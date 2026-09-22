@@ -1,0 +1,37 @@
+# The context is an allowlist; repository evidence, docs, specs, Git, .local,
+# .tools, Supabase signing keys and backup directories are excluded by default.
+**
+!package.json
+!package-lock.json
+!.npmrc
+!tsconfig.base.json
+!apps/
+!apps/api/
+!apps/api/**
+!apps/web/
+!apps/web/**
+!packages/
+!packages/contracts/
+!packages/contracts/**
+!packages/runner/
+!packages/runner/package.json
+!packages/ai/
+!packages/ai/package.json
+!infra/
+!infra/Dockerfile
+
+# Never send local environments, build output, dependencies or credentials.
+**/.env*
+**/.local/**
+**/.tools/**
+**/node_modules/**
+**/.next/**
+**/.next-e2e/**
+**/dist/**
+**/coverage/**
+**/*.pem
+**/*.key
+**/*signing-key*
+**/secrets/**
+**/*.log
+**/*.tsbuildinfo

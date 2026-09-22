@@ -1,0 +1,73 @@
+# Local development only. CLI version is pinned by the root workspace.
+project_id = "alunza-edu-foundation"
+
+[api]
+enabled = true
+port = 15421
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 15422
+shadow_port = 15420
+major_version = 17
+health_timeout = "2m"
+
+[db.pooler]
+enabled = false
+
+[db.migrations]
+enabled = true
+
+[db.seed]
+enabled = false
+
+[realtime]
+enabled = false
+
+[studio]
+enabled = true
+port = 15423
+api_url = "http://127.0.0.1"
+
+[inbucket]
+enabled = true
+port = 15424
+
+[storage]
+enabled = false
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://127.0.0.1:3000", "http://localhost:3000/acceso/invitacion*", "http://127.0.0.1:3000/acceso/invitacion*"]
+jwt_expiry = 3600
+jwt_issuer = "http://127.0.0.1:15421/auth/v1"
+signing_keys_path = "./signing_keys.json"
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = false
+enable_anonymous_sign_ins = false
+minimum_password_length = 12
+
+[auth.email]
+# Enables the email/password provider; global auth.enable_signup still blocks registration.
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+otp_expiry = 3600
+
+[auth.email.template.invite]
+subject = "Acepta tu invitación a Alunza"
+content_path = "./supabase/templates/invite.html"
+
+[auth.email.template.magic_link]
+subject = "Continúa con tu invitación a Alunza"
+content_path = "./supabase/templates/magic-link.html"
+
+[analytics]
+enabled = false
+
+[edge_runtime]
+enabled = false

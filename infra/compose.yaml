@@ -1,0 +1,83 @@
+name: alunza-foundation-apps
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      target: api
+    image: alunza-foundation-api:local
+    init: true
+    env_file:
+      - ../.local/compose.env
+    environment:
+      NODE_ENV: production
+      ENVIRONMENT: local
+      PORT: '4000'
+      HOST: 0.0.0.0
+    ports:
+      - '127.0.0.1:4000:4000'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "Promise.all(['/health/live','/health/ready'].map(async p => {const r = await fetch('http://127.0.0.1:4000' + p, {signal: AbortSignal.timeout(3000)}); if (!r.ok || (await r.json()).data?.status !== 'ok') throw Error();})).then(() => process.exit(0), () => process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    stop_grace_period: 10s
+
+  web:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      target: web
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://127.0.0.1:4000}
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?Run npm run local:up first}
+        NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:?Run npm run local:up first}
+    image: alunza-foundation-web:local
+    init: true
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: '1'
+      PORT: '3000'
+      HOSTNAME: 0.0.0.0
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://127.0.0.1:4000}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?Run npm run local:up first}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:?Run npm run local:up first}
+    ports:
+      - '127.0.0.1:3000:3000'
+    depends_on:
+      api:
+        condition: service_started
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+      - /app/apps/web/.next/cache:rw,nosuid,size=32m,uid=1000,gid=1000,mode=0700
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/', {signal: AbortSignal.timeout(3000)}).then(r => process.exit(r.ok && r.headers.get('content-type')?.includes('text/html') ? 0 : 1), () => process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    stop_grace_period: 10s

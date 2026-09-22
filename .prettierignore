@@ -1,0 +1,15 @@
+Evidencias CAPSTONE/
+specs/
+docs/agent/
+docs/plan/
+node_modules/
+.tools/
+.local/
+dist/
+.next/
+.next-e2e/
+coverage/
+package-lock.json
+**/next-env.d.ts
+supabase/signing_keys.json
+*.sql
