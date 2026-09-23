@@ -21,6 +21,8 @@ function normalizedPath(path: string): string {
       '/health/ready',
       '/api/v1/me',
       '/api/v1/organizations',
+      '/api/v1/class-enrollments',
+      '/api/v1/class-enrollments/preview',
     ].includes(path)
   )
     return path;
@@ -66,6 +68,40 @@ function normalizedPath(path: string): string {
   ];
   for (const [pattern, template] of routes)
     if (pattern.test(path)) return template;
+  for (const collection of ['courses', 'classes', 'concepts', 'exercises']) {
+    if (new RegExp(`^/api/v1/organizations/[^/]+/${collection}/?$`).test(path))
+      return `/api/v1/organizations/:orgId/${collection}`;
+  }
+  for (const collection of [
+    'courses',
+    'classes',
+    'concepts',
+    'exercises',
+    'activities',
+  ]) {
+    if (new RegExp(`^/api/v1/${collection}/[^/]+/?$`).test(path))
+      return `/api/v1/${collection}/:id`;
+    for (const suffix of [
+      'archive',
+      'teachers',
+      'teacher',
+      'join-codes',
+      'students',
+      'versions',
+      'activities',
+      'publish',
+      'close',
+    ]) {
+      if (new RegExp(`^/api/v1/${collection}/[^/]+/${suffix}/?$`).test(path))
+        return `/api/v1/${collection}/:id/${suffix}`;
+    }
+  }
+  if (/^\/api\/v1\/courses\/[^/]+\/teachers\/[^/]+\/?$/.test(path))
+    return '/api/v1/courses/:id/teachers/:teacherId';
+  if (/^\/api\/v1\/classes\/[^/]+\/join-codes\/[^/]+\/revoke\/?$/.test(path))
+    return '/api/v1/classes/:id/join-codes/:codeId/revoke';
+  if (/^\/api\/v1\/activities\/[^/]+\/exercises\/[^/]+\/?$/.test(path))
+    return '/api/v1/activities/:id/exercises/:assignmentId';
   return '<unmatched>';
 }
 
@@ -121,7 +157,7 @@ export async function createApp(
   });
   app.enableCors({
     origin: [...config.allowedOrigins],
-    methods: ['GET', 'HEAD', 'OPTIONS', 'POST', 'PATCH'],
+    methods: ['GET', 'HEAD', 'OPTIONS', 'POST', 'PATCH', 'PUT'],
     allowedHeaders: [
       'Authorization',
       'Content-Type',
@@ -132,7 +168,29 @@ export async function createApp(
     credentials: false,
     maxAge: 600,
   });
-  app.use(json({ limit: '32kb', strict: true, type: 'application/json' }));
+  const standardJson = json({
+    limit: '32kb',
+    strict: true,
+    type: 'application/json',
+  });
+  const exerciseJson = json({
+    limit: '2mb',
+    strict: true,
+    type: 'application/json',
+  });
+  app.use((request: ApiRequest, response: Response, next: NextFunction) => {
+    // The eight test definitions may each contain 64 KiB arguments and expected
+    // JSON; only authoring routes need this envelope. All other routes keep 32 KiB.
+    const authoring =
+      request.method === 'POST' &&
+      (/^\/api\/v1\/organizations\/[0-9a-f-]{36}\/exercises\/?$/i.test(
+        request.path,
+      ) ||
+        /^\/api\/v1\/exercises\/[0-9a-f-]{36}\/versions\/?$/i.test(
+          request.path,
+        ));
+    (authoring ? exerciseJson : standardJson)(request, response, next);
+  });
   app.useGlobalFilters(new SafeExceptionFilter());
   app.enableShutdownHooks(['SIGINT', 'SIGTERM']);
   await app.init();

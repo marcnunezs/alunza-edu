@@ -111,6 +111,51 @@ module.exports.identityTasks = function identityTasks(state) {
       }
       throw new Error('Correo de invitación no recibido en capturador local.');
     },
+    'identity:delivered': async ({ organizationId, email, kind }) => {
+      if (
+        typeof organizationId !== 'string' ||
+        !/^[a-f0-9-]{36}$/.test(organizationId) ||
+        typeof email !== 'string' ||
+        !/^e2e-[a-f0-9-]+@example\.test$/.test(email) ||
+        !['INITIAL', 'RESEND'].includes(kind)
+      )
+        throw new Error('Entrega fuera del fixture Cypress.');
+      const db = new Client({
+        connectionString: state.migrationUrl,
+        connectionTimeoutMillis: 5000,
+        query_timeout: 2000,
+      });
+      try {
+        await db.connect();
+        const deadline = Date.now() + 20_000;
+        while (Date.now() < deadline) {
+          // Read only: delivery preparation rotates the credential and ETag.
+          // Waiting for the requested delivery avoids observing the old SENT row.
+          const result = await db.query(
+            `SELECT d.kind,d.state FROM app.organization_invitations i
+             JOIN LATERAL (
+               SELECT kind,state FROM app.invitation_deliveries
+               WHERE invitation_id=i.id AND organization_id=i.organization_id
+               ORDER BY created_at DESC,id DESC LIMIT 1
+             ) d ON true
+             WHERE i.organization_id=$1 AND i.email_normalized=$2`,
+            [organizationId, email],
+          );
+          const delivery = result.rows[0];
+          if (delivery?.kind === kind) {
+            if (delivery.state === 'SENT') return null;
+            if (['FAILED', 'CANCELLED'].includes(delivery.state))
+              throw new Error('La entrega real terminó sin enviar el correo.');
+          }
+          await delay(200);
+        }
+        throw new Error('La entrega real no alcanzó SENT dentro del plazo.');
+      } catch {
+        throw new Error('No se confirmó la entrega real del fixture Cypress.');
+      } finally {
+        await db.end();
+      }
+    },
     'identity:inactiveAccount': async (accountState) => {
       if (!['INVITED', 'DISABLED'].includes(accountState))
         throw new Error('Estado de fixture inválido.');

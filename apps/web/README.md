@@ -1,4 +1,4 @@
-# Web de identidad y gobierno institucional
+# Web de identidad, contenido y práctica preparada
 
 Next.js App Router presenta `/` (estado de servicios), `/acceso`, `/inicio`, `/administracion/organizaciones`, `/administracion/organizaciones/[orgId]/usuarios` y `/acceso/invitacion`. Supabase Auth gestiona sesión y contraseñas; todas las consultas y mutaciones de dominio llegan a NestJS y se validan con los esquemas públicos de `@alunza/contracts`. No hay API de negocio paralela, Server Actions ni consultas directas a tablas Supabase.
 
@@ -30,6 +30,16 @@ Se conservan las tres variables públicas de `.env.example`. Se validan en build
 
 No se añadieron dependencias. Se mantienen Tailwind, Zod y los componentes shadcn existentes; los diálogos se componen con Radix instalado. Etiquetas, errores asociados, foco de diálogo, teclado, estados textuales y tablas con encabezados forman parte del diseño. La revisión de código y los checks estáticos no acreditan conformidad WCAG completa ni aceptación CAPSTONE.
 
-Desde la raíz Git con el runtime fijado: `npm run lint -w @alunza/web`, `npm run typecheck -w @alunza/web` y `npm run test -w @alunza/web`. La integración real se ejecuta con los arneses de raíz `npm run test:integration` y `npm run test:e2e`; sus resultados se registran separadamente. No hay clases, actividades, publicaciones, recuperación general de contraseña ni otro alcance de IMP-02.
+Desde la raíz Git con el runtime fijado: `npm run lint -w @alunza/web`, `npm run typecheck -w @alunza/web` y `npm run test -w @alunza/web`. La integración real se ejecuta con los arneses de raíz `npm run test:integration` y `npm run test:e2e`; sus resultados se registran separadamente.
+
+## Contenido y editor (IMP-02)
+
+`/academia` permite elegir organización y presenta capacidades por rol: cursos y habilitaciones docentes, clases, conceptos y banco privado. `/clases/[classId]` presenta configuración, códigos colectivos y catálogo de actividades; `/ejercicios/[exerciseId]` conserva las versiones del ejercicio. La composición de `/actividades/[activityId]` fija orden y versiones al publicar y permite un cierre irreversible. Los cambios llegan a NestJS con validación runtime, idempotencia y ETag. Las fechas académicas no tienen hora; la disponibilidad de actividades se introduce en la zona institucional y se convierte a instantes UTC, rechazando horas ambiguas o inexistentes de cambios horarios.
+
+El estudiante abre `/actividades/[activityId]/ejercicios/[assignmentId]` después de obtener la proyección pública autorizada. El editor es un textarea monoespaciado: Tab sale del campo, la fuente responde a ampliación del navegador y los tests ocultos nunca se descargan para filtrarlos después. Cierre y ventana de disponibilidad conservan la lectura, impidiendo edición. Al volver a la ventana se revalida el recurso; se puede actualizar su disponibilidad manualmente.
+
+El borrador local se identifica por cuenta, organización, clase, asignación y versión, con formato versionado y vencimiento de 30 días desde la última edición. Solo se intenta recuperar después de la autorización real de la asignación. Cerrar sesión desmonta su contenido visible y conserva el borrador para la misma cuenta. Un fallo de lectura mantiene la plantilla; un fallo de escritura avisa de que debe conservarse una copia. Descartar pide confirmación. No hay sincronización entre dispositivos ni promesa de recuperación si el navegador elimina sus datos.
+
+`tests/e2e/academic.cy.ts` cubre los flujos con API/BD reales, conservación de versiones, incorporación confirmada, recuperación/cierre/expiración del borrador, fallo de almacenamiento, archivo e aislamiento. El escenario de rendimiento conserva 20 tiempos completos de navegación local con un solo usuario; no acredita latencia de despliegue híbrido ni revisión humana WCAG. En este corte no se habilitan ejecución, envío, IA ni porcentajes de progreso.
 
 Referencias de integración: [Supabase verifyOtp](https://supabase.com/docs/reference/javascript/auth-verifyotp), [Supabase updateUser](https://supabase.com/docs/reference/javascript/auth-updateuser), [páginas App Router](https://nextjs.org/docs/app/api-reference/file-conventions/page) y [diálogos Radix](https://www.radix-ui.com/primitives/docs/components/dialog).

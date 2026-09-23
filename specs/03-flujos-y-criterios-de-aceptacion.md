@@ -7,6 +7,8 @@
 
 ## 1. Fuentes, convenciones y preparación
 
+**Interpretación IMP-02:** el [registro del incremento](../docs/work/IMP-02-content.md) aplica las políticas confirmadas por el usuario a HU-002/003/004/008/022/023 y revalida HU-001/020/021. Resuelve los pendientes de este archivo sobre códigos, fechas, transiciones, archivo y borradores dentro de ese corte; los escenarios originales se conservan. RF-005/007/024 son parciales: no se acredita cierre frente a envíos reales, avance desde intentos ni gobierno completo del banco. Los resultados se consignan en el registro, sin atribuir aceptación humana.
+
 Las obligaciones proceden de la [ERS 1.3](<../Evidencias CAPSTONE/Fase 1/Evidencias de proyecto/Informe_ERS_Alunza.docx>), los [casos de uso 1.2](<../Evidencias CAPSTONE/Fase 1/Evidencias de proyecto/Documento_Casos_de_Uso_Extendidos_Alunza.docx>) y las [historias, hoja Escenarios](<../Evidencias CAPSTONE/Fase 1/Evidencias de proyecto/Plantilla_Historias_Usuario_Alunza.xlsx>). Su prioridad y estado planificado se mantienen en el [Product Backlog](<../Evidencias CAPSTONE/Fase 1/Evidencias de proyecto/Product_Backlog_Alunza.xlsx>).
 
 **Documentado** designa el comportamiento exigido por esas fuentes. **Propuesta técnica** designa ejemplos concretos de datos, precisiones y mecanismos de verificación redactados aquí; no acredita decisiones aprobadas. **Pendiente** identifica la información necesaria para cerrar un caso todavía ambiguo. La [especificación funcional](02-requisitos-funcionales.md) contiene las reglas compartidas y las [fuentes y decisiones](00-fuentes-y-decisiones.md) registran discrepancias.

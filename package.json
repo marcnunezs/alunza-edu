@@ -28,6 +28,7 @@
     "runner:doctor": "node scripts/runner-doctor.mjs",
     "runner:probe": "npm run build -w @alunza/runner && node scripts/runner-probe.mjs",
     "runner:cleanup": "node scripts/runner-cleanup.mjs",
+    "test:academic:fixtures": "npm run build -w @alunza/contracts && npm run build -w @alunza/runner && node scripts/academic-probe.mjs",
     "test:runner": "npm run build -w @alunza/runner && npm run test -w @alunza/runner",
     "test:ai": "npm run build -w @alunza/contracts && npm run build -w @alunza/ai && npm run test -w @alunza/ai",
     "test:ai:integration": "npm run build -w @alunza/contracts && npm run build -w @alunza/ai && node scripts/ai-integration.mjs",

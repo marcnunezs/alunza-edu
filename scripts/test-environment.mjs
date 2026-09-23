@@ -8,6 +8,7 @@ import {
   unlink,
   rm,
   realpath,
+  readdir,
 } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -35,7 +36,7 @@ export const reportDirectory = join(root, '.local/reports/imp-00-05');
 export async function report(name, summary, group = 'imp-00-05') {
   if (!/^[a-z0-9-]+$/.test(name))
     throw new Error('Nombre de informe inválido.');
-  if (!['imp-00-05', 'imp-00-06-08', 'imp-01'].includes(group))
+  if (!['imp-00-05', 'imp-00-06-08', 'imp-01', 'imp-02'].includes(group))
     throw new Error('Grupo de informe inválido.');
   const directory = join(root, '.local/reports', group);
   await mkdir(directory, { recursive: true });
@@ -111,13 +112,16 @@ export async function withTestEnvironment(
     // CLI 2.101 has both a global and a reset-local --version flag: invoking
     // it can return version text without resetting. Restrict the owned copy to
     // IMP-00 instead, then restore the incremental migration before migrate.
-    const incrementalName = '20260911003744_identity_governance.sql';
-    const incrementalCopy = join(
-      ctx.projectDir,
-      'supabase/migrations',
-      incrementalName,
-    );
-    if (upgradeFromFoundation) await unlink(incrementalCopy);
+    const incrementalNames = (await readdir(join(root, 'supabase/migrations')))
+      .filter(
+        (name) =>
+          name.endsWith('.sql') &&
+          name !== '20260910185307_foundation_identity.sql',
+      )
+      .sort();
+    if (upgradeFromFoundation)
+      for (const name of incrementalNames)
+        await unlink(join(ctx.projectDir, 'supabase/migrations', name));
     await cli(ctx, ['db', 'reset', '--local', '--no-seed', '--yes']);
     let foundationSnapshot;
     const snapshot = async () => {
@@ -138,7 +142,7 @@ export async function withTestEnvironment(
       }
     };
     if (upgradeFromFoundation) {
-      await seed(ctx);
+      await seed(ctx, { academic: false });
       foundationSnapshot = await snapshot();
       if (JSON.parse(foundationSnapshot).length !== 14)
         throw new Error(
@@ -159,10 +163,11 @@ export async function withTestEnvironment(
       } finally {
         await foundationDatabase.end();
       }
-      await cp(
-        join(root, 'supabase/migrations', incrementalName),
-        incrementalCopy,
-      );
+      for (const name of incrementalNames)
+        await cp(
+          join(root, 'supabase/migrations', name),
+          join(ctx.projectDir, 'supabase/migrations', name),
+        );
     }
     await migrate(ctx);
     if (upgradeFromFoundation) {
@@ -175,15 +180,15 @@ export async function withTestEnvironment(
         {
           status: 'passed',
           from: '20260910185307',
-          to: '20260911003744',
+          to: incrementalNames.at(-1)?.split('_')[0],
           preserved:
             'organization-profile-membership-identifiers-and-created-at',
         },
         'imp-01',
       );
     }
-    await seed(ctx);
-    await seed(ctx);
+    await seed(ctx, { academic: false });
+    await seed(ctx, { academic: false });
     return await action({ ctx, state: await readState(ctx) });
   } finally {
     try {

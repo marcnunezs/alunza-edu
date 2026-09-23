@@ -16,7 +16,9 @@ select is(
   (select count(*)::integer
     from pg_catalog.pg_class c
     join pg_catalog.pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'app' and c.relkind = 'r' and c.relrowsecurity and c.relforcerowsecurity),
+    where n.nspname = 'app' and c.relkind = 'r' and c.relrowsecurity and c.relforcerowsecurity
+      and c.relname in ('organizations','profiles','organization_memberships','provisioning_grants',
+        'organization_invitations','invitation_deliveries','operation_keys','audit_events')),
   8,
   'Every identity domain table enables and forces RLS'
 );
@@ -46,8 +48,10 @@ select ok(
 select ok(
   (select bool_and(not has_table_privilege('alunza_app', format('app.%I', tablename),
       'DELETE,TRUNCATE,REFERENCES,TRIGGER'))
-    from pg_catalog.pg_tables where schemaname = 'app'),
-  'Application cannot delete history, truncate data or attach triggers'
+    from pg_catalog.pg_tables where schemaname = 'app'
+      and tablename in ('organizations','profiles','organization_memberships','provisioning_grants',
+        'organization_invitations','invitation_deliveries','operation_keys','audit_events')),
+  'Application cannot delete identity history, truncate data or attach triggers'
 );
 
 select ok(

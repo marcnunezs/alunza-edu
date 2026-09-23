@@ -2,6 +2,7 @@ import { writeFile } from 'node:fs/promises';
 import { format } from 'prettier';
 import { z } from 'zod';
 import * as contracts from '@alunza/contracts';
+import { addAcademicOpenApi } from './academic-openapi.mjs';
 
 const schemas = Object.fromEntries(
   Object.entries({
@@ -36,7 +37,17 @@ function response(schema, description) {
           'Las respuestas de dominio son privadas y no se almacenan.',
         schema: { type: 'string', example: 'private, no-store' },
       },
-      ...(['Organization', 'Member', 'Invitation'].includes(schema)
+      ...([
+        'Organization',
+        'Member',
+        'Invitation',
+        'Course',
+        'Class',
+        'Concept',
+        'Exercise',
+        'Activity',
+        'JoinCode',
+      ].includes(schema)
         ? {
             ETag: {
               description:
@@ -79,10 +90,10 @@ function operation(id, schema, errors, protectedRoute = false) {
 export const specification = {
   openapi: '3.0.3',
   info: {
-    title: 'Alunza — identidad y gobierno institucional',
-    version: '0.1.0',
+    title: 'Alunza — identidad, estructura académica y contenido',
+    version: '0.2.0',
     description:
-      'IMP-01. Autorización vigente por operación; evidencia local y remota registradas separadamente.',
+      'IMP-02. Autorización vigente por organización/clase; publicación y editor. Ejecución estudiantil y progreso todavía fuera del corte.',
   },
   servers: [{ url: 'http://127.0.0.1:4000', description: 'Desarrollo local' }],
   paths: {
@@ -288,6 +299,7 @@ specification.paths['/api/v1/organizations/{orgId}'].patch = domainOperation(
   'Organization',
   { ...org, input: 'OrganizationUpdate', versioned: true },
 );
+addAcademicOpenApi(specification, domainOperation);
 await writeFile(
   new URL('../packages/contracts/openapi.json', import.meta.url),
   await format(JSON.stringify(specification), { parser: 'json' }),

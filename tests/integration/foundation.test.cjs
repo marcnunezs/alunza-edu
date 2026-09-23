@@ -505,7 +505,19 @@ describe('Real PostgreSQL grants, constraints and RLS', () => {
       FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_roles r ON r.oid=c.relowner
       WHERE n.nspname='app' AND c.relkind='r' ORDER BY c.relname`);
     expect(tables.rows.map((row) => row.relname)).toEqual([
+      'activities',
+      'activity_exercises',
       'audit_events',
+      'class_join_codes',
+      'class_memberships',
+      'classes',
+      'concept_tags',
+      'concept_versions',
+      'course_teacher_grants',
+      'courses',
+      'exercise_version_concepts',
+      'exercise_versions',
+      'exercises',
       'invitation_deliveries',
       'operation_keys',
       'organization_invitations',
@@ -753,7 +765,7 @@ describe('Real PostgreSQL grants, constraints and RLS', () => {
         "UPDATE app.organization_memberships SET disabled_at=now(),joined_at='2000-01-01T00:00:00Z' WHERE organization_id=$1 AND user_id=$2",
         [orgA.id, studentA.id],
       );
-      await seed(testContext);
+      await seed(testContext, { academic: false });
       // The seed synchronizes Auth passwords; authenticate again rather than
       // expecting a session revoked by a credential change to remain valid.
       for (const user of fixture.users) {

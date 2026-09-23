@@ -1,5 +1,6 @@
 import { z } from 'zod';
 export * from './rag';
+export * from './academic';
 
 export const roleSchema = z.enum(['ADMIN', 'TEACHER', 'STUDENT']);
 export const accountStateSchema = z.enum(['INVITED', 'ACTIVE', 'DISABLED']);
@@ -68,6 +69,11 @@ export const errorResponseSchema = z.strictObject({
       'PAYLOAD_TOO_LARGE',
       'UNSUPPORTED_MEDIA_TYPE',
       'OPERATION_DEADLINE_EXCEEDED',
+      'ACADEMIC_ARCHIVED',
+      'JOIN_CODE_INVALID',
+      'ACTIVITY_NOT_AVAILABLE',
+      'INVALID_TRANSITION',
+      'CONCEPT_CYCLE',
     ]),
     message: z.string().min(1).max(240),
     fields: z.array(z.strictObject({ field: z.string(), message: z.string() })),

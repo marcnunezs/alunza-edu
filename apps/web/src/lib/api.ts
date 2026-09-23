@@ -28,11 +28,20 @@ const messages: Record<number, string> = {
 };
 
 const codeMessages: Record<string, string> = {
+  ACADEMIC_ARCHIVED: 'Este recurso está archivado y solo permite consultas.',
+  JOIN_CODE_INVALID:
+    'El código no es válido, venció o no está disponible para tu cuenta. Solicita uno vigente.',
+  ACTIVITY_NOT_AVAILABLE:
+    'Esta actividad no permite la operación solicitada. Actualiza su disponibilidad.',
+  INVALID_TRANSITION:
+    'Ese cambio de estado no está permitido. La publicación y el cierre conservan su orden.',
+  CONCEPT_CYCLE:
+    'La relación crearía un ciclo. Selecciona otro concepto padre.',
   DUPLICATE: 'Ya existe un registro con esos datos. Revisa el campo indicado.',
   LAST_ADMIN:
     'Debe permanecer al menos un administrador activo en la organización.',
   DEPENDENCIES_ACTIVE:
-    'Hay usuarios activos o invitaciones pendientes. Resuélvelos antes de archivar.',
+    'Hay dependencias activas. Resuelve usuarios, invitaciones, clases o publicaciones antes de archivar.',
   ORGANIZATION_ARCHIVED:
     'La organización está archivada y solo permite consultas.',
   REQUEST_IN_PROGRESS:
@@ -50,7 +59,7 @@ const codeMessages: Record<string, string> = {
 export type ApiOptions = {
   accessToken?: string;
   signal?: AbortSignal;
-  method?: 'GET' | 'POST' | 'PATCH';
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT';
   body?: unknown;
   etag?: string;
   idempotencyKey?: string;

@@ -46,6 +46,8 @@ No solicites permiso solo porque una tabla dice «pendiente». Tampoco uses una 
 
 ## Registro y cierre
 
+**DEC-002/004/006, corte IMP-02:** las políticas de contenido/editor fueron confirmadas por el usuario el 23/09/2026 y están registradas en [fuentes y decisiones](../../specs/00-fuentes-y-decisiones.md) y [contrato IMP-02](../work/IMP-02-content.md). No volver a pedir confirmación sobre habilitación docente por curso, código colectivo, archivo, ventanas, versiones o retención local ya fijados. La admisión concurrente de SUBMIT y los módulos posteriores conservan sus pendientes.
+
 Usa la [plantilla de decisión](14-plantillas-de-trabajo.md). Identifica origen, alternativa elegida, estado, evidencia, dependencias y quién decidió realmente. Registra «supuesto técnico de implementación» si corresponde; solo usa «aprobado» cuando exista tal aprobación.
 
 Cuando una decisión se resuelva, actualiza DTO/modelo/UI/pruebas y la documentación afectada de forma conjunta. Mantén historial de versiones ya usadas por intentos, reglas y fuentes. Si no está resuelta, documenta qué aceptación sigue pendiente y cuál es la siguiente acción concreta, evitando una lista genérica de preguntas que detenga todo el desarrollo.

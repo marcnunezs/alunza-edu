@@ -215,11 +215,25 @@ describe('IMP-01 · Gobierno institucional integrado', () => {
       cy.get('[data-cy="member-row"]').first().should('contain.text', 'Activo');
     });
   });
+  // Updated by Cypress Author on 2026-09-23: synchronize real outbox delivery.
   it('IMP01-07 · Invitación pendiente → reenvío y revocación tienen estado real', () => {
     prepare().then((org) => {
+      cy.intercept(
+        'POST',
+        `/api/v1/organizations/${org.id}/invitations/*/resend`,
+      ).as('resendInvitation');
+      cy.intercept(
+        'POST',
+        `/api/v1/organizations/${org.id}/invitations/*/revoke`,
+      ).as('revokeInvitation');
       openAsAdmin(`/administracion/organizaciones/${org.id}/usuarios`);
       invite(org.email);
       cy.task('identity:mail', { email: org.email }, { log: false });
+      cy.task(
+        'identity:delivered',
+        { organizationId: org.id, email: org.email, kind: 'INITIAL' },
+        { log: false },
+      );
       cy.reload();
       cy.contains('[data-cy="invitation-row"]', org.email).within(() =>
         cy.contains('button', /^Reenviar$/).click(),
@@ -227,7 +241,17 @@ describe('IMP-01 · Gobierno institucional integrado', () => {
       dialog().within(() =>
         cy.contains('button', /^Confirmar reenvío$/).click(),
       );
+      cy.wait('@resendInvitation', { log: false })
+        .its('response.statusCode')
+        .should('eq', 202);
       cy.get('[role="dialog"]').should('not.exist');
+      // The worker changes the ETag while preparing the new credential. Confirm
+      // completion before refreshing; 412 conflicts remain a separate scenario.
+      cy.task(
+        'identity:delivered',
+        { organizationId: org.id, email: org.email, kind: 'RESEND' },
+        { log: false },
+      );
       cy.contains('button', /^Actualizar estados$/).click();
       cy.contains('[data-cy="invitation-row"]', org.email).within(() =>
         cy.contains('button', /^Revocar$/).click(),
@@ -235,6 +259,9 @@ describe('IMP-01 · Gobierno institucional integrado', () => {
       dialog().within(() =>
         cy.contains('button', /^Confirmar revocación$/).click(),
       );
+      cy.wait('@revokeInvitation', { log: false })
+        .its('response.statusCode')
+        .should('eq', 200);
       cy.get('[role="dialog"]').should('not.exist');
       cy.contains('[data-cy="invitation-row"]', org.email).should(
         'contain.text',

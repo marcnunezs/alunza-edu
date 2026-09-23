@@ -55,10 +55,12 @@
   button,
   a,
   input,
+  textarea,
   select {
     touch-action: manipulation;
   }
   a:focus-visible,
+  textarea:focus-visible,
   select:focus-visible {
     @apply outline-2 outline-offset-4 outline-ring;
   }

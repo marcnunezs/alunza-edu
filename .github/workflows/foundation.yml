@@ -86,6 +86,7 @@ jobs:
             .local/reports/imp-00-06-08/runner-docker.json
             .local/reports/imp-00-06-08/ai-integration.json
             .local/reports/imp-01/*.json
+            .local/reports/imp-02/*.json
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7

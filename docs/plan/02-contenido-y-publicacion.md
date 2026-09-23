@@ -1,6 +1,8 @@
 # IMP-02 — Estructura académica, contenido y publicación
 
-Estado: **pendiente de implementación**. Este documento divide la fase en ocho incrementos propuestos. No acredita aplicación, migraciones, pruebas ni aprobación de decisiones. Conserva la secuencia IMP del [plan del agente](../agent/01-plan-de-implementacion.md) y la autoridad de [fuentes y decisiones](../../specs/00-fuentes-y-decisiones.md).
+**Implementación del corte contenido/editor:** el usuario confirmó el plan el 23/09/2026 para completar seis RF nuevos y revalidar tres institucionales (meta 9/27). Las políticas elegidas, contratos, resultados y pendientes están en [el registro IMP-02](../work/IMP-02-content.md). RF-005/007/024 siguen parciales; cierre frente a SUBMIT, progreso y gobierno completo de banco pertenecen a los incrementos posteriores. Este documento conserva el plan original y no sustituye la evidencia ejecutada.
+
+Estado al 23/09/2026: **corte de contenido/editor implementado y verificado localmente**, con nueve RF acumulados y RF-005/007/024 parciales. El resto de este documento conserva el plan original en ocho incrementos; su alcance completo y la aceptación humana permanecen separados del cierre local documentado en [IMP-02](../work/IMP-02-content.md). Conserva la secuencia IMP del [plan del agente](../agent/01-plan-de-implementacion.md) y la autoridad de [fuentes y decisiones](../../specs/00-fuentes-y-decisiones.md).
 
 ## Objetivo y demostración de salida
 

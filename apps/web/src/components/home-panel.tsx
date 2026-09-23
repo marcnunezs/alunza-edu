@@ -125,6 +125,13 @@ export function HomePanel() {
                       ) : null}
                     </div>
                   ) : null}
+                  {membership.accessMode === 'OPERATE' ? (
+                    <Button asChild variant="outline">
+                      <Link href={`/academia?org=${membership.organizationId}`}>
+                        Abrir clases y contenido
+                      </Link>
+                    </Button>
+                  ) : null}
                 </div>
               </>
             ) : (

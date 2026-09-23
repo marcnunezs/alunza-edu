@@ -2,7 +2,7 @@
 
 Alunza es un tutor universitario web para Programación I con JavaScript. Combina ejecución controlada, pruebas deterministas, pistas sustentadas en material docente y seguimiento explicable por clase.
 
-Este repositorio conserva la documentación CAPSTONE y las especificaciones del MVP, junto con la base local IMP-00.01–IMP-00.04, CI/Cypress de IMP-00.05 y los ensayos técnicos IMP-00.06–IMP-00.08. Integra Next.js, NestJS y Supabase local; no acredita requisitos de negocio completos ni despliegue remoto. Véanse [fundación](docs/work/IMP-00-foundation.md), [CI/Cypress](docs/work/IMP-00.05-ci-y-cypress.md) y [ejecutor, IA y preproducción](docs/work/IMP-00.06-08-ensayos.md).
+Este repositorio conserva la documentación CAPSTONE y las especificaciones del MVP, la fundación IMP-00, la identidad institucional IMP-01 y el contenido/editor IMP-02. Integra Next.js, NestJS y Supabase local. El alcance, resultados y límites del primer corte funcional están en [IMP-02](docs/work/IMP-02-content.md); no acredita despliegue remoto ni aceptación académica.
 
 ## Arranque local
 
@@ -24,7 +24,7 @@ La primera descarga de imágenes puede tardar varios minutos. `local:up` crea cl
 
 Límite observado en Docker Desktop de esta máquina: los puertos de Supabase se publican en `0.0.0.0` y `::`, incluso con la red exclusiva configurada para loopback. `local:up` informa las direcciones efectivas. Las URLs anteriores permiten acceder localmente, pero no prueban exclusión de acceso desde la red. Usa únicamente este fixture ficticio y detén Supabase con `local:down` al terminar. Web/API sí tienen binding explícito en `127.0.0.1`; no se cambiaron el firewall ni la configuración global de Docker.
 
-El fixture es incremental: dos organizaciones y seis identidades ficticias. Los correos están en [el fixture](fixtures/foundation/identity.json); `npm run local:credentials` muestra su contraseña común únicamente en una terminal interactiva local. El estado privado también contiene `fixturePassword`. No copies ese valor a reportes o commits. Repetir `db:seed` reconcilia las cuentas ficticias por ID/correo y sus estados; no es una operación de producción.
+El fixture es incremental: conserva las seis identidades originales y completa dos organizaciones, dos administradores, dos profesores, ocho estudiantes, tres clases y diez ejercicios. Los correos están en [identidad](fixtures/foundation/identity.json) y [datos académicos](fixtures/demo/academic.mjs); `npm run local:credentials` muestra su contraseña común únicamente en una terminal interactiva local. El estado privado también contiene `fixturePassword`. No copies ese valor a reportes o commits. Repetir `db:seed` reconcilia las cuentas ficticias por ID/correo y sus estados; no es una operación de producción.
 
 `Ctrl+C` detiene el desarrollo. `npm run local:down` detiene únicamente Supabase de Alunza y conserva sus volúmenes. No hay reset destructivo en el arranque normal. Una migración ya aplicada se corrige con una migración nueva; no se promete recuperar datos borrados mediante rollback automático.
 
@@ -43,7 +43,7 @@ npm audit
 
 `test:integration` crea su propio proyecto Supabase en `.local/integration-workspace`, usa puertos `16421–16424` y una API temporal en `4100`. Cada ejecución reconstruye exclusivamente esa BD de pruebas mediante `db reset --local --no-seed`, aplica las migraciones actuales y repite el seed. Ejecuta Jest contra Auth/API/BD reales y pgTAP, detiene exclusivamente su BD para probar fallo y recuperación, y cierra sus servicios en `finally`. Las mutaciones negativas se restauran; el desarrollo no se reinicializa. Un archivo `.local/integration.lock` impide ejecuciones simultáneas; si hubo terminación abrupta, verifica que su PID ya no exista antes de retirar únicamente ese archivo.
 
-`npm run openapi` genera [OpenAPI](packages/contracts/openapi.json) desde los esquemas públicos. La API contiene solo `/health/live`, `/health/ready`, `/api/v1/me` y `/api/v1/organizations/{orgId}`. JWT ausente/inválido devuelve 401; cuenta inactiva 403; organización ajena o inexistente 404 indistinguible; BD indisponible 503. Las respuestas privadas no se cachean.
+`npm run openapi` genera [OpenAPI](packages/contracts/openapi.json) desde los esquemas públicos. NestJS concentra identidad, gobierno, cursos, clases, conceptos, ejercicios y actividades bajo `/api/v1`, además de salud. JWT ausente/inválido devuelve 401; cuenta inactiva 403; organización ajena o inexistente 404 indistinguible; BD indisponible 503. Las respuestas privadas no se cachean.
 
 `test:artifacts`, después del build y de preparar Supabase local, recorre los bundles públicos y HTML de Next para detectar las credenciales administrativas, contraseñas y clave privada de firma de ese entorno. Falla si faltan los artefactos o el estado necesario para comprobarlos; no imprime los secretos.
 
@@ -109,7 +109,7 @@ Azure tiene dos modos: `rag-local`, predeterminado, combina embeddings remotos c
 
 La preparación de preproducción está en [infra/preproduction](infra/preproduction). Usa API con release/TLS/CORS estrictos, Vercel con comprobación del runtime administrado y un Job manual de conectividad. No hay publicación automática. [El registro conjunto](docs/work/IMP-00.06-08-ensayos.md) detalla comandos, resultados, decisiones y recuperación.
 
-El corte de ensayos anterior precede a IMP-01. La implementación institucional actual se registra en [IMP-01](docs/work/IMP-01-identity.md), con sesiones vigentes, organizaciones, miembros, invitaciones y aislamiento. Siguen pendientes GitHub Actions remoto y las integraciones alojadas, además de las brechas de los ensayos de IMP-00. IMP-02 no se inicia en esta tarea.
+El corte de ensayos anterior precede a IMP-01. La implementación institucional se registra en [IMP-01](docs/work/IMP-01-identity.md) y el contenido/editor en [IMP-02](docs/work/IMP-02-content.md). Siguen pendientes GitHub Actions remoto y las integraciones alojadas, además de las brechas de los ensayos de IMP-00.
 
 ## Identidad y gobierno institucional
 
@@ -120,6 +120,14 @@ Para actualizar una base IMP-00 existente: `npm run db:migrate` y `npm run db:se
 Las invitaciones duran 72 horas y usan Mailpit local; solo guardan el digest institucional. Un trabajador durable entrega el enlace, registra incertidumbre/fallo y reconcilia reintentos. El callback permite verificar correo en otro navegador y aceptar dentro de NestJS. No hay registro público ni correo a destinatarios reales en las pruebas.
 
 Cypress conserva los ocho casos FND y añade los recorridos IMP01. El cierre no depende de un número fijo de ocho pruebas: exige todos los identificadores requeridos y ausencia de fallos. Los informes institucionales están en `.local/reports/imp-01/`; el CI conjunto conserva su ruta histórica. La integración comprueba actualización desde IMP-00; E2E reconstruye desde todas las migraciones. [OpenAPI](packages/contracts/openapi.json) se genera desde los contratos compartidos.
+
+## Recorrido de contenido y editor
+
+Con las migraciones y el seed locales aplicados, entra a `/academia` desde el inicio y elige organización. ADMIN crea un curso, habilita al profesor en ese curso y define conceptos. TEACHER crea su clase, emite el código colectivo y prepara un ejercicio con `module.exports.solve`, conceptos y pruebas visibles/ocultas. En la clase crea una actividad, ordena ejercicios y publica. STUDENT confirma su incorporación con el código, abre la actividad y edita su solución. El banco canónico permite explorar también clases, publicaciones, borradores y actividades cerradas sin preparar contenido desde cero.
+
+El código se muestra una vez; si se pierde, se regenera. Las habilitaciones por curso no reasignan clases existentes. Solo ADMIN cambia profesor o archiva clases, y debe cerrar antes sus actividades publicadas. TEACHER cierra actividades; la consulta histórica se conserva. Las fechas de curso/clase son civiles y las ventanas se muestran en la zona institucional.
+
+El editor conserva borradores durante treinta días desde la última edición en ese navegador y cuenta. Cerrar sesión los conserva; volver a abrirlos requiere autorización actual. Hay descarte manual y aviso si el almacenamiento falla. No hay ejecución, envío, ayuda ni avance desde intentos en este corte. El [manual web](apps/web/README.md) detalla rutas y comportamiento. `npm run test:academic:fixtures` valida diez soluciones correctas y diez incorrectas en Docker; CI lo incluye. Los reportes académicos están en `.local/reports/imp-02/`.
 
 ## Especificaciones del proyecto
 

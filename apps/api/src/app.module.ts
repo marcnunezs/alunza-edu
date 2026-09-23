@@ -14,6 +14,12 @@ import { InvitationController } from './governance/invitation.controller';
 import { InvitationService } from './governance/invitation.service';
 import { InvitationWorker } from './governance/invitation.worker';
 import { InvitationAuthAdapter } from './governance/invitation-auth.adapter';
+import { AcademicController } from './academic/academic.controller';
+import { AcademicService } from './academic/academic.service';
+import { ContentController } from './content/content.controller';
+import { ContentService } from './content/content.service';
+import { ActivitiesController } from './activities/activities.controller';
+import { ActivitiesService } from './activities/activities.service';
 import {
   JWT_KEY_RESOLVER,
   JwtVerifier,
@@ -30,6 +36,9 @@ export class AppModule {
         IdentityController,
         GovernanceController,
         InvitationController,
+        AcademicController,
+        ContentController,
+        ActivitiesController,
       ],
       providers: [
         { provide: APP_CONFIG, useValue: config },
@@ -47,6 +56,9 @@ export class AppModule {
         InvitationService,
         InvitationAuthAdapter,
         InvitationWorker,
+        AcademicService,
+        ContentService,
+        ActivitiesService,
       ],
     };
   }

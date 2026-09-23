@@ -1,10 +1,14 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { OnModuleDestroy } from '@nestjs/common';
-import { Pool } from 'pg';
+import { Pool, types } from 'pg';
 import type { PoolClient } from 'pg';
 import { APP_CONFIG } from '../config';
 import type { AppConfig } from '../config';
 import { ApiError, databaseUnavailable, unauthenticated } from '../http/errors';
+
+// PostgreSQL DATE is a civil academic date, not a midnight timestamp. Keeping
+// OID 1082 as text avoids shifting the day through the host's timezone.
+types.setTypeParser(1082, (value: string) => value);
 
 @Injectable()
 export class DatabaseService implements OnModuleDestroy {
@@ -56,6 +60,11 @@ export class DatabaseService implements OnModuleDestroy {
         ; SELECT id,user_id,consumed_at FROM app.provisioning_grants LIMIT 0
         ; SELECT id,generation,token_digest FROM app.organization_invitations LIMIT 0
         ; SELECT id,state,lease_until FROM app.invitation_deliveries LIMIT 0
+        ; SELECT id,organization_id,revision FROM app.courses LIMIT 0
+        ; SELECT id,organization_id,teacher_id FROM app.classes LIMIT 0
+        ; SELECT id,current_version_id FROM app.concept_tags LIMIT 0
+        ; SELECT id,current_version_id FROM app.exercises LIMIT 0
+        ; SELECT id,state,revision FROM app.activities LIMIT 0
       `);
     } catch {
       throw databaseUnavailable();
@@ -172,6 +181,16 @@ export class DatabaseService implements OnModuleDestroy {
             'No tienes permiso para realizar esta operación.',
             403,
           ],
+          RESOURCE_ARCHIVED: [
+            'ACADEMIC_ARCHIVED',
+            'El recurso archivado permite únicamente consultas.',
+            409,
+          ],
+          INVALID_TRANSITION: [
+            'INVALID_TRANSITION',
+            'El estado de la actividad no permite esta operación.',
+            409,
+          ],
         };
         const rule = rules[error.message];
         if (rule) throw new ApiError(...rule);
@@ -181,6 +200,14 @@ export class DatabaseService implements OnModuleDestroy {
           'DUPLICATE',
           'Ya existe un registro con esos datos.',
           409,
+        );
+      if (code === '22P05' || code === '22021')
+        throw new ApiError(
+          'VALIDATION_FAILED',
+          'El texto contiene caracteres que no se pueden guardar.',
+          422,
+          false,
+          [{ field: 'body', message: 'Revisa la codificación del texto.' }],
         );
       if (code === '23503' || code === '23514')
         throw new ApiError(

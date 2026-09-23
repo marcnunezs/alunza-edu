@@ -18,7 +18,10 @@ export function Shell({ children }: Readonly<{ children: React.ReactNode }>) {
   const navigation = [
     { href: '/', label: 'Estado' },
     ...(signedIn
-      ? [{ href: '/inicio', label: 'Inicio' }]
+      ? [
+          { href: '/inicio', label: 'Inicio' },
+          { href: '/academia', label: 'Clases y contenido' },
+        ]
       : [{ href: '/acceso', label: 'Acceso' }]),
     ...(signedIn && admin
       ? [{ href: '/administracion/organizaciones', label: 'Organizaciones' }]
@@ -91,7 +94,7 @@ export function Shell({ children }: Readonly<{ children: React.ReactNode }>) {
       <footer className="border-t px-5 py-6 sm:px-8">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 text-xs leading-relaxed text-muted-foreground">
           <p>Alunza · Programación I</p>
-          <p>Identidad y organización · Programación I</p>
+          <p>Aprende, practica y conserva tu trabajo</p>
         </div>
       </footer>
     </div>

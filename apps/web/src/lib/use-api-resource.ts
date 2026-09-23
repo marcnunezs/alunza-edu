@@ -15,7 +15,11 @@ type Resource<T> =
   | { status: 'ready'; key: string; result: ApiResult<T> }
   | { status: 'error'; key: string; error: ApiError };
 
-export function useApiResource<T>(path: string, schema: z.ZodType<T>) {
+export function useApiResource<T>(
+  path: string,
+  schema: z.ZodType<T>,
+  enabled = true,
+) {
   const { session, revision } = useSession();
   const token = session?.access_token;
   const key = `${revision}:${path}`;
@@ -23,7 +27,7 @@ export function useApiResource<T>(path: string, schema: z.ZodType<T>) {
   const active = useRef<AbortController | null>(null);
   const load = useCallback(() => {
     active.current?.abort();
-    if (!token) return;
+    if (!token || !enabled) return;
     const controller = new AbortController();
     active.current = controller;
     return apiRequest(path, schema, {
@@ -38,11 +42,14 @@ export function useApiResource<T>(path: string, schema: z.ZodType<T>) {
         if (!controller.signal.aborted)
           setState({ status: 'error', key, error: asApiError(error) });
       });
-  }, [key, path, schema, token]);
+  }, [key, path, schema, token, enabled]);
   const reload = useCallback(async () => {
     setState({ status: 'loading', key });
     await load();
   }, [key, load]);
+  const refresh = useCallback(async () => {
+    await load();
+  }, [load]);
   useEffect(() => {
     void load();
     return () => active.current?.abort();
@@ -50,5 +57,6 @@ export function useApiResource<T>(path: string, schema: z.ZodType<T>) {
   return {
     state: state.key === key ? state : { status: 'loading' as const, key },
     reload,
+    refresh,
   };
 }

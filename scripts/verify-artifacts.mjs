@@ -21,6 +21,8 @@ const secrets = [
 ].filter((value) => typeof value === 'string' && value.length > 15);
 if (secrets.length < 5)
   throw new Error('Falta estado local para comprobar los secretos reales.');
+// Private test canaries belong only to the Node acceptance fixtures.
+secrets.push('hidden-sentinel-e2e', 'IMP02_PRIVATE_EXPECTATION_DO_NOT_EXPOSE');
 if (process.env.ALUNZA_ARTIFACT_CANARIES) {
   const canaries = JSON.parse(process.env.ALUNZA_ARTIFACT_CANARIES);
   if (

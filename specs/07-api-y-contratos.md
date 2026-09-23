@@ -102,13 +102,16 @@ En esta tabla `RF 004`, por ejemplo, significa `ALZ-RF-004`. Cada operación apl
 | --- | --- | --- | --- |
 | `GET, POST /organizations/{orgId}/courses` | ADMIN escribe; TEACHER lee ámbito | `code`, `name`, `description`, `academicPeriod`, fechas; códigos únicos | 022 |
 | `GET, PATCH /courses/{id}` y `POST /courses/{id}/archive` | ADMIN; lectura docente autorizada | Versión y dependencias | 022 |
-| `GET, POST /organizations/{orgId}/classes` | ADMIN; TEACHER crea en curso permitido | `courseId`, `code`, `name`, `startsAt`, `endsAt` | 002,022 |
+| `GET /courses/{id}/teachers`, `PUT /courses/{id}/teachers/{teacherId}` | ADMIN concede/revoca; docente consulta habilitación propia | `enabled`; If-Match del curso; revocar no reasigna clases existentes | 022 |
+| `GET, POST /organizations/{orgId}/classes` | ADMIN; TEACHER crea en curso permitido | `courseId`, `code`, `name`, `startDate`, `endDate` | 002,022 |
 | `GET, PATCH /classes/{id}` | ADMIN o profesor asignado según campos | Profesor edita configuración propia; solo ADMIN reasigna profesor | 002,022 |
 | `POST /classes/{id}/archive` | ADMIN | Bloquear dependencias activas, conservar historial | 022 |
 | `PUT /classes/{id}/teacher` | ADMIN | `teacherId` activo de misma organización | 022 |
 | `POST /classes/{id}/join-codes` | Profesor asignado o ADMIN | `expiresAt`; devuelve código una vez, almacena digest | 002 |
+| `GET /classes/{id}/join-codes` | Profesor asignado o ADMIN | Metadatos sin código; emisión exige If-Match de clase | 002 |
 | `POST /classes/{id}/join-codes/{codeId}/revoke` | Emisor autorizado | Revoca usos futuros, conserva membresías existentes | 002 |
 | `POST /class-enrollments` | STUDENT activo | `code`; misma organización, vigente, no inscripción duplicada | 003 |
+| `POST /class-enrollments/preview` | STUDENT activo | Consulta previa sin membresía; error genérico si es inválido/ajeno/vencido | 003 |
 | `GET /classes/{id}/students` | Profesor asignado o ADMIN de estructura | Lista limitada a datos de membresía | 017,022 |
 | `GET, POST /organizations/{orgId}/concepts` | ADMIN escribe; miembros autorizados leen | `name`, `description`, `parentId?`; unicidad normalizada, sin ciclos | 023 |
 | `PATCH /concepts/{id}` y `POST /concepts/{id}/archive` | ADMIN | Nueva versión; conserva referencias | 023 |
@@ -131,6 +134,12 @@ En esta tabla `RF 004`, por ejemplo, significa `ALZ-RF-004`. Cada operación apl
 `ActivityInput` propuesto: `title`, `type`, `instructions`, `opensAt?`, `closesAt?`, `exercises: [{exerciseVersionId, position, required}]`. El tipo diagnóstica/formativa está documentado en CU-005; se proponen códigos `DIAGNOSTIC` y `FORMATIVE`. Debe tener al menos un ejercicio requerido para publicar. Sin duplicados ni posiciones repetidas. Los límites no pueden superar el máximo institucional. Fechas coherentes y recursos activos de la misma organización. No aceptar `teacherId`, `organizationId` o `publishedAt` como campos libres de un estudiante.
 
 El código colectivo de incorporación puede usarse por varios estudiantes mientras esté vigente; la unicidad se aplica a cada membresía. Solo una invitación individual puede ser de uso único según su contrato. Tener rol ADMIN de gobierno no concede publicación de actividades sin asignación docente explícita.
+
+**Contrato ejecutable IMP-02 (23/09/2026).** Véanse [OpenAPI](../packages/contracts/openapi.json), [esquemas estrictos](../packages/contracts/src/academic.ts) y [diccionario](../docs/work/IMP-02-dictionary.md). La tabla conserva rutas de fases futuras: `/exercises/{id}/governance` y avance desde intentos siguen pendientes. En este corte ADMIN consulta/archiva banco; únicamente el autor TEACHER con clase activa crea versiones PRIVATE. La autoría admite hasta 2 MiB HTTP sin ampliar el límite general de 32 KiB. Dificultad `BEGINNER/INTERMEDIATE/ADVANCED`; JavaScript, entrada exportada `module.exports.solve`, comparación JSON exacta; 1–8 pruebas con al menos una visible y sin IDs ni expectativas contradictorias para argumentos equivalentes. Límites fijos: 134217728 bytes, 3000 ms, 65536 bytes de salida. La coherencia estática no certifica corrección pedagógica universal.
+
+Cursos/clases usan `startDate/endDate` civiles nullable; período académico textual obligatorio. Actividades usan UTC nullable y orden explícito; publicación exige contenido válido y al menos un ejercicio requerido. `DRAFT → PUBLISHED → CLOSED` sin reapertura fija versiones inmutables y permite consulta histórica. La proyección estudiantil incluye `canEdit`, `serverNow` y ventana; edición solo dentro de `[opensAt, closesAt)` en PUBLISHED. Archivo del banco conserva publicaciones existentes. Conceptos normalizan NFKC, espacios y minúsculas; versiones y grafo acíclico conservan referencias.
+
+El código vence a siete días o antes, se muestra una vez y una rotación invalida el anterior. Replay de emisión devuelve metadatos; replay propio de inscripción confirmada recupera la relación tras rotación, revalidando permisos. `POST /class-enrollments` responde 200, incluida repetición; no crea relaciones duplicadas. ADMIN archiva clases después de cerrar actividades publicadas y revoca códigos. La autoría valida texto Unicode persistible (sin NUL ni surrogados aislados) y mide argumentos/resultados JSON compactos en bytes UTF-8, con hasta 65536 por valor; el almacenamiento privado conserva esa representación. Las políticas y pendientes se registran en [IMP-02](../docs/work/IMP-02-content.md).
 
 ## Práctica e intentos
 
@@ -215,4 +224,4 @@ Longitudes propuestas: nombres/títulos 1–160 caracteres normalizados; descrip
 
 El schema OpenAPI debe generarse o mantenerse junto a DTO validados e incluir request/response/errores/ejemplos/permisos. El cliente se valida contra esos contratos. Antes de aceptar una ruta, demostrar caso permitido, inválido, ajeno, estado inactivo y concurrencia relevante. Los [escenarios funcionales](03-flujos-y-criterios-de-aceptacion.md) definen las expectativas de negocio por RF.
 
-Mapeos explícitos hacia [persistencia](06-modelo-de-datos.md): `academicPeriod → academic_period`, instrucciones de actividad `instructions → description`, `opensAt/closesAt → opens_at/closes_at`, diagnóstico técnico público `diagnosisCode → diagnosis_code`, progreso `evidenceState → evidence_status` y CSV `outcome → audit_events.result`. `startsAt/endsAt` de clase deben sustituirse por `startDate/endDate` si el modelo final conserva fechas sin hora; no convertir silenciosamente una fecha académica en un instante UTC. Cerrar esta elección en DEC-004 antes del schema ejecutable.
+Mapeos explícitos hacia [persistencia](06-modelo-de-datos.md): `academicPeriod → academic_period`, instrucciones de actividad `instructions → description`, `opensAt/closesAt → opens_at/closes_at`, diagnóstico técnico público `diagnosisCode → diagnosis_code`, progreso `evidenceState → evidence_status` y CSV `outcome → audit_events.result`. IMP-02 fija `startDate/endDate → start_date/end_date` de cursos/clases como fechas sin hora y conserva `instructions` como nombre de columna de actividad en el diccionario ejecutable. No se convierten fechas académicas en instantes UTC. Los mappings de módulos futuros conservan su estado propuesto.

@@ -234,18 +234,26 @@ export class GovernanceService {
                 `SELECT
           (SELECT count(*)::int FROM app.organization_memberships WHERE organization_id=$1 AND state='ACTIVE' AND user_id<>$2) AS members,
           (SELECT count(*)::int FROM app.organization_invitations WHERE organization_id=$1 AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at>now()) AS invitations,
-          (SELECT count(*)::int FROM app.invitation_deliveries WHERE organization_id=$1 AND state IN ('QUEUED','RUNNING','UNCERTAIN')) AS jobs`,
+          (SELECT count(*)::int FROM app.invitation_deliveries WHERE organization_id=$1 AND state IN ('QUEUED','RUNNING','UNCERTAIN')) AS jobs,
+          (SELECT count(*)::int FROM app.courses WHERE organization_id=$1 AND archived_at IS NULL) AS courses,
+          (SELECT count(*)::int FROM app.classes WHERE organization_id=$1 AND archived_at IS NULL) AS classes,
+          (SELECT count(*)::int FROM app.exercises WHERE organization_id=$1 AND archived_at IS NULL) AS exercises,
+          (SELECT count(*)::int FROM app.concept_tags WHERE organization_id=$1 AND archived_at IS NULL) AS concepts`,
                 [organizationId, who.actorId],
               )
             ).rows[0];
             if (
               dependencies.members ||
               dependencies.invitations ||
-              dependencies.jobs
+              dependencies.jobs ||
+              dependencies.courses ||
+              dependencies.classes ||
+              dependencies.exercises ||
+              dependencies.concepts
             )
               throw new ApiError(
                 'DEPENDENCIES_ACTIVE',
-                'No se puede archivar mientras existan miembros, invitaciones o entregas activas.',
+                'No se puede archivar mientras existan miembros, invitaciones, entregas o recursos académicos activos.',
                 409,
                 false,
                 Object.entries(dependencies)

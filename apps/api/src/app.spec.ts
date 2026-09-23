@@ -91,6 +91,9 @@ describe('real Nest HTTP boundary without data infrastructure', () => {
     expect(response.headers.get('access-control-allow-methods')).toContain(
       'PATCH',
     );
+    expect(response.headers.get('access-control-allow-methods')).toContain(
+      'PUT',
+    );
     expect(response.headers.get('access-control-allow-headers')).toContain(
       'If-Match',
     );
@@ -116,6 +119,43 @@ describe('real Nest HTTP boundary without data infrastructure', () => {
       expect(response.headers.get('x-powered-by')).toBeNull();
     },
   );
+
+  it('increases JSON capacity only on exercise authoring routes', async () => {
+    const id = '11111111-1111-4111-8111-111111111111';
+    const body = JSON.stringify({ statement: 'x'.repeat(40000) });
+    for (const path of [
+      `organizations/${id}/exercises`,
+      `exercises/${id}/versions`,
+    ]) {
+      const response = await fetch(`${baseUrl}/api/v1/${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      });
+      expect(response.status).toBe(401);
+      expect(errorResponseSchema.parse(await response.json()).error.code).toBe(
+        'UNAUTHENTICATED',
+      );
+    }
+    const ordinary = await fetch(
+      `${baseUrl}/api/v1/organizations/${id}/classes`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      },
+    );
+    expect(ordinary.status).toBe(413);
+    const excessive = await fetch(
+      `${baseUrl}/api/v1/exercises/${id}/versions`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ statement: 'x'.repeat(2097152) }),
+      },
+    );
+    expect(excessive.status).toBe(413);
+  });
 
   it('does not reflect untrusted paths, authorization or database credentials in errors and logs', async () => {
     const captured: string[] = [];

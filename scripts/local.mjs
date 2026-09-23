@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import net from 'node:net';
 import pg from 'pg';
 import { createClient } from '@supabase/supabase-js';
+import { seedAcademic } from './academic-fixture.mjs';
 
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
@@ -340,7 +341,7 @@ export async function migrate(ctx) {
     'Migraciones aplicadas. Rol de aplicación limitado y configuración por consumidor preparados.',
   );
 }
-export async function seed(ctx) {
+export async function seed(ctx, { academic = true } = {}) {
   const state = await readState(ctx);
   const fixture = JSON.parse(
     await readFile(join(root, 'fixtures/foundation/identity.json'), 'utf8'),
@@ -415,6 +416,7 @@ export async function seed(ctx) {
   console.log(
     'Fixture incremental preparado: 2 organizaciones, 6 usuarios, 6 membresias.',
   );
+  if (academic) await seedAcademic(state);
 }
 export async function down(ctx) {
   await cli(ctx, ['stop']);

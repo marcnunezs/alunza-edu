@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { root, run, redactDiagnostics } from './local.mjs';
+import { seedAcademic } from './academic-fixture.mjs';
 import {
   withTestEnvironment,
   publicTestEnvironment,
@@ -21,6 +22,7 @@ function sanitized(text) {
 }
 
 async function execute({ ctx, state }) {
+  await seedAcademic(state);
   privateValues = [
     state.fixturePassword,
     state.applicationPassword,
@@ -131,6 +133,10 @@ async function execute({ ctx, state }) {
         { length: 8 },
         (_, i) => `IMP01-${String(i + 1).padStart(2, '0')}`,
       ),
+      ...Array.from(
+        { length: 8 },
+        (_, i) => `IMP02-${String(i + 1).padStart(2, '0')}`,
+      ),
     ];
     const completed = new Set(
       result.tests
@@ -150,6 +156,12 @@ async function execute({ ctx, state }) {
       if (api.output.includes(secret) || web.output.includes(secret))
         throw new Error('Un secreto apareció en logs de los servicios.');
     }
+    if (
+      api.output.includes('hidden-sentinel-e2e') ||
+      web.output.includes('hidden-sentinel-e2e')
+    )
+      throw new Error('Una prueba oculta apareció en logs de los servicios.');
+    await report('e2e', result, 'imp-02');
     await mkdir(join(root, '.local/evidence/imp-00-05'), { recursive: true });
     await writeFile(
       join(root, '.local/evidence/imp-00-05/cypress.log'),
@@ -157,6 +169,11 @@ async function execute({ ctx, state }) {
       { mode: 0o600 },
     );
     console.log(`Cypress: ${result.passed}/${result.total} casos aprobados.`);
+  } catch (error) {
+    error.output = sanitized(
+      `${error.output ?? error.message}\n${api.output}\n${web.output}`,
+    );
+    throw error;
   } finally {
     if (server.listening)
       await new Promise((resolve) => {

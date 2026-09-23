@@ -20,6 +20,7 @@ try {
     ['run', 'runner:prepare'],
     ['run', 'runner:doctor'],
     ['run', 'runner:probe', '--', '--adapter', 'docker'],
+    ['run', 'test:academic:fixtures'],
     ['run', 'cypress:install'],
     ['run', 'test:integration'],
     ['run', 'test:ai:integration'],

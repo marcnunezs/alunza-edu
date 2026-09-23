@@ -4,6 +4,7 @@ module.exports = {
   testEnvironment: 'node',
   testMatch: [
     '<rootDir>/tests/contracts.test.cjs',
+    '<rootDir>/tests/academic-contracts.test.cjs',
     '<rootDir>/tests/provisioning.test.cjs',
   ],
   transform: {},

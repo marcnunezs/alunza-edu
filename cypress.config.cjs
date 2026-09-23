@@ -90,6 +90,43 @@ module.exports = defineConfig({
         ...identityTasks(state),
         'foundation:apiStop': () => control('stop'),
         'foundation:apiStart': () => control('start'),
+        'academic:performance': ({ operation, samples }) => {
+          if (
+            operation !== 'editor' ||
+            !Array.isArray(samples) ||
+            samples.length !== 20 ||
+            samples.some(
+              (value) =>
+                typeof value !== 'number' ||
+                !Number.isFinite(value) ||
+                value < 0,
+            )
+          )
+            throw new Error('Muestra de rendimiento académico inválida.');
+          const sorted = [...samples].sort((a, b) => a - b);
+          const p95Ms = sorted[Math.ceil(sorted.length * 0.95) - 1];
+          const directory = resolve(__dirname, '.local/reports/imp-02');
+          mkdirSync(directory, { recursive: true });
+          writeFileSync(
+            join(directory, 'ui-performance.json'),
+            JSON.stringify(
+              {
+                recordedAt: new Date().toISOString(),
+                status: p95Ms < 3000 ? 'passed' : 'failed',
+                operation,
+                samples,
+                p95Ms,
+                percentile: 'nearest-rank',
+                concurrency: 1,
+                environment:
+                  'local Chrome production build; authenticated navigation including first sample',
+              },
+              null,
+              2,
+            ),
+          );
+          return { p95Ms };
+        },
       });
 
       on('after:run', (result) => {
@@ -100,7 +137,8 @@ module.exports = defineConfig({
             id:
               (test.title || [])
                 .join(' ')
-                .match(/\b(?:FND-\d{2}|IMP01-\d{2})\b/)?.[0] || 'UNKNOWN',
+                .match(/\b(?:FND-\d{2}|IMP01-\d{2}|IMP02-\d{2})\b/)?.[0] ||
+              'UNKNOWN',
             state: states.has(test.state) ? test.state : 'unknown',
           })),
         );
