@@ -1,12 +1,16 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { root, run, doctor, redactDiagnostics } from './local.mjs';
-import { publicTestEnvironment, report } from './test-environment.mjs';
+import {
+  publicTestEnvironment,
+  report,
+  testContext,
+} from './test-environment.mjs';
 
 const npm = process.env.npm_execpath;
 if (!npm) throw new Error('Ejecuta npm run ci:verify desde la raíz Git.');
 const staticEnvironment = publicTestEnvironment({
-  authUrl: 'http://127.0.0.1:16421',
+  authUrl: testContext.authUrl,
   publishableKey: 'sb_publishable_static_configuration_only',
 });
 const steps = [];
@@ -52,12 +56,7 @@ try {
       entry.status = 'failed';
       let diagnostic = error.output ?? error.message;
       try {
-        const state = JSON.parse(
-          await readFile(
-            join(root, '.local/integration-workspace/.local/runtime.json'),
-            'utf8',
-          ),
-        );
+        const state = JSON.parse(await readFile(testContext.statePath, 'utf8'));
         for (const field of [
           'fixturePassword',
           'applicationPassword',

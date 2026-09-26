@@ -26,12 +26,36 @@ import {
   run,
   cli,
 } from './local.mjs';
+import {
+  developmentTarget,
+  testTarget,
+  testWorkspaceDirectory,
+} from './local-target.mjs';
 
-export const testContext = context(
-  join(root, '.local/integration-workspace'),
-  true,
-);
+export const testContext = context(join(root, testWorkspaceDirectory), true);
 export const reportDirectory = join(root, '.local/reports/imp-00-05');
+
+export function buildTestConfig(source) {
+  if (!source.includes(`project_id = "${developmentTarget.projectId}"`))
+    throw new Error('La configuración fuente no pertenece al laboratorio.');
+  let config = source.replace(
+    `project_id = "${developmentTarget.projectId}"`,
+    `project_id = "${testTarget.projectId}"`,
+  );
+  for (const key of [
+    'authPort',
+    'dbPort',
+    'shadowPort',
+    'studioPort',
+    'mailPort',
+    'webPort',
+  ])
+    config = config.replaceAll(
+      new RegExp(`\\b${developmentTarget[key]}\\b`, 'g'),
+      String(testTarget[key]),
+    );
+  return config;
+}
 
 export async function report(name, summary, group = 'imp-00-05') {
   if (!/^[a-z0-9-]+$/.test(name))
@@ -57,6 +81,13 @@ export async function withTestEnvironment(
 ) {
   const ctx = testContext;
   await mkdir(join(root, '.local'), { recursive: true });
+  if (
+    resolve(await realpath(join(root, '.local'))) !==
+    resolve(join(root, '.local'))
+  )
+    throw new Error(
+      'La carpeta local del laboratorio no puede ser un enlace externo.',
+    );
   const lockPath = join(root, '.local/integration.lock');
   // The existing integration lock is also used by E2E: neither suite can mutate
   // the fixture or stop services while the other owns the test environment.
@@ -70,14 +101,35 @@ export async function withTestEnvironment(
           `Puerto de prueba ${port} no disponible; no se tocarán procesos existentes.`,
         );
     }
-    await mkdir(join(ctx.projectDir, 'supabase'), { recursive: true });
-    const config = (await readFile(join(root, 'supabase/config.toml'), 'utf8'))
-      .replace(
-        'project_id = "alunza-edu-foundation"',
-        `project_id = "${ctx.projectId}"`,
+    await mkdir(ctx.projectDir, { recursive: true });
+    if (resolve(await realpath(ctx.projectDir)) !== resolve(ctx.projectDir))
+      throw new Error(
+        'El workspace de pruebas no puede ser un enlace externo.',
+      );
+    const supabaseDirectory = join(ctx.projectDir, 'supabase');
+    await mkdir(supabaseDirectory, { recursive: true });
+    if (
+      resolve(await realpath(supabaseDirectory)) !== resolve(supabaseDirectory)
+    )
+      throw new Error(
+        'El directorio Supabase de pruebas no puede ser un enlace externo.',
+      );
+    const configurationPath = join(supabaseDirectory, 'config.toml');
+    try {
+      if (
+        resolve(await realpath(configurationPath)) !==
+        resolve(configurationPath)
       )
-      .replaceAll('1542', '1642');
-    await writeFile(join(ctx.projectDir, 'supabase/config.toml'), config);
+        throw new Error(
+          'La configuración de pruebas no puede ser un enlace externo.',
+        );
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+    const config = buildTestConfig(
+      await readFile(join(root, 'supabase/config.toml'), 'utf8'),
+    );
+    await writeFile(configurationPath, config);
     // Replace only these owned source copies: removed migrations/tests must not
     // survive in the test workspace. Refuse links that escape the fixed path.
     for (const name of ['migrations', 'tests', 'templates']) {
@@ -203,7 +255,7 @@ export async function withTestEnvironment(
 export function publicTestEnvironment(state) {
   return {
     ALUNZA_E2E_BUILD: '1',
-    NEXT_PUBLIC_API_BASE_URL: 'http://127.0.0.1:4100',
+    NEXT_PUBLIC_API_BASE_URL: testTarget.apiUrl,
     NEXT_PUBLIC_SUPABASE_URL: state.authUrl,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: state.publishableKey,
     NEXT_TELEMETRY_DISABLED: '1',
@@ -289,7 +341,7 @@ export function nodeService(args, environment, cwd = root) {
   };
 }
 
-export function testApi(ctx, state, webPort = 3000) {
+export function testApi(ctx, state, webPort = ctx.webPort) {
   return nodeService([join(root, 'apps/api/dist/main.js')], {
     ...apiEnvironment(ctx, state),
     APP_ORIGIN: `http://127.0.0.1:${webPort}`,

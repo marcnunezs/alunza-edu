@@ -73,6 +73,8 @@ Percentil nearest-rank, primera muestra incluida y caché no controlada; cero fa
 
 ## Punto de reanudación
 
+**Actualización del 26/09/2026:** se retomó la demostración local. La inspección aclaró que el Supabase existente pertenecía al repositorio original; se separaron los destinos DEV/TEST del laboratorio antes de arrancar. El recorrido por roles y la evidencia vigente están en [demostración local](IMP-02-demo-local.md). El punto guardado del 23/09 se conserva abajo como antecedente.
+
 El usuario pidió guardar el progreso el 23/09/2026 para continuar más tarde. Este registro, la [matriz de aceptación](IMP-02-acceptance.md) y el [diccionario](IMP-02-dictionary.md) acompañan el código en el commit local de esta entrega. Los reportes saneados permanecen en `.local/reports/` y están ignorados por Git; sus resultados principales quedan registrados arriba. No se publicó la rama.
 
 El corte autorizado está implementado y su CI local aprobada. No hay un bloqueo técnico activo ni una prueba en ejecución. TEST quedó detenido; Supabase de desarrollo conserva su estado previo. Para retomar, leer este registro y comprobar `git status` antes de editar. El siguiente paso de demostración es aplicar la migración incremental y el seed académico al entorno de desarrollo local mediante las instrucciones del README, y recorrer administrador → profesor → estudiante. No volver a generar el proyecto ni las migraciones existentes.

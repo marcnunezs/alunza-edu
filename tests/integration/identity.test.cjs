@@ -1,3 +1,4 @@
+const { assertLaboratoryTestState } = require('../laboratory-test-state.cjs');
 /* eslint @typescript-eslint/no-require-imports: "off" */
 const { randomUUID } = require('node:crypto');
 const { URLSearchParams } = require('node:url');
@@ -117,12 +118,12 @@ async function delivered(org, inv) {
 async function emailLink(email, generation) {
   for (let attempt = 0; attempt < 50; attempt++) {
     const list = await (
-      await fetch('http://127.0.0.1:16424/api/v1/messages')
+      await fetch('http://127.0.0.1:18424/api/v1/messages')
     ).json();
     for (const message of list.messages ?? []) {
       if (!(message.To ?? []).some((to) => to.Address === email)) continue;
       const detail = await (
-        await fetch(`http://127.0.0.1:16424/api/v1/message/${message.ID}`)
+        await fetch(`http://127.0.0.1:18424/api/v1/message/${message.ID}`)
       ).json();
       for (const found of (detail.HTML ?? '').matchAll(/href="([^"]+)"/g)) {
         const raw = found[1].replaceAll('&amp;', '&');
@@ -154,11 +155,12 @@ async function authenticateInvitation(inv) {
 }
 beforeAll(async () => {
   state = JSON.parse(readFileSync(process.env.ALUNZA_TEST_STATE, 'utf8'));
+  assertLaboratoryTestState(state);
   base = process.env.ALUNZA_TEST_API_URL;
   if (
-    state.projectId !== 'alunza-edu-foundation-test' ||
-    state.authUrl !== 'http://127.0.0.1:16421' ||
-    base !== 'http://127.0.0.1:4100'
+    state.projectId !== 'alunza-edu-laboratorio-test' ||
+    state.authUrl !== 'http://127.0.0.1:18421' ||
+    base !== 'http://127.0.0.1:4300'
   )
     throw new Error('Solo fixture local aislado.');
   pool = new pg.Pool({ connectionString: state.migrationUrl, max: 4 });

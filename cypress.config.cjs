@@ -4,6 +4,9 @@ const { defineConfig } = require('cypress');
 const { readFileSync, mkdirSync, writeFileSync } = require('node:fs');
 const { resolve, join } = require('node:path');
 const { identityTasks } = require('./tests/identity-fixture.cjs');
+const {
+  assertLaboratoryTestState,
+} = require('./tests/laboratory-test-state.cjs');
 
 const reportDirectory = resolve(__dirname, '.local/reports/imp-01');
 
@@ -20,7 +23,7 @@ module.exports = defineConfig({
   taskTimeout: 35_000,
   reporter: 'dot',
   e2e: {
-    baseUrl: 'http://127.0.0.1:3100',
+    baseUrl: 'http://127.0.0.1:3300',
     specPattern: 'tests/e2e/*.cy.ts',
     supportFile: 'tests/e2e/support.ts',
     testIsolation: true,
@@ -44,11 +47,12 @@ module.exports = defineConfig({
       }
       const apiBaseUrl = process.env.ALUNZA_TEST_API_URL;
       const controlKey = process.env.ALUNZA_E2E_CONTROL_KEY;
+      assertLaboratoryTestState(state);
       if (
-        state.projectId !== 'alunza-edu-foundation-test' ||
-        state.authUrl !== 'http://127.0.0.1:16421' ||
-        apiBaseUrl !== 'http://127.0.0.1:4100' ||
-        config.baseUrl !== 'http://127.0.0.1:3100' ||
+        state.projectId !== 'alunza-edu-laboratorio-test' ||
+        state.authUrl !== 'http://127.0.0.1:18421' ||
+        apiBaseUrl !== 'http://127.0.0.1:4300' ||
+        config.baseUrl !== 'http://127.0.0.1:3300' ||
         controlUrl.protocol !== 'http:' ||
         controlUrl.hostname !== '127.0.0.1' ||
         !controlUrl.port ||

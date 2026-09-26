@@ -1,17 +1,19 @@
 import pg from 'pg';
+import { testTarget, assertRuntimeTarget } from './local-target.mjs';
 
 function assertTestDatabase(state) {
   let database;
   try {
+    assertRuntimeTarget(state, testTarget);
     database = new URL(state?.migrationUrl);
   } catch {
     throw new Error('El fixture de fallos necesita la base local de pruebas.');
   }
   if (
-    state.projectId !== 'alunza-edu-foundation-test' ||
+    state.projectId !== testTarget.projectId ||
     !['postgresql:', 'postgres:'].includes(database.protocol) ||
     database.hostname !== '127.0.0.1' ||
-    database.port !== '16422' ||
+    database.port !== String(testTarget.dbPort) ||
     database.pathname !== '/postgres' ||
     database.username !== 'postgres'
   )

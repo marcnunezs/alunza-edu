@@ -1,3 +1,4 @@
+const { assertLaboratoryTestState } = require('../laboratory-test-state.cjs');
 /* eslint @typescript-eslint/no-require-imports: "off" */
 const { randomUUID } = require('node:crypto');
 const { readFileSync } = require('node:fs');
@@ -146,10 +147,11 @@ function definition() {
 }
 beforeAll(async () => {
   state = JSON.parse(readFileSync(process.env.ALUNZA_TEST_STATE, 'utf8'));
+  assertLaboratoryTestState(state);
   base = process.env.ALUNZA_TEST_API_URL;
   if (
-    state.projectId !== 'alunza-edu-foundation-test' ||
-    base !== 'http://127.0.0.1:4100'
+    state.projectId !== 'alunza-edu-laboratorio-test' ||
+    base !== 'http://127.0.0.1:4300'
   )
     throw new Error('Solo entorno aislado académico.');
   pool = new pg.Pool({ connectionString: state.migrationUrl, max: 3 });

@@ -27,6 +27,7 @@ import {
   resolve,
 } from 'node:path';
 import { root, redactDiagnostics } from './local.mjs';
+import { testTarget } from './local-target.mjs';
 
 // Jest 30 on Windows preserves the separator before a dot-prefixed directory
 // as a glob escape. An OS temporary directory keeps the real configs unchanged.
@@ -242,8 +243,8 @@ function environment(workspace) {
     NO_COLOR: '1',
     NEXT_TELEMETRY_DISABLED: '1',
     npm_config_cache: join(workspace, '.local/npm-cache'),
-    NEXT_PUBLIC_API_BASE_URL: 'http://127.0.0.1:4100',
-    NEXT_PUBLIC_SUPABASE_URL: 'http://127.0.0.1:16421',
+    NEXT_PUBLIC_API_BASE_URL: testTarget.apiUrl,
+    NEXT_PUBLIC_SUPABASE_URL: testTarget.authUrl,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
       'sb_publishable_gate_probe_public_placeholder',
   };

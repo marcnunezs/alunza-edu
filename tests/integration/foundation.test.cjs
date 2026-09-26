@@ -1,3 +1,4 @@
+const { assertLaboratoryTestState } = require('../laboratory-test-state.cjs');
 /* eslint @typescript-eslint/no-require-imports: "off" */
 const { readFileSync } = require('node:fs');
 const path = require('node:path');
@@ -32,15 +33,16 @@ function assertLocalTestTarget() {
     );
   }
   state = JSON.parse(readFileSync(process.env.ALUNZA_TEST_STATE, 'utf8'));
+  assertLaboratoryTestState(state);
   apiUrl = process.env.ALUNZA_TEST_API_URL;
   const database = new URL(state.migrationUrl);
   if (
-    state.projectId !== 'alunza-edu-foundation-test' ||
-    state.authUrl !== 'http://127.0.0.1:16421' ||
-    apiUrl !== 'http://127.0.0.1:4100' ||
+    state.projectId !== 'alunza-edu-laboratorio-test' ||
+    state.authUrl !== 'http://127.0.0.1:18421' ||
+    apiUrl !== 'http://127.0.0.1:4300' ||
     !['postgres:', 'postgresql:'].includes(database.protocol) ||
     database.hostname !== '127.0.0.1' ||
-    database.port !== '16422' ||
+    database.port !== '18422' ||
     database.pathname !== '/postgres'
   ) {
     throw new Error(
@@ -744,7 +746,7 @@ describe('Real PostgreSQL grants, constraints and RLS', () => {
       path.resolve(path.dirname(process.env.ALUNZA_TEST_STATE), '..'),
       true,
     );
-    expect(testContext.projectId).toBe('alunza-edu-foundation-test');
+    expect(testContext.projectId).toBe('alunza-edu-laboratorio-test');
     expect(testContext.statePath).toBe(
       path.resolve(process.env.ALUNZA_TEST_STATE),
     );

@@ -30,12 +30,13 @@ export default function StatePage() {
         aria-labelledby="foundation-limit"
       >
         <h2 id="foundation-limit" className="font-semibold">
-          Primera fundación
+          Contenido y editor disponibles
         </h2>
         <p className="max-w-xl text-muted-foreground">
-          Este entorno permite verificar conectividad, sesión y pertenencia a
-          una organización. Las clases, ejercicios y ayudas de aprendizaje se
-          incorporarán en incrementos posteriores.
+          Este entorno permite administrar cursos y clases, publicar actividades
+          y preparar soluciones JavaScript con borradores locales. La ejecución,
+          el envío de soluciones y la ayuda de aprendizaje se incorporarán en
+          incrementos posteriores.
         </p>
       </section>
     </>

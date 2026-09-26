@@ -10,6 +10,7 @@ import {
   testApi,
   nodeService,
   report,
+  testContext,
 } from './test-environment.mjs';
 
 const npm = process.env.npm_execpath;
@@ -56,8 +57,8 @@ async function execute({ ctx, state }) {
     serverAdapterCanaries: 'not-found',
   });
 
-  const api = testApi(ctx, state, 3100);
-  const readyUrl = 'http://127.0.0.1:4100/health/ready';
+  const api = testApi(ctx, state);
+  const readyUrl = `${ctx.apiUrl}/health/ready`;
   const web = nodeService(
     [
       join(root, 'node_modules/next/dist/bin/next'),
@@ -65,7 +66,7 @@ async function execute({ ctx, state }) {
       '--hostname',
       '127.0.0.1',
       '--port',
-      '3100',
+      String(ctx.webPort),
     ],
     publicEnvironment,
     join(root, 'apps/web'),
@@ -101,7 +102,7 @@ async function execute({ ctx, state }) {
   });
   try {
     await api.start(readyUrl);
-    await web.start('http://127.0.0.1:3100');
+    await web.start(ctx.webUrl);
     await new Promise((resolve, reject) => {
       server.once('error', reject);
       server.listen(0, '127.0.0.1', resolve);
@@ -114,7 +115,7 @@ async function execute({ ctx, state }) {
       {
         env: {
           ALUNZA_TEST_STATE: ctx.statePath,
-          ALUNZA_TEST_API_URL: 'http://127.0.0.1:4100',
+          ALUNZA_TEST_API_URL: ctx.apiUrl,
           ALUNZA_E2E_CONTROL_URL: `http://127.0.0.1:${controlPort}`,
           ALUNZA_E2E_CONTROL_KEY: controlKey,
           CYPRESS_CRASH_REPORTS: '0',
@@ -191,7 +192,7 @@ async function execute({ ctx, state }) {
 
 try {
   await report('e2e', { status: 'not-started' }, 'imp-01');
-  await withTestEnvironment(execute, [3100]);
+  await withTestEnvironment(execute, [testContext.webPort]);
 } catch (error) {
   let previous;
   try {

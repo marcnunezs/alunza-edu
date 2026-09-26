@@ -1,16 +1,16 @@
 # Local development only. CLI version is pinned by the root workspace.
-project_id = "alunza-edu-foundation"
+project_id = "alunza-edu-laboratorio"
 
 [api]
 enabled = true
-port = 15421
+port = 17421
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [db]
-port = 15422
-shadow_port = 15420
+port = 17422
+shadow_port = 17420
 major_version = 17
 health_timeout = "2m"
 
@@ -28,22 +28,22 @@ enabled = false
 
 [studio]
 enabled = true
-port = 15423
+port = 17423
 api_url = "http://127.0.0.1"
 
 [inbucket]
 enabled = true
-port = 15424
+port = 17424
 
 [storage]
 enabled = false
 
 [auth]
 enabled = true
-site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://127.0.0.1:3000", "http://localhost:3000/acceso/invitacion*", "http://127.0.0.1:3000/acceso/invitacion*"]
+site_url = "http://localhost:3200"
+additional_redirect_urls = ["http://127.0.0.1:3200", "http://localhost:3200/acceso/invitacion*", "http://127.0.0.1:3200/acceso/invitacion*"]
 jwt_expiry = 3600
-jwt_issuer = "http://127.0.0.1:15421/auth/v1"
+jwt_issuer = "http://127.0.0.1:17421/auth/v1"
 signing_keys_path = "./signing_keys.json"
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10

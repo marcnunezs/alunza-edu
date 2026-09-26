@@ -182,13 +182,22 @@ describe('strict RAG contract and standalone orchestration', () => {
   )('rejects invalid vectors %j', (vectors) => {
     expect(() => validateVectors(vectors, 1, 3)).toThrow('INVALID_VECTOR');
   });
-  it('refuses database destinations outside isolated local test', () => {
-    expect(
-      () =>
-        new PgvectorAssayRepository(
-          'postgresql://alunza_app:fixture@127.0.0.1:15422/postgres',
-        ),
-    ).toThrow('INVALID_CONFIGURATION');
+  it.each([15422, 16422, 17422])(
+    'refuses original or development database destination %s',
+    (port) => {
+      expect(
+        () =>
+          new PgvectorAssayRepository(
+            `postgresql://alunza_app:fixture@127.0.0.1:${port}/postgres`,
+          ),
+      ).toThrow('INVALID_CONFIGURATION');
+    },
+  );
+  it('accepts LAB TEST configuration without opening a database connection', async () => {
+    const repository = new PgvectorAssayRepository(
+      'postgresql://alunza_app:fixture@127.0.0.1:18422/postgres',
+    );
+    await repository.close();
   });
   it.each(['?host=remote&port=5432', '#unexpected', '?sslmode=disable'])(
     'refuses connection option override %s',
@@ -196,7 +205,7 @@ describe('strict RAG contract and standalone orchestration', () => {
       expect(
         () =>
           new PgvectorAssayRepository(
-            `postgresql://alunza_app:fixture@127.0.0.1:16422/postgres${suffix}`,
+            `postgresql://alunza_app:fixture@127.0.0.1:18422/postgres${suffix}`,
           ),
       ).toThrow('INVALID_CONFIGURATION');
     },

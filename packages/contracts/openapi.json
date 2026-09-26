@@ -6,7 +6,7 @@
     "description": "IMP-02. Autorización vigente por organización/clase; publicación y editor. Ejecución estudiantil y progreso todavía fuera del corte."
   },
   "servers": [
-    { "url": "http://127.0.0.1:4000", "description": "Desarrollo local" }
+    { "url": "http://127.0.0.1:4200", "description": "Laboratorio local" }
   ],
   "paths": {
     "/health/live": {

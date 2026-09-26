@@ -3,6 +3,7 @@ import { format } from 'prettier';
 import { z } from 'zod';
 import * as contracts from '@alunza/contracts';
 import { addAcademicOpenApi } from './academic-openapi.mjs';
+import { developmentTarget } from './local-target.mjs';
 
 const schemas = Object.fromEntries(
   Object.entries({
@@ -95,7 +96,9 @@ export const specification = {
     description:
       'IMP-02. Autorización vigente por organización/clase; publicación y editor. Ejecución estudiantil y progreso todavía fuera del corte.',
   },
-  servers: [{ url: 'http://127.0.0.1:4000', description: 'Desarrollo local' }],
+  servers: [
+    { url: developmentTarget.apiUrl, description: 'Laboratorio local' },
+  ],
   paths: {
     '/health/live': { get: operation('liveness', 'Health', []) },
     '/health/ready': { get: operation('readiness', 'Health', [503]) },

@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { root } from './local.mjs';
+import { testTarget } from './local-target.mjs';
 import {
   sources,
   scope,
@@ -11,8 +12,8 @@ import {
 export async function restoreAiFixture(admin, ctx, priorUsage, installed) {
   if (
     !ctx.test ||
-    ctx.projectId !== 'alunza-edu-foundation-test' ||
-    ctx.dbPort !== 16422
+    ctx.projectId !== testTarget.projectId ||
+    ctx.dbPort !== testTarget.dbPort
   )
     throw new Error('Cleanup requires the isolated test project');
   await admin.query('BEGIN');
@@ -37,8 +38,8 @@ export async function restoreAiFixture(admin, ctx, priorUsage, installed) {
 export async function installAiFixture(admin, ctx, options = {}) {
   if (
     !ctx.test ||
-    ctx.projectId !== 'alunza-edu-foundation-test' ||
-    ctx.dbPort !== 16422
+    ctx.projectId !== testTarget.projectId ||
+    ctx.dbPort !== testTarget.dbPort
   )
     throw new Error(
       'El corpus solo se instala en el proyecto exclusivo de pruebas.',

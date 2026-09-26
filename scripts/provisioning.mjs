@@ -3,6 +3,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
 import { context, readState, root } from './local.mjs';
+import { testWorkspaceDirectory } from './local-target.mjs';
 
 const uuid =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -81,9 +82,7 @@ export async function runProvisioning(options) {
     process.stdout.write(`${usage}\n`);
     return;
   }
-  const projectDir = options.test
-    ? join(root, '.local/integration-workspace')
-    : root;
+  const projectDir = options.test ? join(root, testWorkspaceDirectory) : root;
   const ctx = context(projectDir, options.test);
   const state = await readState(ctx);
   const client = new pg.Client({ connectionString: state.migrationUrl });

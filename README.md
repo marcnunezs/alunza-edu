@@ -6,6 +6,8 @@ Este repositorio conserva la documentación CAPSTONE y las especificaciones del 
 
 ## Arranque local
 
+Este laboratorio tiene identificadores, volúmenes, redes y puertos propios: `alunza-edu-laboratorio` para desarrollo y `alunza-edu-laboratorio-test` para las suites. El repositorio original conserva sus servicios `alunza-edu-foundation`. No copies sus archivos privados de estado, claves o `.env.local` al laboratorio. La [guía de demo](docs/work/IMP-02-demo-local.md) registra el entorno y el recorrido por roles.
+
 Trabaja desde esta raíz Git, no desde la carpeta contenedora. Se requiere Docker Desktop con motor Linux activo. En Windows, prepara Node 24.21.0/npm 11.19.0 en la sesión con el script portable (descarga oficial y checksum; no modifica Node global):
 
 ```powershell
@@ -18,7 +20,7 @@ npm run db:seed
 npm run dev
 ```
 
-Abre [Alunza local](http://127.0.0.1:3000). La API escucha en `127.0.0.1:4000`; Supabase Auth/API en `127.0.0.1:15421`, PostgreSQL en `15422`, Studio en `15423` y correo ficticio en `15424`. Se eligieron estos puertos después de detectar servicios ajenos y rangos reservados por Windows. Un puerto ocupado produce un error: los scripts no detienen procesos ajenos. Para preparar Docker se puede abrir Docker Desktop o ejecutar `docker desktop start`.
+Abre [Alunza local](http://127.0.0.1:3200). La API escucha en `127.0.0.1:4200`; Supabase Auth/API en `127.0.0.1:17421`, PostgreSQL en `17422`, Studio en `17423` y correo ficticio en `17424`. Se eligieron estos puertos después de detectar servicios ajenos y rangos reservados por Windows. Un puerto ocupado produce un error: los scripts no detienen procesos ajenos. Para preparar Docker se puede abrir Docker Desktop o ejecutar `docker desktop start`.
 
 La primera descarga de imágenes puede tardar varios minutos. `local:up` crea claves locales de firma y guarda configuración de bootstrap en `.local/runtime.json`. `db:migrate` asigna la contraseña del rol limitado y genera los archivos `.env.local` de API/web por separado. `.env.example` documenta consumidores y sensibilidad; no copies secretos administrativos al frontend. Los archivos de estado, firma y credenciales se excluyen de Git.
 
@@ -41,7 +43,7 @@ npm run test:artifacts
 npm audit
 ```
 
-`test:integration` crea su propio proyecto Supabase en `.local/integration-workspace`, usa puertos `16421–16424` y una API temporal en `4100`. Cada ejecución reconstruye exclusivamente esa BD de pruebas mediante `db reset --local --no-seed`, aplica las migraciones actuales y repite el seed. Ejecuta Jest contra Auth/API/BD reales y pgTAP, detiene exclusivamente su BD para probar fallo y recuperación, y cierra sus servicios en `finally`. Las mutaciones negativas se restauran; el desarrollo no se reinicializa. Un archivo `.local/integration.lock` impide ejecuciones simultáneas; si hubo terminación abrupta, verifica que su PID ya no exista antes de retirar únicamente ese archivo.
+`test:integration` crea su propio proyecto Supabase en `.local/lab-integration-workspace`, usa puertos `18421–18424` y una API temporal en `4300`. Cada ejecución reconstruye exclusivamente esa BD de pruebas mediante `db reset --local --no-seed`, aplica las migraciones actuales y repite el seed. Ejecuta Jest contra Auth/API/BD reales y pgTAP, detiene exclusivamente su BD para probar fallo y recuperación, y cierra sus servicios en `finally`. Las mutaciones negativas se restauran; el desarrollo no se reinicializa. Un archivo `.local/integration.lock` impide ejecuciones simultáneas; si hubo terminación abrupta, verifica que su PID ya no exista antes de retirar únicamente ese archivo.
 
 `npm run openapi` genera [OpenAPI](packages/contracts/openapi.json) desde los esquemas públicos. NestJS concentra identidad, gobierno, cursos, clases, conceptos, ejercicios y actividades bajo `/api/v1`, además de salud. JWT ausente/inválido devuelve 401; cuenta inactiva 403; organización ajena o inexistente 404 indistinguible; BD indisponible 503. Las respuestas privadas no se cachean.
 
@@ -65,7 +67,7 @@ npm run cypress:install
 npm run test:e2e
 ```
 
-El runner reutiliza el fixture y lifecycle de integración, con el mismo `.local/integration.lock`. Reconstruye la BD de pruebas de Supabase16421–16424, construye web/API con `npm run build`, verifica secretos con `test:artifacts` y ejecuta Chrome contra web3100/API4100. El build web usa `.next-e2e`; los puertos y archivos de configuración de desarrollo permanecen separados. Los ocho casos FND conservados cubren salud, acceso de tres roles, rechazo, recarga/cierre de sesión, acceso cruzado y caída/recuperación real de API. Cada test restablece la API; el runner cierra sus procesos y Supabase en `finally`. No se ejecutan dos suites integradas al mismo tiempo.
+El runner reutiliza el fixture y lifecycle de integración, con el mismo `.local/integration.lock`. Reconstruye la BD de pruebas de Supabase18421–18424, construye web/API con `npm run build`, verifica secretos con `test:artifacts` y ejecuta Chrome contra web3300/API4300. El build web usa `.next-e2e`; los puertos y archivos de configuración de desarrollo permanecen separados. Los ocho casos FND conservados cubren salud, acceso de tres roles, rechazo, recarga/cierre de sesión, acceso cruzado y caída/recuperación real de API. Cada test restablece la API; el runner cierra sus procesos y Supabase en `finally`. No se ejecutan dos suites integradas al mismo tiempo.
 
 Los resúmenes históricos de fundación están en `.local/reports/imp-00-05/`; integración/Cypress actuales en `.local/reports/imp-01/`; CI conjunta y ensayos en `.local/reports/imp-00-06-08/`. Los diagnósticos locales saneados permanecen en `.local/evidence/` por incremento. Videos, capturas automáticas y grabación en Cypress Cloud están desactivados. La contraseña ficticia entra al navegador mediante `cy.env()` y se escribe con logging desactivado; credenciales administrativas, conexión BD y clave de control permanecen en Node. El build E2E también comprueba que canarios secretos ficticios de Azure/Sandbox no aparezcan en artefactos públicos.
 
@@ -75,7 +77,7 @@ Los resúmenes históricos de fundación están en `.local/reports/imp-00-05/`; 
 
 ## Alternativa Compose local
 
-Con Supabase iniciado y `db:migrate` ejecutado, detén primero `npm run dev` para liberar 3000/4000:
+Con Supabase iniciado y `db:migrate` ejecutado, detén primero `npm run dev` para liberar 3200/4200:
 
 ```powershell
 npm run compose:up

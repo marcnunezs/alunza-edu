@@ -16,6 +16,8 @@ import {
   collectExpired,
   command,
   imageIdentity,
+  OWNER_LABEL,
+  RUNNER_PREFIX,
 } from '../infra/runner/capsule.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -114,16 +116,18 @@ function observation(kind, result) {
 }
 async function probeReaper() {
   const image = await imageIdentity();
-  const owned = `alunza-runner-${randomUUID()}`;
-  const current = `alunza-runner-${randomUUID()}`;
-  const foreign = `alunza-reaper-control-${randomUUID()}`;
+  const owned = `${RUNNER_PREFIX}${randomUUID()}`;
+  const current = `${RUNNER_PREFIX}${randomUUID()}`;
+  // A fixture created by this probe models the original repository's namespace;
+  // the LAB reaper must preserve it, then finally removes only this known UUID.
+  const foreign = `alunza-runner-${randomUUID()}`;
   const created = [];
   let result;
   try {
-    for (const [name, owner, expires] of [
-      [owned, 'imp-00-06', Date.now() - 1000],
-      [current, 'imp-00-06', Date.now() + 60000],
-      [foreign, 'reaper-control', Date.now() - 1000],
+    for (const [name, ownerLabel, expires] of [
+      [owned, OWNER_LABEL, Date.now() - 1000],
+      [current, OWNER_LABEL, Date.now() + 60000],
+      [foreign, 'org.alunza.runner=imp-00-06', Date.now() - 1000],
     ]) {
       const response = await command([
         'run',
@@ -131,7 +135,7 @@ async function probeReaper() {
         '--name',
         name,
         '--label',
-        `org.alunza.runner=${owner}`,
+        ownerLabel,
         '--label',
         `org.alunza.expires=${expires}`,
         '--network=none',
@@ -436,7 +440,7 @@ async function main() {
       '--all',
       '--quiet',
       '--filter',
-      'label=org.alunza.runner=imp-00-06',
+      `label=${OWNER_LABEL}`,
     ]);
     report.ownedContainersRemaining = remaining.stdout
       .trim()

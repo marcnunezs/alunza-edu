@@ -1,6 +1,11 @@
 import pg from 'pg';
 import { createClient } from '@supabase/supabase-js';
 import {
+  developmentTarget,
+  testTarget,
+  assertRuntimeTarget,
+} from './local-target.mjs';
+import {
   additionalStudents,
   courses,
   classes,
@@ -10,15 +15,10 @@ import {
 } from '../fixtures/demo/academic.mjs';
 
 export async function seedAcademic(state) {
-  const target = new URL(state.migrationUrl);
-  if (
-    !['127.0.0.1', 'localhost'].includes(target.hostname) ||
-    !['15422', '16422'].includes(target.port) ||
-    target.pathname !== '/postgres'
-  )
-    throw new Error(
-      'El fixture académico solo admite la base local de Alunza.',
-    );
+  const expected = [developmentTarget, testTarget].find(
+    (target) => target.projectId === state.projectId,
+  );
+  assertRuntimeTarget(state, expected);
   const database = new pg.Client({ connectionString: state.migrationUrl });
   await database.connect();
   try {

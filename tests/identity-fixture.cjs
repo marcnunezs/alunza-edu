@@ -4,14 +4,16 @@ const { setTimeout: delay } = require('node:timers/promises');
 const { createClient } = require('@supabase/supabase-js');
 const { Client } = require('pg');
 const fixture = require('../fixtures/foundation/identity.json');
+const { assertLaboratoryTestState } = require('./laboratory-test-state.cjs');
 
 module.exports.identityTasks = function identityTasks(state) {
+  assertLaboratoryTestState(state);
   const target = new URL(state.migrationUrl);
   if (
-    state.projectId !== 'alunza-edu-foundation-test' ||
-    state.authUrl !== 'http://127.0.0.1:16421' ||
+    state.projectId !== 'alunza-edu-laboratorio-test' ||
+    state.authUrl !== 'http://127.0.0.1:18421' ||
     target.hostname !== '127.0.0.1' ||
-    target.port !== '16422'
+    target.port !== '18422'
   )
     throw new Error('Las tareas de identidad solo operan fixtures aislados.');
   const owner = fixture.users.find(
@@ -88,19 +90,19 @@ module.exports.identityTasks = function identityTasks(state) {
         throw new Error('Solo correo de fixture Cypress.');
       for (let attempt = 0; attempt < 100; attempt++) {
         const list = await (
-          await fetch('http://127.0.0.1:16424/api/v1/messages')
+          await fetch('http://127.0.0.1:18424/api/v1/messages')
         ).json();
         for (const message of list.messages ?? []) {
           if (!(message.To ?? []).some((to) => to.Address === email)) continue;
           const detail = await (
-            await fetch(`http://127.0.0.1:16424/api/v1/message/${message.ID}`)
+            await fetch(`http://127.0.0.1:18424/api/v1/message/${message.ID}`)
           ).json();
           for (const found of (detail.HTML ?? '').matchAll(/href="([^"]+)"/g)) {
             const raw = found[1].replaceAll('&amp;', '&');
             if (!raw.includes('/acceso/invitacion')) continue;
             const url = new URL(raw);
             if (
-              url.origin !== 'http://127.0.0.1:3100' ||
+              url.origin !== 'http://127.0.0.1:3300' ||
               url.pathname !== '/acceso/invitacion'
             )
               throw new Error('Destino de correo fuera del fixture.');

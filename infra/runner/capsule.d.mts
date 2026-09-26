@@ -1,5 +1,6 @@
 export const OWNER_LABEL: string;
 export const IMAGE_TAG: string;
+export const RUNNER_PREFIX: string;
 export function command(
   args: string[],
   options?: {

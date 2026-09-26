@@ -1,14 +1,21 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  developmentTarget,
+  testTarget,
+  testWorkspaceDirectory,
+  assertRuntimeTarget,
+} from './local-target.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const isolated = process.env.ALUNZA_E2E_BUILD === '1';
-const stateRoot = isolated ? join(root, '.local/integration-workspace') : root;
+const stateRoot = isolated ? join(root, testWorkspaceDirectory) : root;
 const buildDirectory = join(root, 'apps/web', isolated ? '.next-e2e' : '.next');
 const privateState = JSON.parse(
   await readFile(join(stateRoot, '.local/runtime.json'), 'utf8'),
 );
+assertRuntimeTarget(privateState, isolated ? testTarget : developmentTarget);
 const signingKeys = JSON.parse(
   await readFile(join(stateRoot, 'supabase/signing_keys.json'), 'utf8'),
 );

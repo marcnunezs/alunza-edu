@@ -114,7 +114,7 @@ describe('Fundación local integrada', () => {
     cy.env(['apiBaseUrl'], { log: false }).then(({ apiBaseUrl }) => {
       cy.window({ log: false }).then((window) => {
         const session = JSON.parse(
-          window.localStorage.getItem('alunza.auth.127.0.0.1:16421') || '{}',
+          window.localStorage.getItem('alunza.auth.127.0.0.1:18421') || '{}',
         );
         const accessToken: unknown = session.access_token;
         expect(

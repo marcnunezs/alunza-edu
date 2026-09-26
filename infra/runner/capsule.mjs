@@ -2,8 +2,11 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 
-export const OWNER_LABEL = 'org.alunza.runner=imp-00-06';
-export const IMAGE_TAG = 'alunza-runner-capsule:imp-00-06';
+const OWNER_VALUE = 'alunza-edu-laboratorio';
+export const OWNER_LABEL = `org.alunza.runner=${OWNER_VALUE}`;
+export const IMAGE_TAG = 'alunza-laboratorio-runner-capsule:imp-00-06';
+export const RUNNER_PREFIX = 'alunza-laboratorio-runner-';
+const ownedName = new RegExp(`^/${RUNNER_PREFIX}[a-f0-9-]{36}$`);
 // No shell and bounded diagnostics. These commands execute trusted Docker tooling only.
 export function command(
   args,
@@ -70,7 +73,7 @@ export async function runCapsule(input, options = {}) {
   const image = options.image ?? (await imageIdentity());
   if (!/^sha256:[a-f0-9]{64}$/.test(image))
     throw new Error('Runner requires immutable local image ID');
-  const name = `alunza-runner-${randomUUID()}`;
+  const name = `${RUNNER_PREFIX}${randomUUID()}`;
   const started = performance.now();
   let created = false,
     timedOut = false,
@@ -220,8 +223,8 @@ export async function collectExpired() {
     const labels = item.Config.Labels ?? {};
     const expiry = Number(labels['org.alunza.expires']);
     if (
-      labels['org.alunza.runner'] === 'imp-00-06' &&
-      /^\/alunza-runner-[a-f0-9-]{36}$/.test(item.Name) &&
+      labels['org.alunza.runner'] === OWNER_VALUE &&
+      ownedName.test(item.Name) &&
       Number.isFinite(expiry) &&
       expiry < Date.now()
     ) {

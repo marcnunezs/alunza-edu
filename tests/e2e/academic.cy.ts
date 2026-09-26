@@ -64,7 +64,7 @@ function visitAs(
   return cy.visit(path, {
     onBeforeLoad(window) {
       window.localStorage.setItem(
-        'alunza.auth.127.0.0.1:16421',
+        'alunza.auth.127.0.0.1:18421',
         JSON.stringify(session),
       );
       beforeLoad?.(window);

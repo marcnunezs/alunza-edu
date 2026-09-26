@@ -1,4 +1,4 @@
-name: alunza-foundation-apps
+name: alunza-edu-laboratorio-apps
 
 services:
   api:
@@ -6,7 +6,7 @@ services:
       context: ..
       dockerfile: infra/Dockerfile
       target: api
-    image: alunza-foundation-api:local
+    image: alunza-edu-laboratorio-api:local
     init: true
     env_file:
       - ../.local/compose.env
@@ -16,7 +16,7 @@ services:
       PORT: '4000'
       HOST: 0.0.0.0
     ports:
-      - '127.0.0.1:4000:4000'
+      - '127.0.0.1:4200:4000'
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     read_only: true
@@ -44,21 +44,21 @@ services:
       dockerfile: infra/Dockerfile
       target: web
       args:
-        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://127.0.0.1:4000}
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://127.0.0.1:4200}
         NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?Run npm run local:up first}
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:?Run npm run local:up first}
-    image: alunza-foundation-web:local
+    image: alunza-edu-laboratorio-web:local
     init: true
     environment:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: '1'
       PORT: '3000'
       HOSTNAME: 0.0.0.0
-      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://127.0.0.1:4000}
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://127.0.0.1:4200}
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?Run npm run local:up first}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:?Run npm run local:up first}
     ports:
-      - '127.0.0.1:3000:3000'
+      - '127.0.0.1:3200:3000'
     depends_on:
       api:
         condition: service_started
