@@ -49,8 +49,13 @@ export class DatabaseService implements OnModuleDestroy {
 
   async ready(): Promise<void> {
     let client: PoolClient | undefined;
+    let discard = false;
+    const onClientError = () => {
+      discard = true;
+    };
     try {
       client = await this.pool.connect();
+      client.on('error', onClientError);
       await this.assertLimitedRole(client);
       await client.query(`
         SELECT id, display_name, account_state FROM app.profiles LIMIT 0;
@@ -66,10 +71,12 @@ export class DatabaseService implements OnModuleDestroy {
         ; SELECT id,current_version_id FROM app.exercises LIMIT 0
         ; SELECT id,state,revision FROM app.activities LIMIT 0
       `);
+      if (discard) throw databaseUnavailable();
     } catch {
       throw databaseUnavailable();
     } finally {
-      client?.release();
+      client?.release(discard);
+      client?.removeListener('error', onClientError);
     }
   }
 
@@ -103,8 +110,12 @@ export class DatabaseService implements OnModuleDestroy {
   ): Promise<T> {
     let client: PoolClient | undefined;
     let discard = false;
+    const onClientError = () => {
+      discard = true;
+    };
     try {
       client = await this.pool.connect();
+      client.on('error', onClientError);
       await client.query(readOnly ? 'BEGIN READ ONLY' : 'BEGIN');
       await this.assertLimitedRole(client);
       await client.query(
@@ -119,7 +130,9 @@ export class DatabaseService implements OnModuleDestroy {
         if (!session.rows[0]?.valid) throw unauthenticated();
       }
       const result = await action(client);
+      if (discard) throw databaseUnavailable();
       await client.query('COMMIT');
+      if (discard) throw databaseUnavailable();
       return result;
     } catch (error) {
       if (client) {
@@ -231,6 +244,7 @@ export class DatabaseService implements OnModuleDestroy {
       throw databaseUnavailable();
     } finally {
       client?.release(discard);
+      client?.removeListener('error', onClientError);
     }
   }
 
