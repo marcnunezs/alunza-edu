@@ -6,6 +6,7 @@ import {
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { randomUUID } from 'node:crypto';
 const reportPath = new URL(
   '../.local/reports/imp-00-06-08/runner-doctor.json',
   import.meta.url,
@@ -40,12 +41,13 @@ export async function inspectDoctor({
     attempted = true;
     response = await capsule(
       {
-        code: String.raw`module.exports.solve=()=>{const text=require('node:fs').readFileSync('/proc/self/status','utf8');return{node:process.version,uid:process.getuid(),capabilities:Object.fromEntries(text.split('\n').filter(line=>/^Cap(Inh|Prm|Eff|Bnd|Amb):/.test(line)).map(line=>{const [name,value]=line.split(':');return[name,value.trim()];}))};};`,
+        executionId: randomUUID(),
+        code: '',
         args: [],
         budgetMs: 3000,
         outputRemaining: 65536,
       },
-      { image },
+      { image, probe: 'identity' },
     );
     const packet = response.packet;
     if (
@@ -65,7 +67,7 @@ export async function inspectDoctor({
     const student = returned.value;
     const capabilityNames = ['CapInh', 'CapPrm', 'CapEff', 'CapBnd', 'CapAmb'];
     if (
-      returned.kind !== 'value' ||
+      returned.kind !== 'probe' ||
       student?.uid !== 10001 ||
       student.node !== 'v24.21.0' ||
       !student.capabilities ||

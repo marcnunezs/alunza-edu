@@ -1,52 +1,81 @@
 export const hiddenSentinel = 'HIDDEN_FIXTURE_MUST_NOT_APPEAR_PUBLICLY';
+const returnOverhead = Buffer.byteLength(
+  JSON.stringify({ kind: 'value', value: '', invocation: 'QUICKJS_SYNC_CALL' }),
+);
 const one = (expected = true, args = []) => [
   { id: 'visible-1', visibility: 'visible', args, expected },
 ];
-// These fixed programs execute only inside the student capsule, never on the host.
-const processProbe = String.raw`
-const fs=require('node:fs'), cp=require('node:child_process');
-const children=[], errors=[];
-for(let i=0;i<40;i++){
-  const child=cp.spawn('/bin/sleep',['5'],{stdio:'ignore'});
-  child.on('error',error=>errors.push(error.code));
-  children.push(child);
-}
-setTimeout(()=>{
-  const live=children.filter(child=>Number.isInteger(child.pid));
-  const validIdentity=pid=>{
-    const status=fs.readFileSync('/proc/'+pid+'/status','utf8');
-    const caps=status.split('\n').filter(line=>/^Cap(Inh|Prm|Eff|Bnd|Amb):/.test(line));
-    return /^Uid:\s+10001\s+10001\s+10001\s+10001$/m.test(status) && caps.length===5 && caps.every(line=>line.split(':')[1].trim()==='0000000000000000');
-  };
-  const result={attempted:40,started:live.length,eagain:errors.filter(error=>error==='EAGAIN').length,
-    unexpectedErrors:errors.filter(error=>error!=='EAGAIN').length,
-    pidsMax:Number(fs.readFileSync('/sys/fs/cgroup/pids.max','utf8')),
-    pidsCurrent:Number(fs.readFileSync('/sys/fs/cgroup/pids.current','utf8')),
-    uid:process.getuid(),identitiesValid:validIdentity('self')&&live.every(child=>validIdentity(child.pid))};
-  for(const child of live)child.kill('SIGKILL');
-  process.stdout.write(JSON.stringify(result));
-},250);`;
-const networkProbe = String.raw`
-const dns=require('node:dns'), net=require('node:net'), dgram=require('node:dgram');
-const result={loopbackOnly:Object.keys(require('node:os').networkInterfaces()).every(name=>name==='lo')};
-let finished=false;
-const resolver=new dns.Resolver({timeout:100,tries:1});
-const tcp=net.connect({host:'2001:db8::1',port:443});
-const udp=dgram.createSocket('udp4');
-const finish=()=>{
-  if(finished || !result.dns || !result.ipv6 || !result.udp)return;
-  finished=true;clearTimeout(timer);resolver.cancel();tcp.destroy();
-  try{udp.close();}catch{}
-  process.stdout.write(JSON.stringify(result));
-};
-const note=(key,value)=>{result[key]=value;finish();};
-const timer=setTimeout(()=>{for(const key of ['dns','ipv6','udp'])result[key]??='PROBE_TIMEOUT';finish();},500);
-resolver.setServers(['203.0.113.1']);
-resolver.resolve4('alunza-runner.invalid',error=>note('dns',error?.code??'UNEXPECTED_SUCCESS'));
-tcp.on('error',error=>note('ipv6',error.code));tcp.on('connect',()=>note('ipv6','UNEXPECTED_SUCCESS'));
-udp.on('error',error=>note('udp',error.code));
-udp.send(Buffer.from('fixture'),9,'203.0.113.1',error=>note('udp',error?.code??'UNEXPECTED_SUCCESS'));`;
+// These fixed programs execute only in the QuickJS guest inside a capsule.
 export const runnerFixtures = [
+  ...[
+    [
+      'promise-null-prototype',
+      'const p=Promise.resolve(false);Object.setPrototypeOf(p,null);return p;',
+      {},
+    ],
+    [
+      'promise-null-prototype-nested',
+      'const p=Promise.resolve(false);Object.setPrototypeOf(p,null);return {x:p};',
+      { x: {} },
+    ],
+    [
+      'promise-pending-prototype',
+      'const p=new Promise(()=>{});Object.setPrototypeOf(p,Object.prototype);return p;',
+      {},
+    ],
+    [
+      'promise-rejected-prototype',
+      'const p=Promise.reject(false);Object.setPrototypeOf(p,null);return [p];',
+      [{}],
+    ],
+    [
+      'promise-masked-then',
+      'const p=Promise.resolve(false);Object.setPrototypeOf(p,Object.prototype);Object.defineProperty(p,"then",{get(){console.log("PROMISE_GETTER_CALLED");throw new Error("guest getter");}});return p;',
+      {},
+    ],
+  ].map(([id, body, expected]) => ({
+    id,
+    code: `module.exports.solve=()=>{${body}};`,
+    tests: one(expected),
+    expected: 'RUNTIME_ERROR',
+    reason: 'STUDENT_EXCEPTION',
+    expectedStdout: '',
+  })),
+  ...[
+    ['map', 'new Map([["x",1]])'],
+    ['date', 'new Date(0)'],
+    ['set', 'new Set([1])'],
+    ['regexp', '/x/'],
+    ['arraybuffer', 'new ArrayBuffer(2)'],
+    ['typedarray', 'new Uint8Array(2)'],
+    ['boxed-number', 'new Number(1)'],
+    ['error', 'new Error("x")'],
+  ].map(([name, expression]) => ({
+    id: `non-json-${name}-prototype`,
+    code: `module.exports.solve=()=>{const value=${expression};Object.setPrototypeOf(value,null);return {x:value};};`,
+    tests: one({ x: {} }),
+    expected: 'RUNTIME_ERROR',
+    reason: 'STUDENT_EXCEPTION',
+  })),
+  {
+    id: 'console-nul-preserved',
+    code: 'module.exports.solve=()=>{console.log("\\0".repeat(100));return true;};',
+    tests: one(),
+    expected: 'SUCCESS',
+    expectedStdout: '\0'.repeat(100) + '\n',
+  },
+  {
+    id: 'return-nul-preserved',
+    code: 'module.exports.solve=()=>"\\0".repeat(3);',
+    tests: one('\0'.repeat(3)),
+    expected: 'SUCCESS',
+  },
+  {
+    id: 'argument-nul-preserved',
+    code: 'module.exports.solve=x=>x.length;',
+    tests: one(3, ['\0'.repeat(3)]),
+    expected: 'SUCCESS',
+  },
   {
     id: 'sync-json-success',
     code: 'module.exports.solve=(a,b)=>({sum:a+b});',
@@ -66,6 +95,12 @@ export const runnerFixtures = [
     expected: 'RUNTIME_ERROR',
   },
   {
+    id: 'runtime-syntax-exception',
+    code: 'module.exports.solve=()=>{throw new SyntaxError("student");};',
+    tests: one(),
+    expected: 'RUNTIME_ERROR',
+  },
+  {
     id: 'assertion',
     code: 'module.exports.solve=()=>false;',
     tests: one(),
@@ -78,55 +113,55 @@ export const runnerFixtures = [
     expected: 'TIMEOUT',
   },
   {
-    id: 'blocked-event-loop',
-    code: 'module.exports.solve=()=>Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0);',
+    id: 'module-infinite-loop',
+    code: 'for(;;){}',
     tests: one(),
     expected: 'TIMEOUT',
   },
   {
     id: 'cumulative-budget',
-    code: 'module.exports.solve=()=>{Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,1700);return true;};',
+    code: 'module.exports.solve=()=>{const until=Date.now()+1700;while(Date.now()<until){}return true;};',
     tests: [...one(), { ...one()[0], id: 'visible-2' }],
     expected: 'TIMEOUT',
-  },
-  {
-    id: 'native-buffer-memory',
-    code: 'module.exports.solve=()=>{const blocks=[];for(;;)blocks.push(Buffer.alloc(8*1024*1024,1));};',
-    tests: one(),
-    expected: 'UNKNOWN',
-    reason: 'MEMORY_LIMIT',
-  },
-  {
-    id: 'descendant-memory',
-    code: `module.exports.solve=()=>{require('node:child_process').spawnSync(process.execPath,['-e','const a=[];for(;;)a.push(Buffer.alloc(8*1024*1024,1));'],{stdio:'ignore'});return true;};`,
-    tests: one(),
-    expected: 'UNKNOWN',
-    reason: 'MEMORY_LIMIT',
   },
   {
     id: 'javascript-heap-memory',
     code: 'module.exports.solve=()=>{const arrays=[];for(;;)arrays.push(new Array(1024*1024).fill(1));};',
     tests: one(),
     expected: 'UNKNOWN',
-    observeTermination: true,
+    reason: 'MEMORY_LIMIT',
+  },
+  {
+    id: 'arraybuffer-memory',
+    code: 'module.exports.solve=()=>{const blocks=[];for(;;){const block=new Uint8Array(8*1024*1024);block.fill(1);blocks.push(block);}};',
+    tests: one(),
+    expected: 'UNKNOWN',
+    reason: 'MEMORY_LIMIT',
   },
   ...[65535, 65536, 65537].map((bytes) => ({
     id: `output-${bytes}`,
-    code: `module.exports.solve=()=>{require('node:fs').writeSync(1,Buffer.alloc(${bytes},120));return true;};`,
+    code: `module.exports.solve=()=>{console.log('x'.repeat(${bytes - 1}));return true;};`,
     tests: one(),
     expected: bytes > 65536 ? 'UNKNOWN' : 'SUCCESS',
     ...(bytes > 65536 ? { reason: 'OUTPUT_LIMIT' } : {}),
   })),
   {
     id: 'combined-stdout-stderr',
-    code: `module.exports.solve=()=>{const fs=require('node:fs');fs.writeSync(1,Buffer.alloc(32768));fs.writeSync(2,Buffer.alloc(32769));return true;};`,
+    code: `module.exports.solve=()=>{console.log('x'.repeat(32767));console.error('x'.repeat(32768));return true;};`,
     tests: one(),
     expected: 'UNKNOWN',
     reason: 'OUTPUT_LIMIT',
   },
   {
     id: 'output-utf8',
-    code: `module.exports.solve=()=>{require('node:fs').writeSync(1,'é'.repeat(32769));return true;};`,
+    code: `module.exports.solve=()=>{console.log('é'.repeat(32768));return true;};`,
+    tests: one(),
+    expected: 'UNKNOWN',
+    reason: 'OUTPUT_LIMIT',
+  },
+  {
+    id: 'caught-output-limit',
+    code: `module.exports.solve=()=>{try{console.log('x'.repeat(65536));}catch{}return true;};`,
     tests: one(),
     expected: 'UNKNOWN',
     reason: 'OUTPUT_LIMIT',
@@ -138,6 +173,13 @@ export const runnerFixtures = [
     expected: 'UNKNOWN',
     reason: 'RETURN_LIMIT',
   },
+  ...[65535, 65536, 65537].map((bytes) => ({
+    id: `return-${bytes}`,
+    code: `module.exports.solve=()=>'x'.repeat(${bytes - returnOverhead});`,
+    tests: one('x'.repeat(bytes - returnOverhead)),
+    expected: bytes > 65536 ? 'UNKNOWN' : 'SUCCESS',
+    ...(bytes > 65536 ? { reason: 'RETURN_LIMIT' } : {}),
+  })),
   {
     id: 'async-rejected',
     code: 'module.exports.solve=async()=>true;',
@@ -151,11 +193,46 @@ export const runnerFixtures = [
     expected: 'RUNTIME_ERROR',
   },
   {
-    id: 'process-exit-incomplete',
-    code: 'module.exports.solve=()=>process.exit(0);',
+    id: 'getter-return',
+    code: 'module.exports.solve=()=>({get x(){return true}});',
+    tests: one({ x: true }),
+    expected: 'RUNTIME_ERROR',
+  },
+  {
+    id: 'tojson-return',
+    code: 'module.exports.solve=()=>({toJSON(){return true}});',
     tests: one(),
-    expected: 'UNKNOWN',
-    reason: 'PROTOCOL_INVALID',
+    expected: 'RUNTIME_ERROR',
+  },
+  {
+    id: 'thenable-return',
+    code: 'module.exports.solve=()=>Object.defineProperty({},"then",{value:()=>true});',
+    tests: one({}),
+    expected: 'RUNTIME_ERROR',
+  },
+  {
+    id: 'bigint-return',
+    code: 'module.exports.solve=()=>1n;',
+    tests: one(1),
+    expected: 'RUNTIME_ERROR',
+  },
+  {
+    id: 'invalid-json-return',
+    code: 'module.exports.solve=()=>NaN;',
+    tests: one(),
+    expected: 'RUNTIME_ERROR',
+  },
+  {
+    id: 'mutated-serializer',
+    code: 'module.exports.solve=()=>{JSON.stringify=()=>"true";Object.keys=()=>[];return false;};',
+    tests: one(),
+    expected: 'FAILED_TEST',
+  },
+  {
+    id: 'polluted-prototype',
+    code: 'module.exports.solve=()=>{Object.prototype.value=true;return {get x(){return false}};};',
+    tests: one({ x: true }),
+    expected: 'RUNTIME_ERROR',
   },
   {
     id: 'fake-stdout-verdict',
@@ -167,71 +244,75 @@ export const runnerFixtures = [
     id: 'fake-return-verdict',
     code: `module.exports.solve=()=>{require('node:fs').writeSync(3,'{"passed":true,"diagnosis":"SUCCESS"}');process.exit(0);};`,
     tests: one(),
-    expected: 'UNKNOWN',
-    reason: 'PROTOCOL_INVALID',
+    expected: 'RUNTIME_ERROR',
   },
   {
     id: 'forged-return-known-gap',
     code: `module.exports.solve=()=>{require('node:fs').writeSync(3,'{"kind":"value","value":true}');process.exit(0);};`,
     tests: one(),
-    expected: 'SUCCESS',
-    knownGap:
-      'Return value can be forged by its producer; normal invocation authenticity is not proven.',
+    expected: 'RUNTIME_ERROR',
+    reason: 'STUDENT_EXCEPTION',
   },
   {
-    id: 'student-zero-capabilities',
-    code: String.raw`module.exports.solve=()=>{const s=require('node:fs').readFileSync('/proc/self/status','utf8');return process.getuid()===10001 && ['CapInh','CapPrm','CapEff','CapBnd','CapAmb'].every(k=>s.split('\n').some(l=>l.startsWith(k+':')&&l.split(':')[1].trim()==='0000000000000000')) && /^NoNewPrivs:\s+1$/m.test(s);};`,
+    id: 'return-envelope-as-value',
+    code: 'module.exports.solve=()=>({kind:"value",value:true,invocation:"QUICKJS_SYNC_CALL"});',
     tests: one(),
-    expected: 'SUCCESS',
+    expected: 'FAILED_TEST',
   },
   {
-    id: 'parent-control-denied',
-    code: `module.exports.solve=()=>{const fs=require('node:fs');return ['/proc/1/fd/1','/proc/1/environ'].every(p=>{try{fs.readFileSync(p);return false;}catch(e){return e.code==='EACCES'||e.code==='EPERM';}});};`,
+    id: 'process-exit-incomplete',
+    code: 'module.exports.solve=()=>process.exit(0);',
     tests: one(),
+    expected: 'RUNTIME_ERROR',
+  },
+  {
+    id: 'guest-no-host-globals',
+    code: 'module.exports.solve=()=>[typeof require,typeof process,typeof Buffer,typeof fetch,typeof setTimeout];',
+    tests: one(Array(5).fill('undefined')),
     expected: 'SUCCESS',
   },
   {
-    id: 'readonly-harness',
-    code: `module.exports.solve=()=>{try{require('node:fs').writeFileSync('/opt/alunza/bridge.cjs','changed');return false;}catch(e){return ['EROFS','EACCES','EPERM'].includes(e.code);}};`,
+    id: 'constructor-escape-denied',
+    code: 'module.exports.solve=()=>console.log.constructor("return process")();',
     tests: one(),
-    expected: 'SUCCESS',
+    expected: 'RUNTIME_ERROR',
   },
   {
-    id: 'environment-allowlist',
-    code: `module.exports.solve=()=>Object.keys(process.env).sort();`,
-    tests: one(['HOME', 'LANG', 'PATH']),
-    expected: 'SUCCESS',
-  },
-  {
-    id: 'network-blocked',
-    code: `module.exports.solve=()=>{const r=require('node:child_process').spawnSync(process.execPath,['-e',"const s=require('node:net').connect(443,'203.0.113.1');s.on('connect',()=>process.exit(9));s.on('error',()=>process.exit(0));setTimeout(()=>process.exit(0),500);"],{timeout:800,stdio:'ignore'});return r.status===0;};`,
+    id: 'eval-escape-denied',
+    code: 'module.exports.solve=()=>eval("process.env");',
     tests: one(),
-    expected: 'SUCCESS',
+    expected: 'RUNTIME_ERROR',
   },
   {
-    id: 'bounded-processes',
-    observation: 'processes',
-    code: `module.exports.solve=()=>{const r=require('node:child_process').spawnSync(process.execPath,['-e',${JSON.stringify(processProbe)}],{encoding:'utf8',timeout:1500,maxBuffer:4096});if(r.status!==0)return false;const x=JSON.parse(r.stdout);console.log(JSON.stringify(x));return x.attempted===40&&x.started>0&&x.started<40&&x.started+x.eagain===40&&x.eagain>0&&x.unexpectedErrors===0&&x.pidsMax===32&&x.pidsCurrent<=32&&x.uid===10001&&x.identitiesValid;};`,
+    id: 'import-denied',
+    code: 'module.exports.solve=()=>import("node:fs");',
     tests: one(),
-    expected: 'SUCCESS',
-  },
-  {
-    id: 'blocked-dns-ipv6-udp',
-    observation: 'network',
-    code: `module.exports.solve=()=>{const r=require('node:child_process').spawnSync(process.execPath,['-e',${JSON.stringify(networkProbe)}],{encoding:'utf8',timeout:1500,maxBuffer:4096});if(r.status!==0)return false;const x=JSON.parse(r.stdout);console.log(JSON.stringify(x));const denied=['ENETUNREACH','EHOSTUNREACH','EACCES','EPERM','ECONNREFUSED'];return x.loopbackOnly&&['dns','ipv6','udp'].every(key=>denied.includes(x[key]));};`,
-    tests: one(),
-    expected: 'SUCCESS',
+    expected: 'RUNTIME_ERROR',
   },
   {
     id: 'case-state-isolation',
-    code: `module.exports.solve=()=>{const fs=require('node:fs');const before=fs.existsSync('/tmp/student-state');fs.writeFileSync('/tmp/student-state','set');return !before;};`,
+    code: 'module.exports.solve=()=>{const before=globalThis.seen;globalThis.seen=true;return !before;};',
     tests: [...one(), { ...one()[0], id: 'visible-2' }],
+    expected: 'SUCCESS',
+  },
+  {
+    id: 'json-arguments',
+    code: 'module.exports.solve=x=>({a:x.a,n:x.n,arr:x.arr});',
+    tests: one({ a: 'é', n: null, arr: [false, 2] }, [
+      { a: 'é', n: null, arr: [false, 2] },
+    ]),
+    expected: 'SUCCESS',
+  },
+  {
+    id: 'json-argument-prototype',
+    code: 'module.exports.solve=x=>Object.getPrototypeOf(x)===Object.prototype&&x.hasOwnProperty("a");',
+    tests: one(true, [{ a: 1 }]),
     expected: 'SUCCESS',
   },
   {
     id: 'hidden-projection',
     mode: 'SUBMIT',
-    code: 'module.exports.solve=(x)=>{console.log(x);console.error(x);return x;};',
+    code: 'module.exports.solve=x=>{console.log(x);console.error(x);return x;};',
     tests: [
       {
         id: 'hidden-secret-case',
@@ -243,4 +324,13 @@ export const runnerFixtures = [
     expected: 'SUCCESS',
     privateSentinel: hiddenSentinel,
   },
+];
+
+export const osProbeNames = [
+  'identity',
+  'permissions',
+  'memory',
+  'descendant-memory',
+  'processes',
+  'network',
 ];

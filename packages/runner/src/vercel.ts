@@ -119,7 +119,12 @@ export class VercelAdapter implements CapsuleAdapter {
     this.evidence.image = image;
     if (sandbox.vcpus !== 1 || sandbox.memory !== 2048 || sandbox.persistent)
       throw new Error('Unexpected Sandbox resources');
-    const paths = ['capsule.mjs', 'remote-driver.mjs', 'remote-init.mjs'];
+    const paths = [
+      'capsule.mjs',
+      'docker-engine.mjs',
+      'remote-driver.mjs',
+      'remote-init.mjs',
+    ];
     await sandbox.writeFiles(
       await Promise.all(
         paths.map(async (path) => ({

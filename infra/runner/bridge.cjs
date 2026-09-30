@@ -81,29 +81,23 @@ process.stdin.on('end', async () => {
       return;
     }
     fs.writeFileSync('/tmp/solution.cjs', input.code, { mode: 0o444 });
-    fs.writeFileSync('/tmp/args.json', JSON.stringify(input.args), {
-      mode: 0o444,
-    });
-    // Compile only, inside the capsule. No student code runs on the host.
-    const checker = launch(['--check', '/tmp/solution.cjs']);
-    checker.stdout.resume();
-    checker.stderr.resume();
-    const checkExit = await new Promise((resolve) => {
-      checker.on('error', () => resolve(125));
-      checker.on('close', resolve);
-    });
-    if (checkExit !== 0) {
-      complete({
-        status: checkExit === 1 ? 'syntax' : 'failure',
-        runtimeMs: performance.now() - start,
-        stdout: '',
-        stderr: '',
-        outputBytes: 0,
-        outputTruncated: false,
-      });
-      return;
-    }
-    const worker = launch(['/opt/alunza/worker.cjs'], true);
+    fs.writeFileSync(
+      '/tmp/args.json',
+      JSON.stringify({
+        args: input.args,
+        budgetMs: input.budgetMs,
+        outputRemaining: input.outputRemaining,
+      }),
+      {
+        mode: 0o444,
+      },
+    );
+    // Probe mode is chosen only by trusted Docker tooling, never by capsule input.
+    const probe = process.env.ALUNZA_RUNNER_PROBE;
+    const worker = launch(
+      probe ? ['/opt/alunza/os-probe.cjs', probe] : ['/opt/alunza/worker.cjs'],
+      true,
+    );
     let reason = null,
       outputBytes = 0,
       stdout = Buffer.alloc(0),

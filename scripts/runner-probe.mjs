@@ -11,13 +11,17 @@ import {
   LIMITS,
   RUNNER_VERSION,
 } from '../packages/runner/dist/index.js';
-import { runnerFixtures } from '../tests/runner/fixtures.mjs';
+import { runnerFixtures, osProbeNames } from '../tests/runner/fixtures.mjs';
+import { probeExecutionCleanup } from '../tests/runner/cleanup-probe.mjs';
+import { localDockerEngine } from '../infra/runner/docker-engine.mjs';
 import {
   collectExpired,
   command,
   imageIdentity,
   OWNER_LABEL,
   RUNNER_PREFIX,
+  runCapsule,
+  cleanupDockerExecution,
 } from '../infra/runner/capsule.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -116,18 +120,27 @@ function observation(kind, result) {
 }
 async function probeReaper() {
   const image = await imageIdentity();
+  const engine = await localDockerEngine(command);
   const owned = `${RUNNER_PREFIX}${randomUUID()}`;
   const current = `${RUNNER_PREFIX}${randomUUID()}`;
+  const outsideScope = `${RUNNER_PREFIX}${randomUUID()}`;
   // A fixture created by this probe models the original repository's namespace;
   // the LAB reaper must preserve it, then finally removes only this known UUID.
   const foreign = `alunza-runner-${randomUUID()}`;
   const created = [];
+  const fixtureIds = [];
+  // DEV can reap concurrently. Keep every fixture fresh in real time, then
+  // advance only this observation, scoped to the exact IDs created here.
+  const baseTime = Date.now();
+  const hour = 60 * 60 * 1000;
+  const observedNow = baseTime + 2 * hour;
   let result;
   try {
     for (const [name, ownerLabel, expires] of [
-      [owned, OWNER_LABEL, Date.now() - 1000],
-      [current, OWNER_LABEL, Date.now() + 60000],
-      [foreign, 'org.alunza.runner=imp-00-06', Date.now() - 1000],
+      [owned, OWNER_LABEL, baseTime + hour],
+      [current, OWNER_LABEL, baseTime + 3 * hour],
+      [foreign, 'org.alunza.runner=imp-00-06', baseTime + hour],
+      [outsideScope, OWNER_LABEL, baseTime + hour],
     ]) {
       const response = await command([
         'run',
@@ -155,6 +168,10 @@ async function probeReaper() {
       if (response.code !== 0)
         throw new Error('Reaper fixture creation failed');
       created.push(name);
+      const id = response.stdout.trim();
+      if (!/^[a-f0-9]{64}$/.test(id))
+        throw new Error('Reaper fixture identifier unavailable');
+      fixtureIds.push(id);
     }
     const before = await command([
       'inspect',
@@ -162,8 +179,11 @@ async function probeReaper() {
       '--format',
       '{{.State.Running}}',
     ]);
-    const removed = await collectExpired();
-    const expired = await command(['inspect', owned]);
+    const removed = await collectExpired(undefined, {
+      nowMs: observedNow,
+      containerIds: fixtureIds.slice(0, 3),
+    });
+    const expired = await engine.request('GET', `/containers/${owned}/json`);
     const fresh = await command([
       'inspect',
       current,
@@ -176,20 +196,29 @@ async function probeReaper() {
       '--format',
       '{{.State.Running}}',
     ]);
+    const unscoped = await command([
+      'inspect',
+      outsideScope,
+      '--format',
+      '{{.State.Running}}',
+    ]);
     const pass =
       before.stdout.trim() === 'true' &&
       removed === 1 &&
-      expired.code !== 0 &&
+      expired.status === 404 &&
       fresh.stdout.trim() === 'true' &&
-      unrelated.stdout.trim() === 'true';
+      unrelated.stdout.trim() === 'true' &&
+      unscoped.stdout.trim() === 'true';
     result = {
       id: 'expired-owned-orphan',
       status: pass ? 'PASS' : 'FAIL',
+      clock: 'FUTURE_OBSERVATION_SCOPED_TO_THREE_FIXTURE_IDS',
       removed,
       expiredWasRunning: before.stdout.trim() === 'true',
-      expiredRemoved: expired.code !== 0,
+      expiredRemoved: expired.status === 404,
       freshPreserved: fresh.stdout.trim() === 'true',
       unrelatedPreserved: unrelated.stdout.trim() === 'true',
+      outsideScopePreserved: unscoped.stdout.trim() === 'true',
     };
   } finally {
     for (const name of created) {
@@ -284,7 +313,7 @@ async function main() {
       )
         throw new Error('Docker controllers unavailable');
       await imageIdentity();
-      await collectExpired();
+      // Cleanup below is scoped to exact fixture IDs created by this probe.
     } catch {
       throw new PendingError('DOCKER_AND_PREPARED_IMAGE_REQUIRED');
     }
@@ -298,7 +327,7 @@ async function main() {
     remote: provider === 'vercel' ? 'AUTHORIZED_ATTEMPT' : 'NOT_RUN',
     acceptance: 'EXPERIMENTAL_ONLY',
     knownLimits: [
-      'Return producer can forge data; invocation authenticity unproven',
+      'Guest uses QuickJS WASM; host owns return emission after normal synchronous invocation',
       'Trusted bridge UID0 retains SETUID/SETGID/SETPCAP; student must have zero capabilities',
       'Bridge memory counts within128MiB',
       'Kernel transient memory overshoot and kill scheduling latency',
@@ -310,11 +339,7 @@ async function main() {
     provider === 'vercel'
       ? manifest.budget.maxSandboxRuns
       : runnerFixtures.length;
-  const selected = acceptanceOnly
-    ? runnerFixtures.filter((item) =>
-        ['bounded-processes', 'blocked-dns-ipv6-udp'].includes(item.id),
-      )
-    : runnerFixtures.slice(0, maxRuns);
+  const selected = acceptanceOnly ? [] : runnerFixtures.slice(0, maxRuns);
   let failures = 0;
   const runFixture = async (fixture, adapter, signal) =>
     execute(
@@ -359,6 +384,8 @@ async function main() {
       result.diagnosisCode === fixture.expected &&
       (!fixture.reason || fixture.reason === result.terminationReason) &&
       result.evidence.cleanupVerified &&
+      (fixture.expectedStdout === undefined ||
+        result.visibleTestResults[0]?.stdout === fixture.expectedStdout) &&
       (!fixture.observeTermination ||
         adapter.terminationObservation?.dockerOomKilled ||
         adapter.terminationObservation?.oomKillEvents > 0 ||
@@ -401,6 +428,104 @@ async function main() {
     );
   }
   if (provider === 'docker') {
+    const correlatedCleanup = await probeExecutionCleanup();
+    report.cases.push(correlatedCleanup);
+    if (correlatedCleanup.status !== 'PASS') failures++;
+    for (const probe of osProbeNames) {
+      const response = await runCapsule(
+        {
+          executionId: randomUUID(),
+          code: '',
+          args: [],
+          budgetMs: 3000,
+          outputRemaining: 65536,
+        },
+        { probe },
+      );
+      const oom =
+        response.oomKilled ||
+        /^oom_kill [1-9]\d*$/m.test(
+          response.packet?.cgroup?.['memory.events'] ?? '',
+        );
+      let value;
+      try {
+        const envelope = JSON.parse(
+          Buffer.from(response.packet.returnData, 'base64').toString('utf8'),
+        );
+        if (envelope.kind === 'probe') value = envelope.value;
+      } catch {
+        /* no complete probe */
+      }
+      let pass = response.cleanupVerified;
+      if (probe === 'memory' || probe === 'descendant-memory') pass &&= oom;
+      else {
+        pass &&=
+          response.exitCode === 0 &&
+          response.packet?.exitCode === 0 &&
+          !response.timedOut &&
+          !oom;
+        if (probe === 'identity')
+          pass &&=
+            value?.uid === 10001 &&
+            Object.values(value?.capabilities ?? {}).length === 5 &&
+            Object.values(value.capabilities).every(
+              (cap) => cap === '0000000000000000',
+            );
+        if (probe === 'permissions')
+          pass &&=
+            value?.parentDenied &&
+            value?.readonly &&
+            JSON.stringify(value?.environment) ===
+              JSON.stringify(['HOME', 'LANG', 'PATH']);
+        if (probe === 'processes')
+          pass &&=
+            value?.attempted === 40 &&
+            value.started > 0 &&
+            value.started < 40 &&
+            value.started + value.eagain === 40 &&
+            value.eagain > 0 &&
+            value.unexpectedErrors === 0 &&
+            value.pidsMax === 32 &&
+            value.pidsCurrent <= 32 &&
+            value.identitiesValid;
+        if (probe === 'network')
+          pass &&=
+            value?.loopbackOnly &&
+            ['dns', 'ipv6', 'udp'].every((key) =>
+              [
+                'ENETUNREACH',
+                'EHOSTUNREACH',
+                'EACCES',
+                'EPERM',
+                'ECONNREFUSED',
+              ].includes(value[key]),
+            );
+      }
+      if (!pass) failures++;
+      report.cases.push({
+        id: `os-${probe}`,
+        status: pass ? 'PASS' : 'FAIL',
+        oomObserved: oom,
+        cleanupVerified: response.cleanupVerified,
+        observation: value,
+      });
+      console.log(
+        JSON.stringify({
+          stage: 'runner:probe',
+          fixture: `os-${probe}`,
+          status: pass ? 'PASS' : 'FAIL',
+        }),
+      );
+    }
+    const emptyCleanup = await cleanupDockerExecution(randomUUID());
+    if (!emptyCleanup.cleanupVerified || emptyCleanup.removed !== 0) failures++;
+    report.cases.push({
+      id: 'execution-cleanup-empty',
+      status:
+        emptyCleanup.cleanupVerified && emptyCleanup.removed === 0
+          ? 'PASS'
+          : 'FAIL',
+    });
     const reaper = await probeReaper();
     report.cases.push(reaper);
     if (reaper.status !== 'PASS') failures++;
@@ -421,9 +546,12 @@ async function main() {
         status: pass ? 'PASS' : 'FAIL',
         reason: cancelled.terminationReason,
       });
+      const successFixture = runnerFixtures.find(
+        (item) => item.id === 'sync-json-success',
+      );
       const concurrent = await Promise.all([
-        runFixture(runnerFixtures[0], new DockerAdapter()),
-        runFixture(runnerFixtures[0], new DockerAdapter()),
+        runFixture(successFixture, new DockerAdapter()),
+        runFixture(successFixture, new DockerAdapter()),
       ]);
       const isolated = concurrent.every(
         (result) =>
@@ -433,6 +561,12 @@ async function main() {
       report.cases.push({
         id: 'concurrent-capsules',
         status: isolated ? 'PASS' : 'FAIL',
+        results: concurrent.map((result) => ({
+          diagnosis: result.diagnosisCode,
+          reason: result.terminationReason,
+          runtimeMs: result.runtimeMs,
+          cleanupVerified: result.evidence.cleanupVerified,
+        })),
       });
     }
     const remaining = await command([

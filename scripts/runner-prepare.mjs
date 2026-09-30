@@ -1,13 +1,35 @@
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
-import { mkdir, copyFile } from 'node:fs/promises';
+import { mkdir, copyFile, cp } from 'node:fs/promises';
 import { command, imageIdentity, IMAGE_TAG } from '../infra/runner/capsule.mjs';
 const context = resolve(
   dirname(fileURLToPath(import.meta.url)),
   '../infra/runner',
 );
+const buildContext = resolve(context, '../../.local/runner-capsule-build');
+await mkdir(buildContext, { recursive: true });
+for (const file of [
+  'Dockerfile',
+  'bridge.cjs',
+  'worker.cjs',
+  'worker-identity.cjs',
+  'os-probe.cjs',
+]) {
+  await copyFile(resolve(context, file), resolve(buildContext, file));
+}
+for (const name of [
+  'quickjs-emscripten-core',
+  '@jitl/quickjs-wasmfile-release-sync',
+  '@jitl/quickjs-ffi-types',
+]) {
+  await cp(
+    resolve(context, '../../node_modules', name),
+    resolve(buildContext, 'node_modules', name),
+    { recursive: true },
+  );
+}
 const result = await command(
-  ['build', '--network=none', '--tag', IMAGE_TAG, context],
+  ['build', '--network=none', '--tag', IMAGE_TAG, buildContext],
   { timeoutMs: 180000, maxBytes: 1048576 },
 );
 if (result.code !== 0)

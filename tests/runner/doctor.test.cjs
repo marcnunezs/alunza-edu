@@ -25,7 +25,7 @@ const response = () => ({
     },
     returnData: Buffer.from(
       JSON.stringify({
-        kind: 'value',
+        kind: 'probe',
         value: {
           node: 'v24.21.0',
           uid: 10001,

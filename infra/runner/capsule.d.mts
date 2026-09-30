@@ -8,6 +8,8 @@ export function command(
     timeoutMs?: number;
     maxBytes?: number;
     signal?: AbortSignal;
+    dockerHost?: string;
+    apiVersion?: string;
   },
 ): Promise<{
   code: number | null;
@@ -15,15 +17,29 @@ export function command(
   stderr: string;
   stopped: boolean;
 }>;
-export function imageIdentity(image?: string): Promise<string>;
+export function imageIdentity(
+  image?: string,
+  signal?: AbortSignal,
+): Promise<string>;
 export function runCapsule(
   input: {
+    executionId: string;
     code: string;
     args: unknown[];
     budgetMs: number;
     outputRemaining: number;
   },
-  options?: { image?: string; signal?: AbortSignal },
+  options?: {
+    image?: string;
+    signal?: AbortSignal;
+    probe?:
+      | 'identity'
+      | 'memory'
+      | 'descendant-memory'
+      | 'processes'
+      | 'network'
+      | 'permissions';
+  },
 ): Promise<{
   packet: unknown;
   exitCode: number | null;
@@ -32,7 +48,21 @@ export function runCapsule(
   cancelled: boolean;
   cleanupVerified: boolean;
   programWallMs: number;
+  containerWallMs: number | null;
   lifecycleMs: number;
   image: string;
 }>;
-export function collectExpired(): Promise<number>;
+export function collectExpired(
+  signal?: AbortSignal,
+  observation?: { nowMs: number; containerIds: string[] },
+): Promise<number>;
+export function sweepExpiredDockerExecutions(
+  signal?: AbortSignal,
+): Promise<{ cleanupVerified: boolean; removed: number }>;
+export function getDockerAvailability(
+  signal?: AbortSignal,
+): Promise<{ available: boolean; image: string | null }>;
+export function cleanupDockerExecution(
+  executionId: string,
+  signal?: AbortSignal,
+): Promise<{ cleanupVerified: boolean; removed: number }>;

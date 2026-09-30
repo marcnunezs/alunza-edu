@@ -1,22 +1,44 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
+import {
+  localDockerEngine,
+  pinnedDockerEnvironment,
+  capsuleConfiguration,
+  removeAndVerify,
+  CreationTracker,
+} from './docker-engine.mjs';
 
 const OWNER_VALUE = 'alunza-edu-laboratorio';
 export const OWNER_LABEL = `org.alunza.runner=${OWNER_VALUE}`;
-export const IMAGE_TAG = 'alunza-laboratorio-runner-capsule:imp-00-06';
+export const IMAGE_TAG = 'alunza-laboratorio-runner-capsule:imp-03-quickjs-2';
 export const RUNNER_PREFIX = 'alunza-laboratorio-runner-';
 const ownedName = new RegExp(`^/${RUNNER_PREFIX}[a-f0-9-]{36}$`);
+const creationTracker = new CreationTracker();
 // No shell and bounded diagnostics. These commands execute trusted Docker tooling only.
 export function command(
   args,
-  { input, timeoutMs = 15000, maxBytes = 524288, signal } = {},
+  {
+    input,
+    timeoutMs = 15000,
+    maxBytes = 524288,
+    signal,
+    dockerHost,
+    apiVersion,
+  } = {},
 ) {
   return new Promise((resolve, reject) => {
-    const child = spawn('docker', args, {
-      windowsHide: true,
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    const child = spawn(
+      'docker',
+      dockerHost ? ['--host', dockerHost, ...args] : args,
+      {
+        windowsHide: true,
+        stdio: ['pipe', 'pipe', 'pipe'],
+        ...(dockerHost
+          ? { env: pinnedDockerEnvironment(dockerHost, apiVersion) }
+          : {}),
+      },
+    );
     let stdout = Buffer.alloc(0),
       stderr = Buffer.alloc(0),
       stopped = false;
@@ -56,68 +78,99 @@ export function command(
     child.stdin.end(input);
   });
 }
-export async function imageIdentity(image = IMAGE_TAG) {
-  const result = await command([
-    'image',
-    'inspect',
-    image,
-    '--format',
-    '{{.Id}}',
-  ]);
-  const id = result.stdout.trim();
-  if (result.code !== 0 || !/^sha256:[a-f0-9]{64}$/.test(id))
+export async function imageIdentity(image = IMAGE_TAG, signal) {
+  const engine = await localDockerEngine(command, signal);
+  const result = await engine.request(
+    'GET',
+    `/images/${encodeURIComponent(image)}/json`,
+    { signal },
+  );
+  const id = result.data?.Id;
+  if (result.status !== 200 || !/^sha256:[a-f0-9]{64}$/.test(id ?? ''))
     throw new Error('Prepared runner image unavailable');
   return id;
 }
 export async function runCapsule(input, options = {}) {
-  const image = options.image ?? (await imageIdentity());
+  options = {
+    ...options,
+    signal: options.signal
+      ? AbortSignal.any([options.signal, AbortSignal.timeout(30000)])
+      : AbortSignal.timeout(30000),
+  };
+  if (
+    !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(
+      input.executionId ?? '',
+    )
+  )
+    throw new Error('Execution UUID required');
+  if (
+    options.probe &&
+    ![
+      'identity',
+      'memory',
+      'descendant-memory',
+      'processes',
+      'network',
+      'permissions',
+    ].includes(options.probe)
+  )
+    throw new Error('Invalid fixed probe');
+  options.signal?.throwIfAborted();
+  const engine = await localDockerEngine(command, options.signal);
+  const image =
+    options.image ?? (await imageIdentity(IMAGE_TAG, options.signal));
   if (!/^sha256:[a-f0-9]{64}$/.test(image))
     throw new Error('Runner requires immutable local image ID');
   const name = `${RUNNER_PREFIX}${randomUUID()}`;
   const started = performance.now();
   let created = false,
-    timedOut = false,
     cleanupVerified = false;
   let packet,
     exitCode = null,
+    acknowledgedExitCode,
     oomKilled = false,
     programWallMs,
+    containerWallMs = null,
     failure;
   try {
-    const create = await command([
-      'create',
-      '--name',
-      name,
-      '--label',
-      OWNER_LABEL,
-      '--label',
-      `org.alunza.expires=${Date.now() + 120000}`,
-      '--interactive',
-      '--pull=never',
-      '--network=none',
-      '--read-only',
-      '--cap-drop=ALL',
-      '--cap-add=SETUID',
-      '--cap-add=SETGID',
-      '--cap-add=SETPCAP',
-      '--security-opt=no-new-privileges:true',
-      '--memory=134217728',
-      '--memory-swap=134217728',
-      '--cpus=1',
-      '--pids-limit=32',
-      '--ulimit',
-      'nofile=64:64',
-      '--tmpfs',
-      '/tmp:rw,noexec,nosuid,nodev,size=8388608,mode=1777',
-      '--log-driver=none',
-      image,
-    ]);
-    if (create.code !== 0) throw new Error('Runner container creation failed');
+    // A timed-out client can lose the create response after Docker accepted it.
+    // Always attempt cleanup of this generated name, including that uncertain case.
     created = true;
-    const inspect = await command(['inspect', name]);
-    const effective = JSON.parse(inspect.stdout)[0];
+    const expiresAt = Date.now() + 60000;
+    options.signal?.throwIfAborted();
+    creationTracker.begin(input.executionId, name, expiresAt);
+    const create = await engine.request(
+      'POST',
+      `/containers/create?name=${encodeURIComponent(name)}`,
+      {
+        signal: options.signal,
+        body: capsuleConfiguration(
+          image,
+          {
+            'org.alunza.runner': OWNER_VALUE,
+            'org.alunza.expires': String(expiresAt),
+            'org.alunza.execution': input.executionId,
+          },
+          options.probe,
+        ),
+      },
+    );
+    // A definitive HTTP response has completed this create operation. Transport
+    // failures leave the marker until the container is observed or lease expires.
+    creationTracker.observed(name);
+    if (create.status !== 201)
+      throw new Error('Runner container creation failed');
+    created = true;
+    const inspect = await engine.request('GET', `/containers/${name}/json`, {
+      signal: options.signal,
+    });
+    if (inspect.status !== 200) throw new Error('Runner inspection failed');
+    const effective = inspect.data;
     const h = effective.HostConfig;
     if (
+      effective.Config?.Tty !== false ||
+      effective.Config?.OpenStdin !== true ||
+      effective.Config?.StdinOnce !== true ||
       h.Memory !== 134217728 ||
       h.MemorySwap !== 134217728 ||
       h.NanoCpus !== 1000000000 ||
@@ -137,53 +190,71 @@ export async function runCapsule(input, options = {}) {
       h.IpcMode === 'host'
     )
       throw new Error('Runner resource configuration mismatch');
-    const kill = () => {
-      timedOut = true;
-      void command(['kill', name]).catch(() => {});
-    };
-    const timer = setTimeout(kill, Math.max(0, input.budgetMs));
+    // The trusted bridge, outside the student worker, owns its 3000 ms budget.
+    // Docker startup and transport are bounded by the operation deadline;
+    // they must not consume the student's execution allowance.
     const abort = () => {
-      void command(['kill', name]).catch(() => {});
+      void engine
+        .request('POST', `/containers/${name}/kill?signal=SIGKILL`, {
+          timeoutMs: 10000,
+        })
+        .catch(() => {});
     };
     options.signal?.addEventListener('abort', abort, { once: true });
     try {
       if (options.signal?.aborted)
         throw new Error('Execution cancelled before launch');
       const programStart = performance.now();
-      const result = await command(
-        ['start', '--attach', '--interactive', name],
-        { input: JSON.stringify(input), timeoutMs: input.budgetMs + 10000 },
-      );
+      const result = await engine.startAttach(name, {
+        input: JSON.stringify(input),
+        timeoutMs: 30000,
+        signal: options.signal,
+      });
       programWallMs = performance.now() - programStart;
-      if (result.code === 0 && !result.stopped) {
-        try {
-          packet = JSON.parse(result.stdout);
-        } catch {
-          /* incomplete or forged protocol */
-        }
+      acknowledgedExitCode = result.exitCode;
+      try {
+        packet = JSON.parse(result.stdout);
+      } catch {
+        /* incomplete or forged protocol */
       }
     } finally {
-      clearTimeout(timer);
       options.signal?.removeEventListener('abort', abort);
     }
-    const state = await command([
-      'inspect',
-      name,
-      '--format',
-      '{{json .State}}',
-    ]);
-    if (state.code === 0) {
-      const data = JSON.parse(state.stdout);
+    const state = await engine.request('GET', `/containers/${name}/json`, {
+      signal: options.signal,
+    });
+    if (state.status === 200) {
+      const data = state.data.State;
+      if (
+        data.Running !== false ||
+        !Number.isInteger(data.ExitCode) ||
+        data.ExitCode !== acknowledgedExitCode ||
+        typeof data.OOMKilled !== 'boolean'
+      )
+        throw new Error('Runner final state unconfirmed');
       exitCode = data.ExitCode;
       oomKilled = data.OOMKilled;
+      const startedAt = Date.parse(data.StartedAt);
+      const finishedAt = Date.parse(data.FinishedAt);
+      if (startedAt > 0 && finishedAt >= startedAt)
+        containerWallMs = finishedAt - startedAt;
     }
   } catch (error) {
     failure = error;
   } finally {
     if (created) {
       try {
-        const removed = await command(['rm', '--force', name]);
-        cleanupVerified = removed.code === 0;
+        const cleanupSignal = AbortSignal.timeout(10000);
+        if (creationTracker.has(name)) {
+          const observed = await engine.request(
+            'GET',
+            `/containers/${name}/json`,
+            { signal: cleanupSignal },
+          );
+          if (observed.status === 200) creationTracker.observed(name);
+        }
+        cleanupVerified = await removeAndVerify(engine, name, cleanupSignal);
+        cleanupVerified &&= !creationTracker.uncertain(input.executionId);
       } catch {
         cleanupVerified = false;
       }
@@ -196,42 +267,161 @@ export async function runCapsule(input, options = {}) {
     packet: packet ?? null,
     exitCode,
     oomKilled,
-    timedOut,
+    timedOut: false,
     cancelled: options.signal?.aborted ?? false,
     cleanupVerified,
     programWallMs,
+    containerWallMs,
     lifecycleMs: performance.now() - started,
     image,
   };
 }
-export async function collectExpired() {
-  const found = await command([
-    'ps',
-    '--all',
-    '--quiet',
-    '--filter',
-    `label=${OWNER_LABEL}`,
-  ]);
-  if (found.code !== 0) throw new Error('Runner orphan inspection failed');
+export async function getDockerAvailability(
+  signal = AbortSignal.timeout(10000),
+) {
+  try {
+    const engine = await localDockerEngine(command, signal);
+    const info = await engine.request('GET', '/info', {
+      signal,
+      timeoutMs: 10000,
+    });
+    const data = info.data;
+    if (
+      info.status !== 200 ||
+      data.OSType !== 'linux' ||
+      data.CgroupVersion !== '2' ||
+      !data.MemoryLimit ||
+      !data.SwapLimit ||
+      !data.PidsLimit
+    )
+      return { available: false, image: null };
+    const image = await imageIdentity(IMAGE_TAG, signal);
+    return { available: true, image };
+  } catch {
+    return { available: false, image: null };
+  }
+}
+export async function cleanupDockerExecution(
+  executionId,
+  signal = AbortSignal.timeout(10000),
+) {
+  if (
+    !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(
+      executionId ?? '',
+    )
+  )
+    throw new Error('Execution UUID required');
   let removed = 0;
-  for (const id of found.stdout.trim().split(/\s+/).filter(Boolean)) {
+  try {
+    const engine = await localDockerEngine(command, signal);
+    const list = () =>
+      engine.request(
+        'GET',
+        `/containers/json?all=true&filters=${encodeURIComponent(JSON.stringify({ label: [OWNER_LABEL, `org.alunza.execution=${executionId}`] }))}`,
+        { signal, timeoutMs: 10000 },
+      );
+    const found = await list();
+    if (found.status !== 200 || !Array.isArray(found.data))
+      return { cleanupVerified: false, removed };
+    for (const { Id: id } of found.data) {
+      if (!/^[a-f0-9]{12,64}$/.test(id))
+        return { cleanupVerified: false, removed };
+      const inspected = await engine.request('GET', `/containers/${id}/json`, {
+        signal,
+        timeoutMs: 10000,
+      });
+      if (inspected.status === 404) continue;
+      if (inspected.status !== 200) return { cleanupVerified: false, removed };
+      const item = inspected.data;
+      const labels = item.Config.Labels ?? {};
+      if (
+        !ownedName.test(item.Name) ||
+        labels['org.alunza.runner'] !== OWNER_VALUE ||
+        labels['org.alunza.execution'] !== executionId
+      )
+        return { cleanupVerified: false, removed };
+      creationTracker.observed(item.Name);
+      if (!(await removeAndVerify(engine, id, signal)))
+        return { cleanupVerified: false, removed };
+      removed++;
+    }
+    const remaining = await list();
+    return {
+      cleanupVerified:
+        remaining.status === 200 &&
+        Array.isArray(remaining.data) &&
+        remaining.data.length === 0 &&
+        !creationTracker.uncertain(executionId),
+      removed,
+    };
+  } catch {
+    return { cleanupVerified: false, removed };
+  }
+}
+export async function collectExpired(
+  signal = AbortSignal.timeout(10000),
+  observation,
+) {
+  // A controlled clock is only safe with an exact fixture scope. Production
+  // callers omit this internal probe seam and retain the real-clock sweep.
+  if (
+    observation !== undefined &&
+    (!Number.isSafeInteger(observation?.nowMs) ||
+      observation.nowMs < 0 ||
+      !Array.isArray(observation.containerIds) ||
+      observation.containerIds.length < 1 ||
+      observation.containerIds.length > 10 ||
+      !observation.containerIds.every(
+        (id) => typeof id === 'string' && /^[a-f0-9]{64}$/.test(id),
+      ) ||
+      new Set(observation.containerIds).size !==
+        observation.containerIds.length)
+  )
+    throw new Error('Controlled orphan observation requires exact fixture IDs');
+  const scope = observation && new Set(observation.containerIds);
+  const nowMs = observation?.nowMs;
+  const engine = await localDockerEngine(command, signal);
+  const found = await engine.request(
+    'GET',
+    `/containers/json?all=true&filters=${encodeURIComponent(JSON.stringify({ label: [OWNER_LABEL] }))}`,
+    { signal },
+  );
+  if (found.status !== 200 || !Array.isArray(found.data))
+    throw new Error('Runner orphan inspection failed');
+  let removed = 0;
+  for (const { Id: id } of found.data) {
     if (!/^[a-f0-9]{12,64}$/.test(id))
       throw new Error('Unexpected Docker identifier');
-    const inspected = await command(['inspect', id]);
-    if (inspected.code !== 0) continue;
-    const item = JSON.parse(inspected.stdout)[0];
+    if (scope && !scope.has(id)) continue;
+    const inspected = await engine.request('GET', `/containers/${id}/json`, {
+      signal,
+    });
+    if (inspected.status === 404) continue;
+    if (inspected.status !== 200)
+      throw new Error('Runner orphan inspection failed');
+    const item = inspected.data;
     const labels = item.Config.Labels ?? {};
     const expiry = Number(labels['org.alunza.expires']);
     if (
       labels['org.alunza.runner'] === OWNER_VALUE &&
       ownedName.test(item.Name) &&
       Number.isFinite(expiry) &&
-      expiry < Date.now()
+      expiry < (nowMs ?? Date.now())
     ) {
-      if ((await command(['rm', '--force', id])).code !== 0)
+      if (!(await removeAndVerify(engine, id, signal)))
         throw new Error('Runner orphan cleanup failed');
+      creationTracker.observed(item.Name);
       removed++;
     }
   }
   return removed;
+}
+export async function sweepExpiredDockerExecutions(
+  signal = AbortSignal.timeout(10000),
+) {
+  try {
+    return { cleanupVerified: true, removed: await collectExpired(signal) };
+  } catch {
+    return { cleanupVerified: false, removed: 0 };
+  }
 }
