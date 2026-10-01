@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "environment": "preproduction",
+  "remote": {
+    "enabled": false,
+    "approvedBy": null,
+    "approvalRef": null,
+    "approvedAt": null,
+    "expiresAt": null,
+    "allowedOperations": []
+  },
+  "budget": {
+    "currency": "CLP",
+    "maxCost": 0,
+    "maxDurationSeconds": 1800,
+    "maxHttpRequests": 60,
+    "maxSandboxRuns": 1,
+    "maxAiRequests": 2,
+    "maxAiTokens": 512
+  },
+  "release": { "sha": null, "apiImage": null, "jobImage": null },
+  "targets": {
+    "azure": {
+      "subscriptionId": null,
+      "resourceGroup": null,
+      "location": null,
+      "environmentName": null,
+      "registryName": null,
+      "identityName": null,
+      "apiName": null,
+      "jobName": null,
+      "apiOrigin": null
+    },
+    "vercel": { "projectId": null, "teamId": null, "webOrigin": null },
+    "supabase": {
+      "projectRef": null,
+      "authUrl": null,
+      "databaseHost": null,
+      "databasePort": 5432,
+      "region": null
+    },
+    "sandbox": {
+      "teamId": null,
+      "projectId": null,
+      "region": null,
+      "image": null
+    },
+    "azureOpenAi": {
+      "resourceId": null,
+      "endpoint": null,
+      "region": null,
+      "generationDeployment": null,
+      "embeddingDeployment": null,
+      "apiVersion": "v1",
+      "embeddingDimensions": null
+    }
+  }
+}

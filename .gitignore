@@ -1,0 +1,22 @@
+node_modules/
+.next/
+.next-e2e/
+cypress/videos/
+cypress/screenshots/
+cypress.env.json
+dist/
+coverage/
+.tools/
+.local/
+.env
+.env.*
+!.env.example
+supabase/.temp/
+supabase/.branches/
+supabase/signing_keys.json
+*.tsbuildinfo
+*.log
+
+# Documentación y especificaciones locales
+/docs/
+/specs/

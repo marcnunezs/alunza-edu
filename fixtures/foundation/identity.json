@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "kind": "foundation-incremental",
+  "createdAt": "2026-09-10T12:00:00.000Z",
+  "organizations": [
+    {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "code": "ALUNZA_A",
+      "name": "Institución Ficticia A",
+      "timezone": "America/Santiago"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000002",
+      "code": "ALUNZA_B",
+      "name": "Institución Ficticia B",
+      "timezone": "America/Santiago"
+    }
+  ],
+  "users": [
+    {
+      "id": "20000000-0000-4000-8000-000000000001",
+      "email": "admin.a@alunza.test",
+      "displayName": "Administrador A",
+      "accountState": "ACTIVE",
+      "organizationId": "10000000-0000-4000-8000-000000000001",
+      "role": "ADMIN",
+      "membershipState": "ACTIVE"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000002",
+      "email": "teacher.a@alunza.test",
+      "displayName": "Profesor A",
+      "accountState": "ACTIVE",
+      "organizationId": "10000000-0000-4000-8000-000000000001",
+      "role": "TEACHER",
+      "membershipState": "ACTIVE"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000003",
+      "email": "student.a@alunza.test",
+      "displayName": "Estudiante A",
+      "accountState": "ACTIVE",
+      "organizationId": "10000000-0000-4000-8000-000000000001",
+      "role": "STUDENT",
+      "membershipState": "ACTIVE"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000004",
+      "email": "admin.b@alunza.test",
+      "displayName": "Administrador B",
+      "accountState": "ACTIVE",
+      "organizationId": "10000000-0000-4000-8000-000000000002",
+      "role": "ADMIN",
+      "membershipState": "ACTIVE"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000005",
+      "email": "teacher.b@alunza.test",
+      "displayName": "Profesor B",
+      "accountState": "ACTIVE",
+      "organizationId": "10000000-0000-4000-8000-000000000002",
+      "role": "TEACHER",
+      "membershipState": "ACTIVE"
+    },
+    {
+      "id": "20000000-0000-4000-8000-000000000006",
+      "email": "student.b@alunza.test",
+      "displayName": "Estudiante B",
+      "accountState": "ACTIVE",
+      "organizationId": "10000000-0000-4000-8000-000000000002",
+      "role": "STUDENT",
+      "membershipState": "ACTIVE"
+    }
+  ]
+}

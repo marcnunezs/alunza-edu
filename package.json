@@ -1,0 +1,66 @@
+{
+  "name": "alunza",
+  "version": "0.0.1",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "packageManager": "npm@11.19.0",
+  "engines": {
+    "node": "24.21.0",
+    "npm": "11.19.0"
+  },
+  "scripts": {
+    "local:doctor": "node scripts/local.mjs doctor",
+    "local:up": "node scripts/local.mjs up",
+    "local:down": "node scripts/local.mjs down",
+    "local:credentials": "node scripts/local.mjs credentials",
+    "db:migrate": "node scripts/local.mjs migrate",
+    "db:seed": "node scripts/local.mjs seed",
+    "dev": "npm run build -w @alunza/contracts && concurrently --kill-others -n contracts,api,web \"npm run dev -w @alunza/contracts\" \"npm run dev -w @alunza/api\" \"npm run dev -w @alunza/web\"",
+    "build": "npm run build -w @alunza/contracts && npm run build -w @alunza/runner && npm run build -w @alunza/ai && npm run build -w @alunza/api && npm run build -w @alunza/web",
+    "typecheck": "npm run build -w @alunza/contracts && npm run typecheck --workspaces --if-present && tsc --project tests/e2e/tsconfig.json",
+    "lint": "eslint apps packages scripts tests cypress.config.cjs",
+    "format:check": "prettier --check apps packages scripts tests infra .github cypress.config.cjs package.json tsconfig.base.json eslint.config.mjs .prettierrc.json",
+    "test": "npm run openapi && npm run test -w @alunza/api && npm run test -w @alunza/web && node --experimental-vm-modules node_modules/jest/bin/jest.js --config tests/jest.contracts.cjs --runInBand && npm run test:runner && npm run test:ai && npm run test:preproduction",
+    "runner:prepare": "node scripts/runner-prepare.mjs",
+    "runner:doctor": "node scripts/runner-doctor.mjs",
+    "runner:probe": "npm run build -w @alunza/runner && node scripts/runner-probe.mjs",
+    "runner:cleanup": "node scripts/runner-cleanup.mjs",
+    "test:runner": "npm run build -w @alunza/runner && npm run test -w @alunza/runner",
+    "test:ai": "npm run build -w @alunza/contracts && npm run build -w @alunza/ai && npm run test -w @alunza/ai",
+    "test:ai:integration": "npm run build -w @alunza/contracts && npm run build -w @alunza/ai && node scripts/ai-integration.mjs",
+    "ai:doctor": "npm run build -w @alunza/contracts && npm run build -w @alunza/ai && node scripts/ai-probe.mjs --doctor",
+    "ai:probe": "npm run build -w @alunza/contracts && npm run build -w @alunza/ai && node scripts/ai-probe.mjs",
+    "preprod:check": "node scripts/preprod.mjs check",
+    "preprod:plan": "node scripts/preprod.mjs plan",
+    "preprod:smoke": "node scripts/preprod-smoke.mjs",
+    "test:preproduction": "node --experimental-vm-modules node_modules/jest/bin/jest.js --config tests/preproduction/jest.config.cjs --runInBand",
+    "test:integration": "node scripts/integration.mjs",
+    "test:artifacts": "node scripts/verify-artifacts.mjs",
+    "openapi": "npm run build -w @alunza/contracts && node scripts/openapi.mjs",
+    "compose:up": "node scripts/local.mjs compose-up",
+    "compose:down": "docker compose --env-file .local/compose.env -f infra/compose.yaml down",
+    "cypress:install": "node node_modules/cypress/bin/cypress install && node node_modules/cypress/bin/cypress verify",
+    "test:e2e": "node scripts/e2e.mjs",
+    "test:gates": "node scripts/verify-gates.mjs",
+    "ci:verify": "node scripts/ci-verify.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@supabase/supabase-js": "2.116.0",
+    "concurrently": "10.0.5",
+    "cypress": "16.0.0",
+    "eslint": "10.10.0",
+    "jose": "6.2.12",
+    "pg": "8.23.0",
+    "prettier": "3.9.6",
+    "supabase": "2.101.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.0"
+  },
+  "overrides": {
+    "multer": "2.3.0"
+  }
+}

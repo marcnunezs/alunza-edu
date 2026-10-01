@@ -1,0 +1,92 @@
+name: Foundation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: foundation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Foundation, identity and technical experiments
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      CI: 'true'
+      NEXT_TELEMETRY_DISABLED: '1'
+      npm_config_update_notifier: 'false'
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Check out the candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up the pinned runtime
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.21.0'
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Check runtime and Docker
+        run: |
+          test "$(node --version)" = 'v24.21.0'
+          test "$(npm --version)" = '11.19.0'
+          node --version
+          npm --version
+          docker version
+          docker compose version
+
+      - name: Check Cypress system dependencies
+        # Ubuntu >=24.04 package names from the official Cypress installation guide.
+        run: |
+          required=(libgtk-3-0t64 libgbm-dev libnotify-dev libnss3 libxss1 libasound2t64 libxtst6 xauth xvfb)
+          missing=()
+          for package in "${required[@]}"; do
+            if ! dpkg-query -W -f='${db:Status-Status}' "$package" 2>/dev/null | grep -qx installed; then
+              missing+=("$package")
+            fi
+          done
+          if (( ${#missing[@]} )); then
+            sudo apt-get update
+            sudo apt-get install --no-install-recommends -y "${missing[@]}"
+          fi
+          command -v Xvfb
+          google-chrome --version
+
+      - name: Install from the lockfile
+        run: npm ci
+
+      - name: Verify the foundation
+        id: verify
+        # Same entry point as local verification: checks, real Supabase integration,
+        # runner/pgvector experiments, builds and Cypress; no paid provider calls.
+        run: npm run ci:verify
+
+      - name: Upload public verification reports
+        if: ${{ always() && hashFiles('.local/reports/imp-00-05/*.json', '.local/reports/imp-00-06-08/*.json', '.local/reports/imp-01/*.json', '.local/reports/imp-02/*.json') != '' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: foundation-${{ github.run_id }}-${{ github.run_attempt }}
+          # Deliberately include only runner-generated, sanitized JSON summaries.
+          # Never upload .local itself, runtime state, logs, keys, screenshots or video.
+          path: |
+            .local/reports/imp-00-05/*.json
+            .local/reports/imp-00-06-08/ci.json
+            .local/reports/imp-00-06-08/runner-docker.json
+            .local/reports/imp-00-06-08/ai-integration.json
+            .local/reports/imp-01/*.json
+            .local/reports/imp-02/*.json
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7

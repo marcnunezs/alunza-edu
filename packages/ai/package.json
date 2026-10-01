@@ -1,0 +1,32 @@
+{
+  "name": "@alunza/ai",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config ../../tests/ai/jest.unit.cjs --runInBand"
+  },
+  "dependencies": {
+    "@alunza/contracts": "0.0.0",
+    "@azure/identity": "4.13.2",
+    "openai": "7.15.0",
+    "pg": "8.23.0",
+    "ws": "8.21.3",
+    "zod": "4.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.4",
+    "@types/pg": "8.23.1",
+    "typescript": "5.9.3"
+  }
+}

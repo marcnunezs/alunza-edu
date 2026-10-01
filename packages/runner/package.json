@@ -1,0 +1,23 @@
+{
+  "name": "@alunza/runner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config ../../tests/runner/jest.config.cjs --runInBand"
+  },
+  "dependencies": {
+    "@vercel/sandbox": "3.2.2",
+    "zod": "4.6.1"
+  }
+}
