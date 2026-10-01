@@ -147,22 +147,4 @@ La base principal es la ERS 1.3, con revisión técnica del 4 de septiembre de 2
 
 Para comenzar la implementación, leer fuentes y decisiones, producto, requisitos y arquitectura. Cada área tiene contratos y criterios de aceptación propios. Trata los pendientes mediante la [guía de decisiones](docs/agent/12-decisiones-pendientes.md): permite supuestos técnicos reversibles registrados y prototipos verificables, sin dar por aceptados comportamientos que dependan de una definición relevante todavía ausente. El trabajo independiente puede avanzar.
 
-## Documentación original
 
-Las fuentes se conservan en [Evidencias CAPSTONE](<Evidencias CAPSTONE/Fase 1>). El [inventario](specs/00-fuentes-y-decisiones.md) identifica los archivos usados y sus límites. Los specs complementan las evidencias académicas y no sustituyen sus aprobaciones.
-
-El contrato general de operación futura permanece en [operación y despliegue](specs/11-operacion-y-despliegue.md); los comandos anteriores cubren la fundación y el gobierno institucional locales implementados.
-
-## Instrucciones para el agente de desarrollo
-
-El punto de entrada es [AGENTS.md](AGENTS.md). Las [guías de implementación para agentes](docs/agent/README.md) contienen el orden de trabajo, instrucciones por área, tratamiento de decisiones pendientes, pruebas y criterios de entrega.
-
-Para encargar la construcción del MVP o una capacidad concreta, utiliza los [prompts de implementación](docs/agent/13-prompts-de-implementacion.md). Estas guías preparan el trabajo de código y mantienen separados lo documentado, lo propuesto y lo realmente implementado.
-
-La [selección de skills recomendadas](docs/agent/15-skills-recomendadas.md) identifica las capacidades ya disponibles, las incorporaciones prioritarias y sus límites para este stack.
-
-## Desarrollo por fases
-
-El [plan progresivo de implementación](docs/plan/README.md) organiza el desarrollo en nueve fases, con incrementos pequeños, dependencias, resultados observables, pruebas y criterios de cierre. Incluye una [matriz de control y trazabilidad](docs/plan/09-control-y-trazabilidad.md) y un archivo detallado por fase.
-
-El corte [IMP-00.01 a IMP-00.04](docs/plan/00-fundacion.md) implementa versiones, workspace, Supabase local y una conexión real web/API/datos con acceso protegido. Su evidencia está en [el registro de trabajo](docs/work/IMP-00-foundation.md); [IMP-00.05](docs/work/IMP-00.05-ci-y-cypress.md) incorpora CI y Cypress. La fase IMP-00 completa y los RF de negocio no se dan por terminados.
