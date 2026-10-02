@@ -98,9 +98,9 @@ Los resúmenes históricos de fundación están en `.local/reports/imp-00-05/`; 
 
 `npm run test:gates` demuestra por separado que los cinco comandos de formato/lint/tipos/tests/build rechazan un defecto deliberado. Usa una copia física aislada del código y dependencias en el directorio temporal del sistema (`alunza-gate-probes/run-*`), verifica primero un baseline correcto y restaura las fuentes después de cada caso. Puede tardar varios minutos; no se ejecuta en cada push. No necesita Supabase y no modifica las aplicaciones de trabajo.
 
-[El workflow](.github/workflows/foundation.yml) usa Ubuntu24.04, acciones oficiales fijadas por SHA y permisos de lectura. Reutiliza `npm ci` y `ci:verify`, y sube únicamente resúmenes JSON con retención de siete días. Atiende PR, push a main y ejecución manual. **GitHub Actions remoto no está ejecutado:** el workflow y la base permanecen como cambios locales, sin publicación ni dispatch. Validación sintáctica y ejecución local no equivalen a un run remoto aprobado.
+[El workflow](.github/workflows/foundation.yml) usa Ubuntu24.04, acciones oficiales fijadas por SHA y permisos de lectura. Reutiliza `npm ci` y `ci:verify`, y sube únicamente resúmenes JSON con retención de siete días. Atiende PR, push a main y ejecución manual. La rama `laboratorio` está publicada en `equipo`. La [ejecución manual 36968922897](https://github.com/marcnunezs/alunza-edu/actions/runs/36968922897), sobre `4a3ee8f`, aprobó sus **17 controles** en el primer intento: 985 tests unitarios, 146 HTTP, 471 aserciones SQL, 27 pruebas IA/pgvector, 45 Cypress y evaluación TEST completa. No acredita las integraciones alojadas ni aceptación docente.
 
-El job tiene un límite de 90 minutos. La última corrida local aprobada de sus 17 etapas tomó 50 min 13 s, sin contar instalación ni preparación del workflow; el margen contempla esas tareas y diferencias entre runners. El [registro de consolidación](docs/work/2026-10-02-git-and-ci.md) documenta el ajuste y las comprobaciones locales. La duración real en GitHub sigue pendiente de medición.
+El job tiene un límite de 90 minutos. La corrida local aprobada que motivó el ajuste tomó 50 min 13 s en sus 17 etapas, sin contar instalación ni preparación del workflow. El primer job remoto duró **43 min 23 s**, superando el límite anterior de 40 minutos. La nueva revalidación local falló en la tercera serie SUBMIT por p95 concurrente de **6.273,51 ms** frente a 5.000 ms; las tres series remotas aprobaron. Integración IA, Cypress y evaluación TEST locales aprobaron por separado después del fallo. El [registro de consolidación y revalidación](docs/work/2026-10-02-git-and-ci.md) conserva ambos resultados y el pendiente de rendimiento local.
 
 ## Alternativa Compose local
 
@@ -138,7 +138,7 @@ Azure tiene dos modos: `rag-local`, predeterminado, combina embeddings remotos c
 
 La preparación de preproducción está en [infra/preproduction](infra/preproduction). Usa API con release/TLS/CORS estrictos, Vercel con comprobación del runtime administrado y un Job manual de conectividad. No hay publicación automática. [El registro conjunto](docs/work/IMP-00.06-08-ensayos.md) detalla comandos, resultados, decisiones y recuperación.
 
-El corte de ensayos anterior precede a IMP-01. La implementación institucional se registra en [IMP-01](docs/work/IMP-01-identity.md) y el contenido/editor en [IMP-02](docs/work/IMP-02-content.md). Siguen pendientes GitHub Actions remoto y las integraciones alojadas, además de las brechas de los ensayos de IMP-00.
+El corte de ensayos anterior precede a IMP-01. La implementación institucional se registra en [IMP-01](docs/work/IMP-01-identity.md) y el contenido/editor en [IMP-02](docs/work/IMP-02-content.md). Siguen pendientes las integraciones alojadas y las brechas de los ensayos de IMP-00; la CI remota actual se describe arriba.
 
 ## Identidad y gobierno institucional
 
