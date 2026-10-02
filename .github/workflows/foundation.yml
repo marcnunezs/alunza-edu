@@ -17,7 +17,8 @@ jobs:
   verify:
     name: Foundation, identity and technical experiments
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    # The 17 verification stages took 50m13s locally; allow setup and runner variance.
+    timeout-minutes: 90
     env:
       CI: 'true'
       NEXT_TELEMETRY_DISABLED: '1'

@@ -100,6 +100,8 @@ Los resúmenes históricos de fundación están en `.local/reports/imp-00-05/`; 
 
 [El workflow](.github/workflows/foundation.yml) usa Ubuntu24.04, acciones oficiales fijadas por SHA y permisos de lectura. Reutiliza `npm ci` y `ci:verify`, y sube únicamente resúmenes JSON con retención de siete días. Atiende PR, push a main y ejecución manual. **GitHub Actions remoto no está ejecutado:** el workflow y la base permanecen como cambios locales, sin publicación ni dispatch. Validación sintáctica y ejecución local no equivalen a un run remoto aprobado.
 
+El job tiene un límite de 90 minutos. La última corrida local aprobada de sus 17 etapas tomó 50 min 13 s, sin contar instalación ni preparación del workflow; el margen contempla esas tareas y diferencias entre runners. El [registro de consolidación](docs/work/2026-10-02-git-and-ci.md) documenta el ajuste y las comprobaciones locales. La duración real en GitHub sigue pendiente de medición.
+
 ## Alternativa Compose local
 
 Con Supabase iniciado y `db:migrate` ejecutado, detén primero `npm run dev` para liberar 3200/4200:
