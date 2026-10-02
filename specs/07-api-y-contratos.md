@@ -1,10 +1,10 @@
 # API y contratos de Alunza
 
-Estado: **contratos institucionales concretados para IMP-01 / DEC-004**; las áreas académicas posteriores permanecen propuestas. Fuentes: F01 ERS §§3.1–3.3 y F03 casos de uso en [fuentes](00-fuentes-y-decisiones.md). La API institucional implementada se describe también en [OpenAPI](../packages/contracts/openapi.json) y [DTO compartidos](../packages/contracts/src/index.ts). La ejecución local se registra en docs/work, sin acreditar despliegue remoto.
+Estado: **contratos concretados para identidad IMP-01, contenido IMP-02, RUN/SUBMIT IMP-03 y materiales/ayuda IMP-04.01–04.06 / DEC-004**. El listener operacional y ledger de IMP-04.07, junto con la preparación ejecutable de IMP-04.08, están implementados y probados en TEST; los módulos posteriores conservan sus propuestas. Fuentes: F01 ERS §§3.1–3.3 y F03 casos de uso en [fuentes](00-fuentes-y-decisiones.md). La API implementada se describe también en [OpenAPI](../packages/contracts/openapi.json) y [DTO compartidos](../packages/contracts/src/index.ts). La ejecución local se registra en docs/work, sin acreditar despliegue remoto ni aceptación completa de IMP-04.08.
 
 ## Convenciones
 
-- API de dominio exclusiva de NestJS bajo `/api/v1`, HTTPS, JSON UTF-8. Excepciones explícitas: carga binaria y exportación CSV.
+- API de dominio exclusiva de NestJS bajo `/api/v1`, HTTPS, JSON UTF-8. Excepciones explícitas: carga/descarga binaria de materiales y exportación CSV.
 - DTO públicos en `camelCase`; contrato RAG conserva exactamente sus cinco claves en `snake_case`.
 - IDs opacos UUID, fechas ISO 8601 en UTC, números finitos. La interfaz presenta zona `America/Santiago` cuando corresponde.
 - Cada request protegido lleva `Authorization: Bearer <JWT>` de Supabase Auth. El backend valida token, cuenta, membresía activa y ámbito real del recurso.
@@ -56,9 +56,9 @@ Recursos individuales usan `{ "data": {...}, "requestId": "..." }` sin `page`. U
 
 Un error JavaScript del estudiante es una ejecución procesada con diagnóstico, normalmente HTTP 201; no es un HTTP 500. `TIMEOUT` del programa tampoco equivale a 504 de la API. La indisponibilidad de IA puede terminar como feedback válido con `PROVIDER_UNAVAILABLE`, conservando HTTP 200 y el intento existente.
 
-**Idempotencia propuesta:** `Idempotency-Key` obligatorio para crear ejecuciones, intentos, trabajos de feedback, invitaciones y exportaciones. Alcance `(actor, organización, operación, clave)` más hash de payload. Misma clave y payload devuelve el mismo recurso; distinto payload devuelve 409. Una reserva transaccional impide que dos requests concurrentes creen dos envíos. Si sigue procesándose, devolver 409 `REQUEST_IN_PROGRESS` con `Retry-After`; una reserva vencida se reconcilia con el resultado persistido antes de reejecutar.
+**Idempotencia:** los cortes ejecutables concretan esta regla, incluida la ayuda propia descrita más abajo; las exportaciones conservan su propuesta. `Idempotency-Key` obligatorio para crear ejecuciones, intentos, trabajos de feedback, invitaciones y exportaciones. Alcance `(actor, organización, operación, clave)` más hash de payload. Misma clave y payload recupera el mismo recurso mientras se conserve su respuesta; distinto payload devuelve 409. Una reserva transaccional impide que dos requests concurrentes creen dos envíos. Si sigue procesándose, devolver 409 `REQUEST_IN_PROGRESS` con `Retry-After`. Una reserva vencida se reconcilia según el contrato de su operación: RUN/SUBMIT nunca vuelven a ejecutar código por vencimiento o incertidumbre; SUBMIT conserva el resultado durable o confirma UNKNOWN operacional tras verificar limpieza.
 
-Guardar el recurso confirmado y la respuesta idempotente en la misma transacción. **Propuesta:** retener claves de solicitudes terminadas 24 horas; fijar el plazo definitivo en DEC-004/009. Un nuevo intento deliberado requiere nueva clave. La interfaz conserva su clave hasta conocer el desenlace.
+Guardar el recurso confirmado y la respuesta idempotente en la misma transacción. IMP-01 y RUN/SUBMIT de IMP-03 conservan la respuesta durante 24 horas y mantienen la clave, hash y vínculo para impedir duplicación; una clave expirada no repite efectos. Los plazos de módulos futuros y la retención institucional de datos reales conservan sus decisiones DEC-004/009. Un nuevo intento deliberado requiere nueva clave. La interfaz conserva su clave hasta conocer el desenlace.
 
 Ediciones de recursos versionados llevan `If-Match` con el ETag obtenido en lectura. Si cambió, devolver 412 `PRECONDITION_FAILED` y ofrecer recarga; no sobrescribir silenciosamente. El catálogo de errores HTTP no amplía catálogos de diagnóstico, RAG o señales.
 
@@ -119,7 +119,7 @@ En esta tabla `RF 004`, por ejemplo, significa `ALZ-RF-004`. Cada operación apl
 | `GET /exercises/{id}/versions` | Docente con acceso al banco o ADMIN autorizado | Versiones reutilizables del ámbito; lectura compartida no concede edición de autor | 004,024 |
 | `POST /exercises/{id}/versions` | Autor docente o ADMIN autorizado | Nueva versión completa; no modifica uso publicado | 004,024 |
 | `PATCH /exercises/{id}/governance` | ADMIN | Propiedad/visibilidad dentro de organización | 024 |
-| `POST /exercises/{id}/archive` | ADMIN | Retirar de nuevas asignaciones, conservar uso histórico; efecto sobre publicación vigente pendiente DEC-002 | 024 |
+| `POST /exercises/{id}/archive` | ADMIN | Retirar de nuevas asignaciones y conservar publicaciones existentes según DEC-002 | 024 |
 | `GET /classes/{id}/activities` | Profesor asignado; STUDENT ve publicadas | Listado autorizado con estado y avance | 005,007 |
 | `POST /classes/{id}/activities` | Profesor asignado | `title`, `type`, `instructions`, ejercicios ordenados y ventana | 005 |
 | `GET, PATCH /activities/{id}` | Autor docente; estudiante según publicación | Edición DRAFT; protección de versión | 005,007 |
@@ -135,7 +135,7 @@ En esta tabla `RF 004`, por ejemplo, significa `ALZ-RF-004`. Cada operación apl
 
 El código colectivo de incorporación puede usarse por varios estudiantes mientras esté vigente; la unicidad se aplica a cada membresía. Solo una invitación individual puede ser de uso único según su contrato. Tener rol ADMIN de gobierno no concede publicación de actividades sin asignación docente explícita.
 
-**Contrato ejecutable IMP-02 (23/09/2026).** Véanse [OpenAPI](../packages/contracts/openapi.json), [esquemas estrictos](../packages/contracts/src/academic.ts) y [diccionario](../docs/work/IMP-02-dictionary.md). La tabla conserva rutas de fases futuras: `/exercises/{id}/governance` y avance desde intentos siguen pendientes. En este corte ADMIN consulta/archiva banco; únicamente el autor TEACHER con clase activa crea versiones PRIVATE. La autoría admite hasta 2 MiB HTTP sin ampliar el límite general de 32 KiB. Dificultad `BEGINNER/INTERMEDIATE/ADVANCED`; JavaScript, entrada exportada `module.exports.solve`, comparación JSON exacta; 1–8 pruebas con al menos una visible y sin IDs ni expectativas contradictorias para argumentos equivalentes. Límites fijos: 134217728 bytes, 3000 ms, 65536 bytes de salida. La coherencia estática no certifica corrección pedagógica universal.
+**Contrato ejecutable IMP-02 (23/09/2026).** Véanse [OpenAPI](../packages/contracts/openapi.json), [esquemas estrictos](../packages/contracts/src/academic.ts) y [diccionario](../docs/work/IMP-02-dictionary.md). En ese corte quedaron pendientes `/exercises/{id}/governance` y avance desde intentos; IMP-03 añade después el avance propio descrito más abajo. En IMP-02 ADMIN consulta/archiva banco; únicamente el autor TEACHER con clase activa crea versiones PRIVATE. La autoría admite hasta 2 MiB HTTP sin ampliar el límite general de 32 KiB. Dificultad `BEGINNER/INTERMEDIATE/ADVANCED`; JavaScript, entrada exportada `module.exports.solve`, comparación JSON exacta; 1–8 pruebas con al menos una visible y sin IDs ni expectativas contradictorias para argumentos equivalentes. Límites fijos: 134217728 bytes, 3000 ms, 65536 bytes de salida. La coherencia estática no certifica corrección pedagógica universal.
 
 Cursos/clases usan `startDate/endDate` civiles nullable; período académico textual obligatorio. Actividades usan UTC nullable y orden explícito; publicación exige contenido válido y al menos un ejercicio requerido. `DRAFT → PUBLISHED → CLOSED` sin reapertura fija versiones inmutables y permite consulta histórica. La proyección estudiantil incluye `canEdit`, `serverNow` y ventana; edición solo dentro de `[opensAt, closesAt)` en PUBLISHED. Archivo del banco conserva publicaciones existentes. Conceptos normalizan NFKC, espacios y minúsculas; versiones y grafo acíclico conservan referencias.
 
@@ -149,35 +149,90 @@ El código vence a siete días o antes, se muestra una vez y una rotación inval
 | `POST /activities/{id}/exercises/{aeId}/attempts` | `code`, `exerciseVersionId`, `previousAttemptId?` | Ejecuta todas las pruebas requeridas y persiste; 201 con intento y resultado | 010,011,014 |
 | `GET /activities/{id}/exercises/{aeId}/attempts` | Filtros cursor | Historial propio o del alumno permitido al profesor | 011,014,017 |
 | `GET /attempts/{id}` | Sin payload | Código propio, fecha, versión y resultado público autorizado | 011,017 |
+| `GET /activities/{id}/progress` | Sin payload | Avance propio mínimo por asignaciones requeridas y versiones fijas | 007 |
 | `POST /attempts/{id}/feedback-requests` | `kind: "FEEDBACK"` o `kind: "HINT"`, `hintLevel?` | 202 con ID de trabajo durable; requiere intento persistido propio | 012,013 |
 | `GET /feedback-requests/{id}` | Sin payload | Estado de trabajo; al terminar, `feedbackId` o error controlado | 012,013 |
 | `GET /attempts/{id}/feedback` | Cursor opcional | Feedback validado y niveles concedidos; proyección propia/docente | 012,013,017 |
 
 `previousAttemptId` solo vincula un intento del mismo estudiante y ejercicio asignado; no autoriza reutilizar ni alterar su código. Un envío siempre usa código y pruebas del servidor para una ejecución nueva: no confía en `executionId`, resultados, puntajes o hashes enviados por el navegador como prueba de éxito.
 
+**Contrato SUBMIT IMP-03.04–03.06, 26/09/2026:** el usuario resolvió DEC-002:
+un envío admitido por el servidor antes del cierre puede terminar y persistirse
+después; nuevas admisiones posteriores se rechazan. La confirmación de la UI
+no reserva admisión. Entregar, recuperar y consultar exige autorización vigente.
+El [registro IMP-03.04–03.06](../docs/work/IMP-03-submissions.md), su diccionario,
+[contratos estrictos](../packages/contracts/src/submissions.ts) y OpenAPI describen
+la implementación local de las cuatro rutas de envío, historia, detalle y avance.
+Solo STUDENT propietario accede a estos datos; lectura docente de RF-017 queda
+para IMP-06. El JSON de envío acepta `code`, `exerciseVersionId` y opcionalmente
+`previousAttemptId`, con `Idempotency-Key`; límites de fuente/HTTP iguales a RUN.
+
+La respuesta `Attempt` incluye IDs de intento, ejecución, actividad, asignación
+y versión, `testsVersion` SHA-256, número de admisión monotónico, intento anterior
+nullable, fechas servidor, código y resultado técnico. El resultado público
+extiende RUN solo con `hiddenChecksPassed` nullable y `allRequiredPassed`.
+Historia omite código y pagina con cursor entero exclusivo: `limit` por defecto
+10, máximo 20, `data` y `page: {nextCursor,hasMore}`. Ordena `attemptNumber DESC`.
+El avance devuelve `activityId`, `completed`, `required`, `ratio`, `evidenceState`
+y `asOf`; `0/0` tiene ratio null y estado `NO_REQUIRED_EXERCISES`, distinto de
+`NO_ATTEMPTS` o `HAS_EVIDENCE`.
+
+Admisión y cierre se serializan. Fuera de la transacción se ejecuta la suite
+completa; evidencia normalizada se guarda antes de confirmar atómicamente
+intento, código, resultados, eventos y respuesta. No se reejecuta una operación
+incierta: el reconciliador conserva evidencia durable o registra UNKNOWN
+operacional, tras comprobar limpieza. Misma clave/payload recupera respuesta
+24 horas; clave expirada no genera otro intento. Clave activa devuelve 409
+`REQUEST_IN_PROGRESS` con `Retry-After`; payload distinto entra en conflicto.
+Cuotas iniciales: 1 RUN y 2 SUBMIT activos por actor/organización, 4 combinados
+por organización y 10 admisiones combinadas por minuto/actor/organización.
+
+**Contrato RUN IMP-03.01–03.03 (26/09/2026).** La ruta de ejecución usa exclusivamente
+pruebas visibles y devuelve `RunExecution` según OpenAPI. Admite código de hasta
+65536 bytes UTF-8 y un envoltorio HTTP de 512 KiB específico, sin ampliar el límite
+general. Una reserva durable serializa con el cierre, la ejecución sucede fuera
+de la transacción y el resultado público se conserva 24 horas para idempotencia.
+No se guarda la fuente ni se crea intento. La misma clave/payload recupera la
+misma ejecución; una clave vencida devuelve `IDEMPOTENCY_EXPIRED` y nunca ejecuta
+otra vez. RUN admitido puede terminar después del cierre; devolver o recuperar
+su resultado exige acceso vigente. Cuotas y reconciliación están documentadas en
+[IMP-03](../docs/work/IMP-03-practice.md). Las rutas de feedback de esta sección
+continúan pendientes de sus incrementos.
+
 ```json
 {
   "data": {
     "attemptId": "11111111-1111-4111-8111-111111111111",
+    "executionId": "33333333-3333-4333-8333-333333333333",
+    "activityId": "44444444-4444-4444-8444-444444444444",
+    "assignmentId": "55555555-5555-4555-8555-555555555555",
     "exerciseVersionId": "22222222-2222-4222-8222-222222222222",
-    "submittedAt": "2026-09-10T15:00:00Z",
+    "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "attemptNumber": 1,
+    "previousAttemptId": null,
+    "admittedAt": "2026-09-26T15:00:00Z",
+    "submittedAt": "2026-09-26T15:00:02Z",
+    "code": "module.exports.solve = () => 0;",
     "technicalResult": {
+      "runnerVersion": "imp-03-quickjs.4",
       "diagnosisCode": "FAILED_TEST",
-      "visibleTests": [
-        { "id": "visible-1", "passed": false },
-        { "id": "visible-2", "passed": false }
+      "visibleTestResults": [
+        { "id": "66666666-6666-4666-8666-666666666666", "passed": false, "stdout": "", "stderr": "" },
+        { "id": "77777777-7777-4777-8777-777777777777", "passed": false, "stdout": "", "stderr": "" }
       ],
       "visiblePassed": 0,
       "visibleTotal": 2,
       "hiddenChecksPassed": false,
       "allRequiredPassed": false,
-      "stdout": "",
       "outputTruncated": false,
-      "durationMs": 34
-    },
-    "feedbackAvailable": false
+      "outputBytes": 0,
+      "runtimeMs": 34,
+      "lifecycleMs": 2000,
+      "infrastructureStatus": "OK",
+      "terminationReason": "ASSERTION_FAILED"
+    }
   },
-  "requestId": "req-demo-003"
+  "requestId": "88888888-8888-4888-8888-888888888888"
 }
 ```
 
@@ -187,17 +242,105 @@ El código vence a siete días o antes, se muestra una vez y una rotación inval
 
 ## Fuentes e ingestión
 
+Contratos ejecutables de IMP-04.01–04.03 en
+[`materials.ts`](../packages/contracts/src/materials.ts). Todas las rutas usan
+`/api/v1`, JWT vigente, proyección pública validada y `no-store`. Los listados
+usan `cursor`/`limit`; `activityId` en fuentes intersecta materiales generales
+de esa clase y los de la actividad elegida.
+
 | Método y ruta | Actor / entrada | Resultado | RF |
 | --- | --- | --- | --- |
-| `GET /classes/{id}/sources` | Profesor/ADMIN; alumno ve fuentes visibles autorizadas | Nombre, versión y estado permitido | 006,025 |
-| `POST /classes/{id}/sources` | Profesor/ADMIN; multipart `file`, `title`, `activityId?` | 202 con fuente, versión y trabajo; PDF texto/TXT/MD ≤10 MB | 006,025 |
-| `GET /sources/{id}` | Autoridad sobre esa clase/fuente | Metadatos y estado, no URL pública permanente | 006,025 |
-| `PATCH /sources/{id}/visibility` | ADMIN autorizado | Alcance compatible con clase/actividad; nueva revisión auditable | 025 |
-| `POST /sources/{id}/reindex` | ADMIN; docente reintenta su carga fallida según permiso | 202 con nueva generación, nunca mezcla versiones | 006,025 |
-| `POST /sources/{id}/archive` | ADMIN | Excluye inmediatamente futuras recuperaciones | 025 |
-| `GET /sources/{id}/versions/{versionId}/content` | Usuario con acceso vigente | Contenido o enlace temporal privado; reválida autorización | 013,025 |
+| `GET /classes/{id}/sources` | Profesor asignado/ADMIN; alumno inscrito ve fuentes disponibles autorizadas | Fuente, disponibilidad, versión activa, cantidad de fragmentos, permisos y último trabajo permitido | 006,025 |
+| `GET /classes/{id}/source-scopes` | Profesor asignado/ADMIN | Solo ID, título y estado de las actividades; no concede lectura pedagógica a ADMIN | 006,025 |
+| `POST /classes/{id}/sources` | Profesor/ADMIN; multipart `file`, `title`, `activityId?`; `Idempotency-Key` | 202 después de confirmar archivo/reserva/trabajo; `data: {source, version, job}` | 006,025 |
+| `GET /sources/{id}` | Acceso vigente sobre clase/fuente | Metadatos y disponibilidad separados del último procesamiento | 006,025 |
+| `GET /sources/{id}/versions` | Profesor asignado/ADMIN con permiso de historia | Versiones inmutables paginadas, incluidas fallidas; no expone ruta Storage | 006,025 |
+| `POST /sources/{id}/versions` | ADMIN o docente dueño; multipart `file`; `If-Match` e `Idempotency-Key` | 202 con nueva versión y trabajo; conserva la anterior hasta completar publicación | 006,025 |
+| `GET /sources/{id}/versions/{versionId}/chunks` | Profesor asignado/ADMIN, fuente activa | Fragmentos de la generación completa de la versión, con texto/localizador/tokens/hash; sin vectores ni fragmentos parciales | 006,025 |
+| `GET /sources/{id}/jobs/{jobId}` | Gestor autorizado de la fuente | Estado público del trabajo, intentos y error seguro; sin tokens de lease | 006,025 |
+| `PATCH /sources/{id}/visibility` | ADMIN; `{visible: boolean}`, `If-Match` | Nueva revisión auditable; la clase y actividad permanecen fijas | 025 |
+| `POST /sources/{id}/reindex` | ADMIN o docente que reintenta su carga fallida; `{versionId?}`, `If-Match`, `Idempotency-Key` | 202 con nueva generación; la versión debe pertenecer a la fuente y tener archivo confirmado | 006,025 |
+| `POST /sources/{id}/archive` | ADMIN; `{reason}`, `If-Match`, `Idempotency-Key` | Excluye inmediatamente recuperación/descarga y cancela activación pendiente; conserva historia | 025 |
+| `GET /sources/{id}/versions/{versionId}/content` | Usuario con acceso vigente; alumno limitado a versión activa | Bytes como adjunto a través de API; autoriza antes y después de Storage, sin enlace público | 006,025 |
 
-Tamaño operativo propuesto: 10 MB significa 10.000.000 bytes, por confirmar en DEC-010. Rechazar PDF sin texto extraíble con mensaje de formato no procesable. No OCR ni ingestión de URLs arbitrarias en el MVP. La reindexación no duplica resultados en el corpus activo.
+DEC-010 fija 10 MB como **10.000.000 bytes**. Se validan tamaño real, formato
+detectado y nombre seguro. PDF sin texto, corrupto/cifrado o extracción excedida
+termina con un error accionable, sin índice utilizable. No hay OCR ni ingestión
+de URLs. Clases/actividades ajenas, campos desconocidos y reasignación de ámbito
+se rechazan; ADMIN no recibe acceso a código o intentos por gobernar materiales.
+
+`MaterialSource.state` contiene `ACTIVE/ARCHIVED`; `availability` contiene
+`NOT_READY/READY/HIDDEN/ARCHIVED`. `latestJob.state` usa
+`UPLOADING/QUEUED/RUNNING/SUCCEEDED/FAILED` y puede ser `null` según la proyección.
+`UPLOADING` informa una recepción todavía no confirmada; el `202` requiere
+confirmación durable del archivo y trabajo. Una
+reindexación fallida puede coexistir con una versión anterior `READY`. Los
+estados de generación internos no amplían el contrato RAG.
+
+Los fragmentos se ordenan por índice con cursor de índice y paginación
+acotada. La recuperación vectorial se filtra por organización/clase/actividad,
+visibilidad, generación activa y perfil compatible antes de top-k=5; en este
+corte se verifica por la función autorizada de datos, sin endpoint público de
+ayuda sobre intentos en IMP-04.01–04.03. El corte siguiente añade estas interfaces.
+
+### Ayuda propia implementada en IMP-04.04–04.06
+
+El [contrato Zod](../packages/contracts/src/help.ts) y OpenAPI definen las siete
+rutas bajo `/api/v1`. Solo STUDENT ACTIVE propietario con acceso vigente puede
+usarlas; ADMIN y docentes no reciben lectura pedagógica adicional. CLOSED permite
+ayuda sobre evidencia histórica sin habilitar otro envío.
+
+| Método y ruta | Contrato |
+| --- | --- |
+| `POST /attempts/{id}/feedback-requests` | `kind: FEEDBACK\|HINT`, `hintLevel?`, Idempotency-Key; 202 tras reserva confirmada |
+| `GET /feedback-requests/{id}` | Estado durable y vínculo al resultado; no registra lectura |
+| `GET /attempts/{id}/feedback` | Historial de metadatos, cursor, máximo 20 y capacidades actuales |
+| `GET /feedback/{id}` | Contenido autorizado y token de presentación ligado al feedback |
+| `POST /feedback/{id}/viewed` | ACK `{presentationToken}` idempotente; registra presentación explícita |
+| `GET /feedback/{id}/sources/{chunkId}` | Solo cita perteneciente al feedback: versión original, extracto y localizador |
+| `GET /feedback/{id}/sources/{chunkId}/content` | Binario de la versión originalmente citada por NestJS, no-store y autorización vigente |
+
+El envoltorio separa identidad/fechas/tipo/nivel/estado del objeto RAG, que conserva
+sus cinco campos y tres estados. FEEDBACK siempre tiene `hint` vacío. Las pistas
+preparadas permanecen reservadas hasta ACK; un fallback no consume nivel. Replays
+devuelven el trabajo existente y otro payload con la misma clave produce 409.
+La explicación válida se reutiliza. Polling no crea eventos. Ocultar/archivar una
+fuente suprime texto derivado y referencias, aunque no fuera citada. Las descargas
+genéricas de materiales para estudiantes siguen limitadas a versiones activas.
+Véanse límites y eventos en el [registro de ayuda](../docs/work/IMP-04-help.md).
+
+### Listener operacional privado de evaluación
+
+IMP-04.07/preparación .08 incorpora un listener independiente en loopback,
+habilitado solo para TEST/LAB-EVAL con `EVALUATION_ENABLED` y
+`EVALUATION_OPERATIONS_PORT` (4401 en el perfil fijado). No forma parte de
+`/api/v1`, de la interfaz estudiantil ni de los permisos ADMIN. La credencial
+opaca ligada al run se genera durante autorización de mantenimiento; no es un
+JWT de usuario ni permite crear/modificar el manifiesto aprobado.
+
+| Método y ruta operacional | Conducta |
+| --- | --- |
+| `GET /operations/ai-runs/{id}` | Estado, etapas, presupuestos/totales, resultados operacionales y calibración del run autorizado |
+| `GET /operations/ai-runs/{id}/receipts?cursor=&limit=` | Proyección segura, cursor UUID, límite 1–100, `items/nextCursor`; sin contenido privado ni tokens de despacho |
+| `POST /operations/ai-runs/{id}/stages/{stage}/start` | Inicia una de las cuatro etapas solo si la precedente está confirmada; cuerpo vacío |
+| `POST /operations/ai-runs/{id}/stop` | Detiene nuevos despachos/publicaciones de la corrida; no borra recibos ni consumo tardío; cuerpo vacío |
+
+Todas las respuestas son `no-store`; se rechazan origen de navegador, cuerpo de
+petición y acceso fuera de loopback. El
+[contrato privado compartido](../packages/contracts/src/evaluation.ts) valida
+manifiestos, perfiles, observaciones y recibos. Las cargas de materiales y
+solicitudes/ACK/referencias del experimento usan las rutas de producto existentes,
+JWT de actores autorizados, `Idempotency-Key`, revisión y cuotas normales.
+Los bindings de servidor intersectan esos permisos con el alcance, hash,
+operaciones y presupuesto del run. No existe endpoint operacional para ejecutar
+un prompt arbitrario. El [manual](../docs/work/IMP-04-evaluation-operations.md)
+separa preparar/autorizar/ejecutar. Los contratos y el arnés están probados en
+TEST: la CI completa del 02/10/2026 aprobó 146 pruebas HTTP y 45 recorridos
+Cypress sin omisiones; el run de evaluación cerró 43/43 casos y tres
+reanudaciones. Los resultados y sus límites constan en el
+[registro de evaluación](../docs/work/IMP-04-evaluation.md). IMP-04.08 conserva
+el alcance de preparación ejecutable; Azure, p95 remoto, evaluación semántica,
+revisión docente y aceptación CAPSTONE permanecen pendientes.
 
 ## Progreso, tablero, señales y auditoría
 

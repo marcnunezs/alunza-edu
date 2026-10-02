@@ -25,6 +25,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { TeacherSelect } from './classes';
 import { ActivityFormDialog, activityLabels } from './activity-panel';
+import { ActivityProgress } from './activity-progress';
+import { MaterialsPanel } from './materials-panel';
 import {
   ConfirmAction,
   LoadState,
@@ -207,6 +209,7 @@ function ClassContent({
           item.organizationId === classroom.organizationId &&
           item.role !== 'ADMIN',
       ),
+    10,
   );
   const membership =
     identity.status === 'ready'
@@ -358,6 +361,11 @@ function ClassContent({
       {teacher && active ? (
         <JoinCodes classroom={classroom} timezone={timezone} done={reload} />
       ) : null}
+      <MaterialsPanel
+        classId={classroom.id}
+        canUpload={active && (admin || teacher)}
+        manage={admin || teacher}
+      />
       {membership?.role !== 'ADMIN' ? (
         <Section
           title="Actividades"
@@ -401,6 +409,9 @@ function ClassContent({
                         Abrir actividad
                       </Link>
                     </Button>
+                    {membership?.role === 'STUDENT' ? (
+                      <ActivityProgress activityId={activity.id} />
+                    ) : null}
                   </article>
                 ))}
               </div>

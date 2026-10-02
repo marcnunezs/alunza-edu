@@ -1,6 +1,6 @@
 # IMP-04 — Fuentes y ayuda contextual con IA/RAG
 
-Estado inicial: **pendiente de implementación**. La fase cierra principalmente ALZ-RF-006/012/013/025 y completa la verificación integrada de degradación IA de ALZ-RF-010. Los artefactos, división de trabajo y precisiones nuevas son propuestas; este documento no acredita evaluación de IA ni integración con proveedores.
+Estado al 02/10/2026: **IMP-04.01–04.06 implementados y probados localmente; IMP-04.07 implementado y probado localmente; preparación ejecutable de IMP-04.08 probada en TEST**. El corte autorizado de materiales se registra en [IMP-04-materials](../work/IMP-04-materials.md), con activación automática de una generación completa, nuevas versiones al reemplazar y cierre local separado de Azure real. El [registro de ayuda](../work/IMP-04-help.md) conserva la implementación, las comprobaciones y el cierre local de IMP-04.04–04.06; el [registro de evaluación](../work/IMP-04-evaluation.md) registra CI completo aprobado y separa la aceptación local de Azure y de la revisión docente pendientes. La fase completa cierra principalmente ALZ-RF-006/012/013/025 y verifica degradación integrada de ALZ-RF-010. Este documento no acredita por sí solo evaluación pedagógica, integración remota ni aceptación humana.
 
 ## Resultado y demostración de la fase
 
@@ -22,7 +22,7 @@ IMP-05 depende de práctica y evidencia determinista, no de esta fase. Si Azure 
 
 | Decisión | Qué concretar con evidencia | Trabajo que puede avanzar mientras tanto |
 | --- | --- | --- |
-| DEC-010 | Deployment/modelo, dimensión, tokenizer, extractor, distancia/umbral, ambigüedad, niveles, timeout y reintentos; unidad de 10 MB | Interfaces, schema estricto, corpus etiquetado, fallbacks y ensayos locales marcados como tales |
+| DEC-010 | Configuración Azure y calibración medidas, calidad pedagógica y latencia pendientes; materiales fija tokenizer/extractor/tamaño y ayuda concreta explicación separada, niveles 1–3, verificación y plazo de 15 s | Corpus adversario y arnés ejecutable por etapas con procedencia de calibración, probado en TEST |
 | DEC-004 | API de trabajos, deduplicación, adquisición/lease, respuesta durable, consulta de estado, cancelación y recuperación | Implementación reversible de contratos y pruebas de concurrencia; no `202` sin persistencia |
 | DEC-006 | Fuentes/versiones/generaciones/fragmentos, claves de alcance, relación con intentos y RLS | Diccionario y migraciones locales revisadas |
 | DEC-008 | Perfil, muestra, concurrencia, región, costo y medición de ayuda completa | Instrumentación y preparación del experimento; no p95 inferido de mocks |
@@ -32,30 +32,100 @@ Azure OpenAI es el proveedor inicial de generación y embeddings; PostgreSQL/pgv
 
 ## Incrementos en orden
 
-Los ocho incrementos comienzan **pendientes**. Cada uno deja una capacidad comprobable y evidencia propia. No se considera RF-006 listo por subir un archivo si todavía no puede indexarse y recuperarse de forma autorizada.
+Los incrementos IMP-04.01–04.06 tienen implementación de producto integrada y probada localmente. El corte actual implementa IMP-04.07 y la preparación ejecutable de IMP-04.08; su verificación integrada local está aprobada; la medición Azure y la aceptación humana permanecen pendientes. Cada uno deja una capacidad comprobable y evidencia propia. No se considera RF-006 listo por subir un archivo si todavía no puede indexarse y recuperarse de forma autorizada. La recuperación SQL de materiales comprueba el índice; el corte de ayuda integra consultas desde intentos, explicaciones, pistas y referencias, probadas con proveedor TEST explícito.
 
 | Incremento | Resultado observable | Artefactos propuestos | Comprobaciones para cerrar el incremento |
 | --- | --- | --- | --- |
 | IMP-04.01 Contratos, permisos y evaluación base | Una fuente y una solicitud de ayuda tienen alcance, versiones y salidas inequívocos; un caso etiquetado expresa qué evidencia debería sustentarlo | Puertos de extracción/embeddings/recuperación/generación, schema RAG, modelo de generaciones/trabajos, corpus inicial y registro DEC-004/010 | Tres estados, cinco campos, referencia ajena y diagnóstico cambiado rechazados; permisos docente/admin/estudiante; casos con y sin sustento y requisitos de configuración |
 | IMP-04.02 Carga y gestión visible | Profesor y ADMIN autorizado cargan un archivo válido y consultan estado/metadatos; el inválido se rechaza con causa útil | API NestJS, Storage privado, metadatos/versiones, trabajo durable, carga y listado por rol; limpieza de objetos huérfanos | PDF con texto/TXT/MD, tamaño real/tipo detectado, PDF sin texto/cifrado/corrupto, metadatos incompletos y ámbito ajeno; no confirmar carga utilizable parcial |
 | IMP-04.03 Indexación, reindexación y archivo | Una generación completa puede buscarse; una falla no reemplaza la anterior; archivo excluye inmediatamente la fuente | Worker durable, extractor acotado, tokenizer 500/50, adaptador Azure OpenAI embeddings, pgvector, publicación atómica, pantalla de reintento y gobierno | Caída/reanudación, doble entrega, lease vencido, dimensión errónea, valores no finitos, cambio de modelo, publicación concurrente, archivo durante indexación y ausencia de fragmentos parciales activos |
-| IMP-04.04 Recuperación autorizada | Un intento propio encuentra hasta cinco fragmentos pertinentes solo de su ámbito; corpus insuficiente produce fallback | Constructor de consulta desde evidencia pública, filtros SQL/RLS previos a ranking, recuperación top-k=5, pertinencia y política de ambigüedad | Señuelos más similares de otra organización/clase/actividad excluidos; corpus vacío/irrelevante; fuente archivada; falta de intento implica cero recuperación y embeddings de consulta |
+| IMP-04.04 Recuperación autorizada | Un intento propio encuentra hasta cinco fragmentos pertinentes solo de su ámbito; corpus insuficiente produce fallback | Constructor de consulta desde evidencia pública, filtros SQL/RLS previos a ranking, recuperación top-k=5 y política de pertinencia calibrada/versionada | Señuelos más similares de otra organización/clase/actividad excluidos; corpus vacío/irrelevante; fuente archivada; falta de intento implica cero recuperación y embeddings de consulta |
 | IMP-04.05 Feedback durable y validado | Desde el intento se solicita ayuda, se observa el trabajo y se obtiene SUPPORTED o fallback consultable | Endpoint de solicitud durable, consumidor, adaptador de generación, prompt/schema versionados, validador semántico, persistencia e interfaz de feedback | `202` después de commit del trabajo; cinco campos exactos; diagnóstico/citas/localizador coherentes; salida inválida descartada; fallo de persistencia de feedback no confirmado como guardado |
 | IMP-04.06 Pistas y referencias completas | El estudiante pide la siguiente ayuda permitida y abre documento/ubicación sin saltar niveles ni perder historia | Reserva atómica de nivel e idempotencia, UI de pistas, evento de entrega, lectura privada/revalidación de cita, historial por intento | Clave repetida sin doble consumo; niveles inválidos; fallbacks no consumen nivel; intento nuevo conserva ayudas anteriores; revocación entre generación, lectura y apertura de documento |
 | IMP-04.07 Fallos e inyección de instrucciones | Una caída o contenido malicioso no altera dominio, expone fuentes ajenas ni bloquea práctica | Batería adversaria, errores deterministas, recuperación de trabajos y métricas seguras; endurecimiento según resultados | Proveedor/índice/BD caídos distinguidos de no evidencia; JSON extra/`score`, cita inventada/irrelevante y contradicción; documentos/código que piden revelar tests o ejecutar herramientas; reintento técnico sigue funcionando |
 | IMP-04.08 Evaluación y aceptación integrada | El recorrido real queda reproducible con calidad, latencia y límites documentados | Cypress del flujo, integración real Storage/pgvector/Azure OpenAI, corpus/rúbrica versionados, registro RF/PT/RNF, manuales y configuración | E1–E4 de RF-006/012/013/025; ALZ-HU-010-E4 y orden commit→RAG; evaluación humana registrada por quien participe realmente; p95/consumo medidos y pendientes explícitos |
 
-La preparación de corpus y fixtures atraviesa todos los incrementos. Los dobles controlados prueban fallos, permisos y contrato; la integración de embeddings y generación con Azure OpenAI se comprueba separadamente. Sin proveedor configurado puede existir código y prueba local, pero el cierre de integración queda pendiente.
+La preparación de corpus y fixtures atraviesa todos los incrementos. Los dobles controlados prueban fallos, permisos y contrato; la integración de embeddings y generación con Azure OpenAI se comprueba separadamente. Sin proveedor configurado puede existir código y prueba local, pero la integración remota con Azure queda pendiente.
+
+### Corte de ayuda implementado y probado localmente
+
+El panel de intento guardado e historial permite solicitar `FEEDBACK` separado
+de las pistas `HINT` 1–3. Una actividad CLOSED conserva esta ayuda propia con
+permisos vigentes. SUCCESS admite explicación; UNKNOWN por fallo de infraestructura
+recibe una explicación determinista `NO_EVIDENCE` sin llamar a IA. RUN y un envío
+todavía sin confirmar no habilitan solicitudes. La lectura docente queda en RF-017.
+
+El historial carga metadatos y capacidades desde el servidor. Abrir una respuesta
+consulta su contenido; después de presentarlo explícitamente se confirma un ACK
+idempotente. Una explicación vigente registra `FEEDBACK_VIEWED` también cuando
+es un fallback; una pista solo registra `HINT_DELIVERED` si está `SUPPORTED`.
+Consultar estado no entrega una pista. Los fallbacks de pistas carecen de token y
+no consumen nivel; una respuesta incierta conserva la misma clave. Las referencias vuelven
+a validar la versión y fragmento originales, incluso tras reemplazo; ocultar,
+archivar o revocar acceso suprime el contenido derivado sin reactivarlo al restaurar
+la fuente. Contratos y fronteras: [diccionario de ayuda](../work/IMP-04-help-dictionary.md).
+
+En servidor, `HELP_WORKER_ENABLED` controla el consumidor de ayuda. La
+[configuración de ejemplo](../../.env.example) separa embeddings, generación y
+verificación: `AI_GENERATION_DEPLOYMENT/MODEL/CONFIGURATION_ID/TOKENIZER`,
+`AI_VERIFICATION_DEPLOYMENT/MODEL` y calibración mediante
+`HELP_CALIBRATION_JSON` más `HELP_CALIBRATION_CORPUS_SHA256`. La calibración debe
+corresponder al corpus y configuración autorizados; no existe un umbral Azure
+predeterminado. Estas variables no se exponen mediante `NEXT_PUBLIC`.
+
+`npm run help:plan` genera un plan offline con el
+[manifiesto específico](../../infra/preproduction/help-manifest.example.json).
+No llama proveedores ni despliega recursos. Ese plan histórico se complementa
+con el arnés ejecutable `help:eval` del corte siguiente; preparar o validar un
+manifiesto no acredita Azure real.
+La operación del consumidor en Container Apps y Vercel Sandbox IMP-03.07 siguen
+pendientes antes de producción. Cypress aprobó **42/42 recorridos locales**, incluidos
+los cuatro de ayuda, con Auth, API, Storage y pgvector reales y proveedor de IA TEST
+explícito. El registro del corte conserva las comprobaciones, correcciones y fallos
+previos, incluido el perfil de latencia. La calidad semántica con Azure, evaluación
+docente y aceptación CAPSTONE permanecen pendientes.
+
+### Fallos y preparación ejecutable probados localmente
+
+IMP-04.07 amplía pruebas de proveedor/índice, PostgreSQL en admisión,
+checkpoint/publicación y reinicio tras revisión, y Storage interrumpido, corrupto
+o revocado durante lectura. Los tres recorridos nuevos `IMP04-08/09/10` cubren
+degradación con RUN/SUBMIT operativos, contenido hostil como texto y recuperación
+de ACK/descarga sin duplicar eventos o niveles. La corrida completa aprobó
+45/45 recorridos, sin pendientes ni omitidos, dentro de `ci:verify` el 02/10/2026.
+El arnés TEST aprobó sus cuatro etapas, 43 casos y perfiles de 100+100 ayudas,
+con 234 muestras, 763 recibos y reanudación sin duplicados. Los reportes y los
+fallos anteriores se conservan en el registro del incremento.
+
+La preparación de IMP-04.08 incorpora LAB-EVAL aislado, manifiesto acotado,
+autorización de mantenimiento, listener operacional privado y etapas
+`INGESTION → CALIBRATION → FUNCTIONAL → EVALUATION`. El ledger común registra
+cada despacho y reserva llamadas/tokens/costo antes del proveedor. Recibos sin
+resultado durable no habilitan repetición automática; una respuesta tardía puede
+registrar consumo sin publicarse. Tokens o costos desconocidos permanecen nulos.
+La calibración exige consultas, distancias, corpus y recibos del mismo origen y
+configuración; TEST no acredita ni se promueve a Azure.
+
+El perfil fija una explicación y tres pistas en un intento funcional, y luego
+25 intentos × 4 ayudas en serie y otros 25 × 4 con concurrencia cuatro. Mantiene
+las cuotas del producto, el plazo absoluto de 15 s y la meta documental p95
+<12 s. La espera por cuota se separa de admisión→persistencia y tiempo del cliente;
+se conservan fallbacks y muestras fallidas. Precios, candidato y presupuestos
+por etapa/global deben quedar explícitos antes de una corrida remota autorizada.
+Véanse el [diccionario](../work/IMP-04-evaluation-dictionary.md) y el
+[manual operacional](../work/IMP-04-evaluation-operations.md). El arnés y las
+pruebas controladas no cierran calidad semántica, revisión docente, CAPSTONE,
+Vercel Sandbox IMP-03.07 ni operación productiva de ACA.
 
 ## Diseño de trabajo que debe quedar concretado
 
 ### Corpus, versiones y durabilidad
 
-La carga admite PDF con texto extraíble, TXT y Markdown de hasta 10 MB. La interpretación de 10.000.000 bytes es propuesta DEC-010. Se valida tamaño real y tipo por contenido; no basta MIME o extensión enviados por el cliente. No se incorpora OCR, descarga de URLs arbitrarias ni ejecución de contenido del archivo.
+La carga admite PDF con texto extraíble, TXT y Markdown de hasta 10 MB. DEC-010 concreta para IMP-04.01–04.03 **10.000.000 bytes**. Se valida tamaño real y tipo por contenido; no basta MIME o extensión enviados por el cliente. No se incorpora OCR, descarga de URLs arbitrarias ni ejecución de contenido del archivo.
 
 Cada archivo conserva hash, versión, organización, clase y actividad opcional. El extractor opera con presupuesto de memoria/tiempo y conserva localizadores. La fragmentación usa el tokenizer fijado: hasta 500 tokens y 50 de solapamiento salvo bordes. Se registra índice, texto, conteo y hash por fragmento junto a versión de extractor/tokenizer/configuración.
 
-El modelo propuesto distingue:
+El modelo implementado para el corte distingue:
 
 | Entidad o estado | Significado que debe probarse |
 | --- | --- |
@@ -63,7 +133,15 @@ El modelo propuesto distingue:
 | Versión de contenido | Binario/texto y localizadores inmutables; reemplazar contenido crea otra versión |
 | Generación de índice | Embeddings de una configuración homogénea; reindexar crea otra generación |
 | Generación activa | Puntero publicado de forma atómica solo a un conjunto completo y autorizado |
-| `UPLOADED/PROCESSING/READY/FAILED/ARCHIVED` | Estados operativos propuestos de ingestión; no son estados de respuesta RAG |
+| `UPLOADED/PROCESSING/READY/FAILED/ARCHIVED` | Estados internos de generaciones; no son estados de respuesta RAG |
+
+La API distingue disponibilidad de fuente (`NOT_READY/READY/HIDDEN/ARCHIVED`)
+del último trabajo (`UPLOADING/QUEUED/RUNNING/SUCCEEDED/FAILED`). La web distingue
+recepción pendiente de archivo confirmado y puede mostrar
+procesamiento fallido y una versión anterior disponible simultáneamente.
+Clase/actividad quedan fijas al crear la fuente; cambiar `visible` no cambia su
+ámbito. El perfil inicial de embeddings queda registrado y una configuración
+incompatible se rechaza; su migración deliberada queda fuera del corte local.
 
 Storage y PostgreSQL no comparten transacción. La tarea debe resolver confirmación de metadatos/trabajo, objetos huérfanos y compensación de fallos. El trabajo durable necesita adquisición atómica, lease recuperable, deduplicación y reintentos acotados. Un proceso en memoria no justifica `202` ni recuperación después de reiniciar.
 
@@ -75,7 +153,7 @@ Para una ayuda sobre un intento, el orden obligatorio es: comprobar intento conf
 
 Los filtros integran organización, clase, actividad compatible, visibilidad, fuente no archivada y generación activa completa. No se buscan fragmentos globales para filtrarlos después. Una fuente de clase puede sustentar actividades de esa clase; una fuente restringida a actividad solo la actividad correspondiente. Probar fuente señuelo muy pertinente en cada ámbito prohibido.
 
-El contexto al modelo excluye identidad personal innecesaria, secretos, código ajeno, entradas/resultados esperados ocultos y stdout/stderr de casos ocultos. Incluye solo evidencia pública del intento, código limitado, nivel permitido y fragmentos autorizados con IDs. El prompt del servidor exige español claro, siguiente paso concreto, conservación del diagnóstico, citas suministradas y ayuda gradual sin solución completa inmediata.
+El contexto al modelo excluye identidad personal innecesaria, secretos, código ajeno, pruebas ocultas, expectativas y stdout/stderr. Incluye enunciado, conceptos, resultados booleanos de pruebas visibles, diagnóstico y código completo del intento, nivel permitido y fragmentos autorizados con IDs. Si el código no cabe en los límites de entrada, devuelve una limitación explícita; no lo recorta silenciosamente. El prompt del servidor exige español claro, conservación del diagnóstico y citas suministradas; FEEDBACK explica sin pista y HINT ofrece ayuda gradual sin solución completa.
 
 Código, preguntas y documentos se tratan como datos sin autoridad para cambiar instrucciones. El modelo no recibe herramientas, SQL, navegación, permisos de escritura ni capacidad de ejecutar código. No determina progreso, señales, nota o intervención.
 
@@ -86,12 +164,12 @@ Las cinco claves son obligatorias y únicas; `additionalProperties: false` tambi
 | Campo exacto | Validación prevista |
 | --- | --- |
 | `diagnosis_code` | Uno de `SUCCESS`, `SYNTAX_ERROR`, `RUNTIME_ERROR`, `FAILED_TEST`, `TIMEOUT`, `UNKNOWN`; coincide con el diagnóstico persistido |
-| `explanation` | Texto plano no vacío; máximo propuesto 2.000 caracteres; no contradice resultado ni evidencia |
-| `hint` | Texto plano; máximo propuesto 1.000 caracteres; puede ser vacío en degradación o si no corresponde pista |
+| `explanation` | Texto plano no vacío; máximo 2.000 caracteres; no contradice resultado ni evidencia |
+| `hint` | Texto plano; máximo 1.000 caracteres; vacío en FEEDBACK y degradación |
 | `source_refs` | Entre 0 y 5 referencias; IDs, versión y localizador deben pertenecer al contexto autorizado y respaldar la respuesta |
 | `status` | Exactamente `SUPPORTED`, `NO_EVIDENCE` o `PROVIDER_UNAVAILABLE` |
 
-Las referencias anidadas propuestas contienen `source_id`, `source_version_id`, `chunk_id`, `locator`. El servidor resuelve enlaces desde metadatos, nunca desde URLs inventadas por el modelo. `SUPPORTED` exige al menos una referencia pertinente validada; un ID existente pero irrelevante no demuestra sustento. Una explicación contradictoria invalida toda la carga: no se corrige únicamente el enum.
+Las referencias anidadas contienen `source_id`, `source_version_id`, `chunk_id`, `locator`. El servidor resuelve enlaces desde metadatos, nunca desde URLs inventadas por el modelo. `SUPPORTED` exige al menos una referencia pertinente validada y aceptación del verificador semántico; un ID existente pero irrelevante no demuestra sustento. El verificador emite un veredicto interno y no reescribe el candidato. Una explicación contradictoria invalida toda la carga: no se corrige únicamente el enum.
 
 | Condición | Conducta verificable |
 | --- | --- |
@@ -106,13 +184,13 @@ Se conservan versiones de prompt, schema, proveedor y hashes/referencias del con
 
 ### Pistas, trabajos y latencia
 
-La propuesta DEC-010 utiliza tres niveles por intento: orientación de concepto, pregunta dirigida y guía de siguiente paso o pseudocódigo parcial. La progresión y rúbrica requieren resolución; agotar niveles no desbloquea solución completa.
+El corte autorizado concreta tres niveles por intento: orientación de concepto, pregunta dirigida y guía de siguiente paso o pseudocódigo parcial. La evaluación pedagógica con rúbrica y participantes reales sigue pendiente; agotar niveles no desbloquea solución completa. La explicación FEEDBACK se solicita por separado y no consume esos niveles.
 
-El backend decide el próximo nivel disponible y reserva idempotencia/nivel atómicamente. Repetir una clave no salta niveles ni duplica consumo. `NO_EVIDENCE` y `PROVIDER_UNAVAILABLE` no consumen un nivel concedido; un nuevo intento conserva historia y abre su propio registro de ayuda. El evento `HINT_DELIVERED` requiere entrega real, no simple solicitud o fallo.
+El backend decide el próximo nivel disponible y reserva idempotencia/nivel atómicamente. Repetir una clave no salta niveles ni duplica consumo. `NO_EVIDENCE` y `PROVIDER_UNAVAILABLE` no consumen un nivel concedido; un nuevo intento conserva historia y abre su propio registro de ayuda. Una pista preparada conserva su reserva hasta el ACK. El evento `HINT_DELIVERED` requiere presentación explícita confirmada de manera idempotente, no simple solicitud, consulta de metadatos o fallo; no acredita comprensión del estudiante.
 
 El trabajo de feedback se confirma durablemente antes de responder `202`. El cliente consulta estado operativo y luego feedback validado; `QUEUED/RUNNING` no se incorporan al catálogo RAG. Un lease vencido o doble entrega debe reconciliar lo ya guardado y no producir dos ayudas ni consumir niveles dos veces.
 
-La propuesta actual fija plazo interactivo total de 15 s, sin reintento automático de generación dentro de esa solicitud; la meta documentada es p95 <12 s. Ingestión propone hasta tres intentos con espera creciente para fallos transitorios, nunca para archivo inválido o acceso denegado. Estos detalles se resuelven en DEC-010; no se presentan como configuración aprobada. Medir cola, recuperación, generación, validación, persistencia y entrega: un `202` rápido no cumple por sí solo la meta de ayuda completa.
+La implementación de ayuda fija un plazo absoluto de 15 s desde admisión, lease de 10 s renovado cada 3 s y registros de despacho/checkpoints que evitan repetir automáticamente una llamada incierta. La meta documentada p95 <12 s conserva su medición pendiente; las pruebas con dobles no la acreditan para Azure. El corte de ingestión implementa hasta tres intentos con espera creciente para fallos transitorios, nunca para archivo inválido o acceso denegado; sus límites se registran en [IMP-04-materials](../work/IMP-04-materials.md). Medir cola, recuperación, generación, validación, persistencia y entrega: un `202` rápido no cumple por sí solo la meta de ayuda completa.
 
 ## Cobertura de aceptación y riesgos
 

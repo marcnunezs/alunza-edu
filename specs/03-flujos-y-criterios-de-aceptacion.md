@@ -119,7 +119,7 @@ Para cada prueba se registra requisito, escenario, versión del producto, fixtur
 | ALZ-HU-005-E3 | Profesor ajeno a la clase o estudiante; solicita publicar/cerrar. | Deniega cambio; actividad y evidencia sin modificación. |
 | ALZ-HU-005-E4 | Actividad DRAFT, PUBLISHED o CLOSED; solicita transición. | Solo admite transiciones definidas, conserva uno de los tres estados y registra auditoría. Al cerrar, bloquea envíos. |
 
-**Propuesta técnica/Pendiente:** probar DRAFT → PUBLISHED → CLOSED como secuencia inicial. Reapertura y retornos requieren decisión explícita. La separación de catálogo activo e historial cerrado depende de DEC-002. La prueba no puede afirmar validez de transiciones que aún no se han definido.
+**Decisión ratificada — DEC-002:** probar DRAFT → PUBLISHED → CLOSED como secuencia inicial y la separación de catálogo activo e historial cerrado conforme a [fuentes y decisiones](00-fuentes-y-decisiones.md). Reapertura y retornos requieren una nueva decisión explícita; la prueba no puede afirmar validez de transiciones que aún no se han definido.
 
 ### ALZ-CU-006 — Cargar e indexar material oficial
 
@@ -153,7 +153,7 @@ Para cada prueba se registra requisito, escenario, versión del producto, fixtur
 | ALZ-HU-007-E3 | Estudiante sin membresía solicita clase por URL/API. | No recibe publicaciones ni metadatos protegidos. |
 | ALZ-HU-007-E4 | Clase sin PUBLISHED; abre lista. | Estado vacío accesible y comprensible, sin inventar progreso. |
 
-**Pendiente DEC-002:** en actividad CLOSED con intentos previos, comprobar solo consulta histórica autorizada y bloqueo de nuevos envíos una vez confirmada esa interpretación.
+**Decisión ratificada — DEC-002:** en actividad CLOSED con intentos previos, comprobar consulta histórica con autorización vigente y bloqueo de nuevas admisiones.
 
 ### ALZ-CU-008 — Abrir ejercicio y preparar solución
 
@@ -194,7 +194,7 @@ Para cada prueba se registra requisito, escenario, versión del producto, fixtur
 
 **Flujo normal:** elige enviar → solicita confirmación → estudiante confirma → valida estado y autorización → ejecuta pruebas → persiste intento/eventos/resultado → confirma registro y actualiza evidencia → puede solicitar IA/RAG. **Postcondición:** intento persistido, independiente de la disponibilidad de IA.
 
-**Propuesta técnica — DEC-002:** distinguir confirmación del estudiante en la interfaz, admisión transaccional por el servidor y confirmación final de persistencia. Admitir solo mientras PUBLISHED; un envío admitido antes del cierre puede completar y persistirse después. Si el cierre precede a la admisión, rechazar y conservar borrador. Esta semántica de concurrencia permanece pendiente de ratificación; no equivale a confirmar durabilidad al admitir.
+**Decisión ratificada — DEC-002, 26/09/2026:** distinguir confirmación del estudiante en la interfaz, admisión transaccional por el servidor y confirmación final de persistencia. Admitir solo mientras PUBLISHED y dentro de su ventana; un envío admitido antes del cierre puede completar y persistirse después. Si el cierre precede a la admisión, rechazar y conservar borrador. Entregar o consultar exige autorización vigente; admitir no equivale a confirmar durabilidad. La implementación y evidencia se registran en [IMP-03.04–03.06](../docs/work/IMP-03-submissions.md).
 
 | Escenario | Dado / cuando | Entonces verificable |
 | --- | --- | --- |
@@ -203,7 +203,7 @@ Para cada prueba se registra requisito, escenario, versión del producto, fixtur
 | ALZ-HU-010-E3 | Intenta enviar por otro estudiante o a clase no autorizada. | No crea intento ajeno ni revela datos de la actividad. |
 | ALZ-HU-010-E4 | Intento persistido; falla proveedor de feedback. | Intento y resultado permanecen consultables y estado RAG es PROVIDER_UNAVAILABLE. |
 
-**Aceptación complementaria:** instrumentar el orden «confirmación de persistencia → llamada IA/RAG» y simular fallo de persistencia comprobando cero invocaciones. No basta un mensaje visual de éxito. Según la propuesta DEC-002, probar por separado cierre previo a admisión —rechazo— y cierre posterior a admisión —puede completar y persistirse—; ambas pruebas deben registrar los instantes de admisión, cierre y persistencia.
+**Aceptación complementaria:** instrumentar el orden «confirmación de persistencia → llamada IA/RAG» y simular fallo de persistencia comprobando cero invocaciones. No basta un mensaje visual de éxito. Según la resolución DEC-002, probar por separado cierre previo a admisión —rechazo— y cierre posterior a admisión —puede completar y persistirse—; ambas pruebas deben registrar los instantes de admisión, cierre y persistencia.
 
 ### ALZ-CU-011 — Consultar resultado técnico
 
@@ -489,7 +489,7 @@ Para cada prueba se registra requisito, escenario, versión del producto, fixtur
 | Corpus insuficiente | Solicitar ayuda con corpus vacío/no pertinente de esa clase. | NO_EVIDENCE, referencias vacías, explicación técnica conservada y ausencia de citas inventadas. |
 | Persistencia indisponible | Fallar guardado durante envío. | No confirma intento, no llama IA/RAG, no inventa progreso y conserva editor. |
 | Aislamiento | Repetir consultas/mutaciones con clase B o segunda clase de A no autorizada. | API, datos, Storage, RAG, tableros y CSV niegan datos ajenos. |
-| Cierre mientras se trabaja | Profesor cierra antes de que el estudiante confirme envío; agregar carrera antes/después de admisión del servidor según DEC-002. | Envío aún no admitido: rechazo y borrador conservado. Propuesta pendiente: admitido mientras PUBLISHED puede terminar y persistirse tras cierre; solo entonces se confirma guardado. |
+| Cierre mientras se trabaja | Profesor cierra antes de que el estudiante confirme envío; agregar carrera antes/después de admisión del servidor según DEC-002. | Envío aún no admitido: rechazo y borrador conservado. Según la resolución DEC-002, admitido mientras PUBLISHED y dentro de su ventana puede terminar y persistirse tras cierre; solo entonces se confirma guardado, con autorización vigente para entregar el resultado. |
 | Evidencia histórica | Editar ejercicio publicado y activar otra versión de regla. | Actividad/intento/señal previos conservan las versiones que sustentan su evidencia. |
 | Señal y revisión | Crear fixture de regla cumplida, abrir evidencia y revisar dos veces. | Señal explicable; segunda revisión no cambia responsable ni fecha originales. |
 | Interfaz accesible y falla | Repetir flujo por teclado, con carga lenta, vacío y error. | Mensajes accionables, foco visible, estado comprensible y ausencia de dependencia exclusiva del color. |

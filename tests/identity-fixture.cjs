@@ -64,13 +64,32 @@ module.exports.identityTasks = function identityTasks(state) {
         await db.end();
       }
     },
-    'identity:login': async (role) => {
+    'identity:login': async (selection) => {
+      const role = typeof selection === 'string' ? selection : selection?.role;
       if (!['ADMIN', 'TEACHER', 'STUDENT'].includes(role))
         throw new Error('Rol de fixture inválido.');
-      const account = fixture.users.find(
+      let account = fixture.users.find(
         (u) =>
           u.role === role && u.organizationId === fixture.organizations[0].id,
       );
+      if (typeof selection !== 'string') {
+        if (
+          role !== 'STUDENT' ||
+          !selection ||
+          Object.keys(selection).sort().join(',') !== 'academicStudent,role' ||
+          !Number.isInteger(selection.academicStudent) ||
+          selection.academicStudent < 0 ||
+          selection.academicStudent > 2
+        )
+          throw new Error('Selector académico de fixture inválido.');
+        // These three existing demo students isolate the per-actor practice
+        // quota between browser scenarios without changing product limits.
+        const { additionalStudents } =
+          await import('../fixtures/demo/academic.mjs');
+        account = additionalStudents.filter(
+          (u) => u.organizationId === fixture.organizations[0].id,
+        )[selection.academicStudent];
+      }
       const auth = createClient(state.authUrl, state.publishableKey, {
         auth: { persistSession: false, autoRefreshToken: false },
       });

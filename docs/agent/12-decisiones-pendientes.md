@@ -18,7 +18,7 @@ No solicites permiso solo porque una tabla dice «pendiente». Tampoco uses una 
 | DEC | Qué debes resolver o probar | Trabajo que puede avanzar | Qué no debes dar por cerrado |
 | --- | --- | --- | --- |
 | DEC-001 Ámbito administrativo, resuelta para IMP-01 | Aplicar permiso técnico explícito de un uso, creador ADMIN, un rol por organización e identidad/correo global con estado local; verificar los contratos y rechazos resultantes | Gobierno institucional e invitaciones de 72 horas conforme a la resolución del usuario, con protección del último admin y archivo administrativo de lectura | Pruebas o aceptación por documentar la decisión; permiso global por ser ADMIN; acceso docente implícito; dependencias académicas futuras sin verificar |
-| DEC-002 Publicación e historial | Precisar historial CLOSED, admisión concurrente al cierre, disponibilidad por fechas y efecto del archivo del banco | Máquina de estados, preservación histórica, tests de carrera bajo propuesta explícita y flujos sin ambigüedad | Reapertura, envío posterior al cierre o bloqueo de ejercicios publicados decidido silenciosamente |
+| DEC-002 Publicación e historial | Aplicar decisiones de IMP-02 y resolución SUBMIT del 26/09/2026: admitidos antes del cierre pueden persistir después; posteriores se rechazan | Implementación y pruebas de carreras, preservación histórica y autorización vigente, dentro del encargo de desarrollo | Implementación o pruebas por documentar la decisión; reapertura o admisión posterior al cierre |
 | DEC-003 Límites y clasificación | Demostrar límites totales de proceso, unidades y protección de tests; fijar precedencia y motivos de terminación | Puerto de ejecutor, harness, pruebas adversarias locales y prototipo autorizado | 128 MB solo por limitar heap; séptimo diagnóstico; Docker como prueba de aislamiento productivo |
 | DEC-004 Contratos y trabajos | Concretar DTO, HTTP, fechas, idempotencia, transacciones, leases y plazos | Contratos tipados, migraciones locales revisadas, integración por incrementos | API y BD con significado distinto; 202 sin trabajo durable; 201 de intento no persistido |
 | DEC-005 Semántica de señales | Fijar eventos elegibles, ventanas, empates, comparabilidad, firma de error y episodio | Funciones puras, reloj inyectado, fixtures de frontera y propuesta SQL con evidencia | Umbrales ocultos, IA clasificando al alumno, interpretación propuesta atribuida a aceptación docente |
@@ -36,17 +36,28 @@ No solicites permiso solo porque una tabla dice «pendiente». Tampoco uses una 
 
 **Fechas:** el contrato propuesto de clases menciona `startsAt/endsAt` y el modelo conserva fechas académicas. Determina si la institución necesita fecha o instante y alinea nombres, tipo, zona y pruebas. `opensAt/closesAt` de actividad y `publishedAt/closedAt` de transición son conceptos distintos.
 
-**Envío y cierre:** distingue confirmación del estudiante, admisión por servidor y confirmación durable. La propuesta permite terminar un envío admitido antes del cierre; solicitudes admitidas después se rechazan. Mantén pendiente la decisión de esa carrera hasta resolver DEC-002, sin mezclar eventos en la prueba.
+**Envío y cierre:** distingue confirmación del estudiante, admisión por servidor y confirmación durable. El usuario resolvió la carrera SUBMIT el 26/09/2026: permite terminar y guardar un envío admitido antes del cierre; nuevas admisiones posteriores se rechazan. Serializa admisión/cierre y exige autorización vigente para entregar o consultar. No vuelvas a solicitar esta decisión. El usuario autorizó implementar el plan; su estado y pruebas se registran en [IMP-03.04–03.06](../work/IMP-03-submissions.md).
 
 **Visibilidad histórica:** archivar una entidad no equivale a borrar evidencia. Si el spec deja ambiguo el acceso operativo a una versión ya publicada, prepara ambos casos de aceptación y una política aislada, sin ampliar acceso por omisión.
 
-**Parámetros de tamaño:** el archivo de 10 MB, el proceso de 128 MB y la salida de 64 KB tienen unidades propuestas a confirmar. Centraliza los bytes elegidos y prueba frontera inferior/exacta/superior. No cambies el número contractual para hacer pasar un test.
+**Parámetros de tamaño:** IMP-04 concreta 10 MB de archivo como 10.000.000 bytes. El ejecutor ya fija 128 MiB y 64 KiB en DEC-003; no volver a pedir esas unidades. Centraliza los bytes elegidos y prueba frontera inferior/exacta/superior. El presupuesto independiente del extractor documental no modifica los límites del proceso estudiantil ni del Sandbox.
 
 **Modelos IA:** el proveedor inicial está decidido; el deployment concreto no. Verifica qué ofrece el ambiente autorizado y evalúa compatibilidad. Falta de credenciales no permite elegir en secreto otro proveedor o afirmar que un doble es integración real.
 
 ## Registro y cierre
 
-**DEC-002/004/006, corte IMP-02:** las políticas de contenido/editor fueron confirmadas por el usuario el 23/09/2026 y están registradas en [fuentes y decisiones](../../specs/00-fuentes-y-decisiones.md) y [contrato IMP-02](../work/IMP-02-content.md). No volver a pedir confirmación sobre habilitación docente por curso, código colectivo, archivo, ventanas, versiones o retención local ya fijados. La admisión concurrente de SUBMIT y los módulos posteriores conservan sus pendientes.
+**DEC-004/006/010, corte IMP-04.01–04.03:** el usuario autorizó materiales con
+activación automática al completar una generación y reemplazo mediante nueva
+versión. Conserva el ámbito inicial y las reglas de gobierno; ocultar no reasigna
+material. El primer procesamiento fija el perfil de embeddings del ambiente y
+una configuración incompatible se rechaza, sin sustitución silenciosa de
+proveedor. Los contratos, diccionario, límites y evidencia están en el
+[registro de materiales](../work/IMP-04-materials.md). No volver a pedir decisiones
+ya acordadas; distingue configuración técnica local de llamada Azure real,
+evaluación pedagógica y aceptación humana pendientes. IMP-03.07 no bloquea
+ingestión local; continúa pendiente antes de producción.
+
+**DEC-002/004/006, corte IMP-02:** las políticas de contenido/editor fueron confirmadas por el usuario el 23/09/2026 y están registradas en [fuentes y decisiones](../../specs/00-fuentes-y-decisiones.md) y [contrato IMP-02](../work/IMP-02-content.md). No volver a pedir confirmación sobre habilitación docente por curso, código colectivo, archivo, ventanas, versiones o retención local ya fijados. La regla SUBMIT/cierre se resolvió el 26/09/2026 según el apartado anterior; sus contratos de persistencia/recuperación están implementados y su evidencia y pendientes se registran en [IMP-03.04–03.06](../work/IMP-03-submissions.md). Los módulos posteriores conservan sus decisiones y comprobaciones pendientes.
 
 Usa la [plantilla de decisión](14-plantillas-de-trabajo.md). Identifica origen, alternativa elegida, estado, evidencia, dependencias y quién decidió realmente. Registra «supuesto técnico de implementación» si corresponde; solo usa «aprobado» cuando exista tal aprobación.
 

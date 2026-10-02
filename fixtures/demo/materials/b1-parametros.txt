@@ -1,0 +1,10 @@
+Parámetros y resultados
+Material ficticio de Programación I, clase B1.
+
+Un parámetro representa una entrada de la función. Al llamar a la función, los argumentos proporcionan los valores concretos. Utiliza nombres que permitan explicar el papel de cada entrada.
+
+La instrucción return entrega un resultado y termina esa llamada. Escribir un valor con console.log lo muestra en la consola, pero no sustituye el retorno. Antes de corregir una función, comprueba qué valor espera recibir quien la llama.
+
+Las variables locales pertenecen a la llamada en la que se crean. No dependas de una ejecución anterior para obtener el resultado de una nueva entrada. Una función sencilla permite seguir el recorrido desde sus argumentos hasta su retorno.
+
+Para comprobar el comportamiento, elige dos entradas pequeñas. Escribe el resultado que esperas antes de ejecutar. Si el programa retorna undefined, busca una ruta que termine sin return. Compara también el tipo del valor recibido con el esperado.

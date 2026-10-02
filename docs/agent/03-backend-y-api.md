@@ -50,8 +50,8 @@ Para integrar otros componentes, lee [fundación y arquitectura](02-fundacion-y-
 ### Contenido, publicación y cierre
 
 - Para ALZ-RF-004/005/023/024, valida conceptos, dificultad y contrato de pruebas; conserva versiones utilizadas. Publica solo contenido válido y fija versiones, orden y conjunto requerido dentro de la transacción.
-- Impide reaperturas implícitas y cambios silenciosos en el conjunto evaluado de una actividad publicada. Las políticas de historial `CLOSED`, ventana de disponibilidad, archivado y admisión concurrente requieren DEC-002.
-- Diseña una función explícita de admisión y una prueba de carrera entre enviar/cerrar. La propuesta de conservar una ejecución ya admitida debe quedar identificada como propuesta hasta resolver DEC-002; no inventes otro momento de corte.
+- Impide reaperturas implícitas y cambios silenciosos en el conjunto evaluado de una actividad publicada. Aplica las políticas de historial `CLOSED`, ventana de disponibilidad, archivado y admisión concurrente resueltas en [DEC-002](../../specs/00-fuentes-y-decisiones.md).
+- Mantén una función explícita de admisión y una prueba de carrera entre enviar/cerrar. DEC-002, ratificada para SUBMIT el 26/09/2026, conserva una ejecución admitida antes del cierre y rechaza nuevas admisiones posteriores; entregar o consultar exige autorización vigente. No vuelvas a solicitar esta decisión ni inventes otro momento de corte.
 
 ### Ejecución, envío y feedback
 
@@ -90,7 +90,7 @@ Consulta el catálogo íntegro de [API](../../specs/07-api-y-contratos.md). No a
 | Decisión | Acción del agente |
 | --- | --- |
 | DEC-001 | Prepara permiso y escenarios de aprovisionamiento y roles; continúa con autorización de los ámbitos definidos. No concedas privilegio global por defecto. |
-| DEC-002 | Prepara política explícita y prueba reproducible de cierre/admisión. No cierres RF-005/010 ni expongas historial adicional con una regla no resuelta. |
+| DEC-002 | Aplica la resolución vigente y conserva pruebas reproducibles de cierre/admisión e historial autorizado. La decisión ratificada no sustituye la evidencia necesaria para cerrar RF-005/010 ni autoriza ampliar el acceso histórico. |
 | DEC-004 | Registra las elecciones reversibles de serialización, DTO y operación. Resuelve `startsAt/endsAt` frente a `startDate/endDate` de clase antes del esquema ejecutable; conserva fechas académicas como fechas si ese es el modelo elegido. |
 | DEC-004/009 | Mantén límites de cuerpo, longitud, paginación y retención de claves como configuración propuesta. No atribuyas aprobación a 24 horas o a los límites sugeridos. |
 | DEC-007 | Verifica compatibilidad real y registra patches, gestor de paquetes y workspace. Una elección reversible compatible puede documentarse sin pedir autorización repetitiva. |

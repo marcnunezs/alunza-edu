@@ -37,6 +37,141 @@ Los ocho incrementos están implementados en migraciones, API, contratos, interf
 
 La validación final local aprobó las once etapas de `npm run ci:verify`, incluyendo actualización desde IMP-00, RLS de escritura, correo real, carreras, recuperación de entregas e interfaz administrativa. Cypress completó 16/16 recorridos; el detalle está en el registro enlazado. No se atribuye aceptación académica, validación de despliegue remoto ni cobertura de dependencias de clases/documentos aún inexistentes. IMP-02 no comienza en este corte.
 
+## Corte de práctica IMP-03.01–IMP-03.03 — 26/09/2026
+
+El alcance autorizado conecta editor, admisión NestJS, QuickJS/WASM en Docker y
+resultado temporal RUN. La migración agrega reservas operativas, cuotas,
+idempotencia y recuperación; no crea intentos, progreso ni ayuda. El cierre de
+actividad impide nuevas admisiones y permite terminar las anteriores, sujeto al
+acceso vigente al recuperar la respuesta. La decisión de SUBMIT continúa pendiente.
+
+El [registro de práctica](../work/IMP-03-practice.md) conserva los comandos y
+resultados de la verificación local. La brecha histórica de falsificación del
+retorno se convierte en regresión obligatoria con el nuevo intérprete. La evidencia
+anterior permanece como registro del prototipo; no describe el arnés actual.
+Sandbox remoto, paridad productiva, aceptación académica y los incrementos
+IMP-03.04 en adelante quedan pendientes.
+
+El corte quedó implementado, integrado y probado localmente: `npm run ci:verify`
+aprobó sus 13 etapas el 26/09/2026 a las 21:36:02 UTC. Incluye 327 pruebas
+unitarias/de contrato, 69 casos Docker, 20 verificaciones del banco canónico,
+97 pruebas HTTP, 181 aserciones SQL, 100 muestras de rendimiento y 29 recorridos
+Cypress. Los fallos iniciales y las correcciones permanecen en el registro.
+
+## Corte de envíos IMP-03.04–IMP-03.06 — 26/09/2026
+
+El corte está **implementado y probado localmente**: SUBMIT durable, historia
+propia, comparación/reintento y avance mínimo por actividad. DEC-002 quedó
+resuelta por el usuario: la admisión se serializa respecto del cierre; un envío
+admitido antes puede persistir después, las nuevas admisiones se rechazan y la
+entrega o recuperación exige permisos vigentes. El [registro de envíos](../work/IMP-03-submissions.md),
+su [diccionario](../work/IMP-03-submissions-dictionary.md) y el
+[plan autorizado](../work/IMP-03-submissions-plan.md) detallan contratos,
+implementación, escenarios, fallos corregidos y límites. Las cifras del corte
+anterior conservan la evidencia histórica RUN.
+
+La CI final `npm run ci:verify` aprobó **14/14 etapas** el 26/09/2026 a las
+23:31:08 UTC. Incluye 444 pruebas unitarias/de contrato (145 API, 21 web,
+82 contratos, 101 runner, 60 IA y 35 preproducción), 69 casos Docker,
+20 verificaciones del banco canónico, 110/110 pruebas HTTP, 285 aserciones SQL
+(104 de SUBMIT) y 35/35 recorridos Chrome, sin pendientes ni omitidos.
+Los informes de este corte están en `.local/reports/imp-03-submissions/`:
+`ci.json`, `integration.json`, `e2e.json`, `run-performance.json` y
+`submit-performance.json`.
+
+Los perfiles finales usan cien solicitudes RUN y cien SUBMIT; cada operación
+incluye cincuenta secuenciales y cincuenta con concurrencia cuatro, sin errores
+y con limpieza verificada. SUBMIT incluye pruebas visibles/ocultas y commit.
+Las cápsulas son nuevas por caso y la frecuencia se eleva únicamente en el
+proceso aislado de medición, como documenta el registro.
+
+| Operación | p95 secuencial (ms) | p95 con concurrencia cuatro (ms) |
+| --- | --- | --- |
+| RUN | 1460,17 | 2307,43 |
+| SUBMIT | 2083,26 | 4032,03 |
+
+Ambos perfiles aprueban el objetivo local de menos de cinco segundos. Esta
+evidencia no acredita rendimiento híbrido, paridad productiva Sandbox ni
+aceptación humana. IA/RAG, progreso por concepto, señales y lectura docente
+conservan sus incrementos posteriores; el avance mínimo no completa RF-015.
+El alcance local aporta evidencia a RF-007/009/010/011/014 y revalida el cierre
+concurrente de RF-005, sin declarar aceptados esos RF globalmente ni toda IMP-03.
+
+## Corte de materiales IMP-04.01–IMP-04.03 — 27/09/2026
+
+El usuario autorizó fuentes, carga privada y procesamiento recuperable, con
+activación automática del índice completo y reemplazo mediante nuevas versiones.
+La implementación conecta contratos, NestJS, Storage, PostgreSQL/pgvector,
+worker y pantallas de clase/actividad. Su estado es **implementado y probado localmente**;
+comandos, resultados y pendientes se mantienen en el
+[registro de materiales](../work/IMP-04-materials.md).
+
+El corte aporta ALZ-RF/HU/CU/PT-006 y 025 y sus E1–E4, sin cerrar todavía los
+requisitos de ayuda 012/013. La recuperación SQL comprueba generaciones activas
+con filtros antes de top-k=5; solicitar ayuda sobre intentos quedó para el corte siguiente.
+DEC-004/006 concretan trabajos/versiones; DEC-010 fija tamaño, extracción,
+fragmentación y política de reintento local. Los seis documentos ficticios
+completan el corpus canónico de DEC-012.
+
+Las pruebas integradas distinguen extracción/Storage/pgvector reales del doble
+explícito de embeddings en TEST. Azure real, evaluación pedagógica, despliegue
+y aceptación CAPSTONE permanecen pendientes. IMP-03.07 — Sandbox remoto conserva
+prioridad antes de producción y no bloquea esta ingestión docente.
+
+## Corte de ayuda IMP-04.04–IMP-04.06 — 27/09/2026
+
+El alcance autorizado está **implementado y probado localmente**. Conecta
+intento propio confirmado, recuperación filtrada, explicación separada de tres
+niveles de pista, trabajo durable, validación semántica, historial y referencias
+privadas de la versión citada. El [registro de ayuda](../work/IMP-04-help.md) y su
+[diccionario](../work/IMP-04-help-dictionary.md) conservan contratos, decisiones,
+comprobaciones y límites. Cypress aprobó **42/42 recorridos**, incluidos los cuatro
+de ayuda, con Auth, API, Storage y pgvector reales y proveedor de IA TEST explícito.
+El registro conserva las incidencias iniciales de worker y Cypress, sus correcciones
+y el fallo histórico del perfil de latencia; este cierre no declara aprobada la CI
+agregada.
+
+El corte aporta RF/HU/CU/PT-012 y 013 E1–E4 y revalida RF-010, RF-006/025 y sus
+fronteras de persistencia/permiso. CLOSED permite ayuda sobre evidencia existente;
+SUCCESS solo explicación. Metadatos y seguimiento no entregan pistas: el ACK
+posterior a presentación explícita registra el evento una sola vez. Ni los
+fallbacks ni los trabajos fallidos consumen niveles o alteran diagnóstico/progreso.
+Ocultar, archivar o revocar acceso suprime la ayuda derivada; restaurar la fuente
+no revive el contenido suprimido. RF-017 docente conserva su corte posterior.
+
+`HELP_WORKER_ENABLED` habilita el consumidor de servidor, con generación,
+verificación y calibración configuradas en [.env.example](../../.env.example).
+`npm run help:plan` prepara el [manifiesto de ensayo](../../infra/preproduction/help-manifest.example.json)
+sin llamadas remotas; la preparación ejecutable posterior se registra en el corte siguiente.
+Las pruebas locales con proveedor TEST explícito no acreditan Azure real, p95
+remoto, calidad semántica, evaluación docente ni aceptación CAPSTONE. Este cierre
+histórico no acredita el incremento siguiente, Vercel Sandbox IMP-03.07 ni la
+operación productiva del consumidor.
+
+## Fallos IMP-04.07 y preparación ejecutable IMP-04.08 — 01/10/2026
+
+Estado al 02/10/2026: **IMP-04.07 probado localmente y preparación ejecutable IMP-04.08 probada en TEST**. El
+[registro del incremento](../work/IMP-04-evaluation.md) concentra comandos,
+resultados y pendientes; el [diccionario](../work/IMP-04-evaluation-dictionary.md)
+y [manual](../work/IMP-04-evaluation-operations.md) concretan DEC-004/006/008/010.
+La corrida completa de `ci:verify` está aprobada: 985 pruebas, 146 casos HTTP, 471 aserciones SQL, 27 casos de integración IA, 45 recorridos Cypress y el arnés de cuatro etapas.
+
+| Frontera | Ampliación implementada | Evidencia local y condición remota |
+| --- | --- | --- |
+| RF-010/012/013 · CON-01–03 | RUN/SUBMIT durante fallback, ACK perdido, historial y recuperación sin doble pista | Tres recorridos `IMP04-08/09/10`, con teclado/foco/borrador/sesión; regresión total 45/45 aprobada, sin omisiones |
+| RF-006/025/013 · SEG-01/03/05 | Contenido adversario sin autoridad, Storage real interrumpido/corrupto y revocación durante I/O | Rechazo sin fuga ni cambio de diagnóstico; descargas y referencias autorizadas |
+| Persistencia y consumidor | Caída PostgreSQL en admisión, fallos de checkpoint/publicación, reinicio postREVIEW y reconciliación de ledger | Sin 202 ni estado parcial al fallar admisión; misma clave y recibos; plazo original; cero eventos sin ACK |
+| Evaluación operacional | LAB-EVAL separado, bindings/credencial y cuatro etapas, ledger universal, presupuestos y recibos seguros | Corrida TEST completa y recuperable: 43 casos, 234 ayudas y 763 recibos; diez controles contables con dos procesos; cuotas vigentes y autorización exacta |
+| DEC-008/010 · REN-03/04 | 100 ayudas en serie y 100 con concurrencia cuatro; calibración ligada a evidencia y origen | Reportes por perfil, costos/uso observados o desconocidos, fallbacks completos; Azure medido por separado |
+
+Los proveedores controlados de TEST se seleccionan desde el arnés, fuera de
+instrucciones estudiantiles o materiales. La calibración TEST no se acepta como
+Azure. El paquete de revisión deja autor, fecha y aceptación sin completar hasta
+una revisión humana real. Permanecen pendientes Azure/calidad semántica,
+aceptación docente/CAPSTONE, RF-017, IMP-03.07 y el despliegue del consumidor ACA.
+El fallo histórico de latencia SUBMIT y las corridas anteriores se preservan;
+la tercera corrida de CI pasó completa, incluidos tres perfiles SUBMIT consecutivos bajo 5 s. Esto no acepta el incremento IMP-04.08 remoto ni la calidad pedagógica.
+
 ## Cobertura de los 27 RF
 
 Para cada `ALZ-RF-NNN` se conservan `ALZ-HU-NNN`, `ALZ-CU-NNN` y `ALZ-PT-NNN`, más los cuatro escenarios `ALZ-HU-NNN-E1` a `E4`. Son **108 escenarios de origen**, que deben concretarse con datos y resultados esperados antes de ejecutarse. Los casos adversariales adicionales complementan esa base, no reemplazan sus identificadores.

@@ -433,6 +433,12 @@ describe('IMP-02 · Contenido y editor con servicios reales', () => {
       cy.press(Cypress.Keyboard.Keys.TAB);
       cy.get('[data-cy="student-code"]').should('have.focus');
       cy.press(Cypress.Keyboard.Keys.TAB);
+      cy.contains('button', /^Ejecutar$/).should('have.focus');
+      cy.press(Cypress.Keyboard.Keys.TAB);
+      cy.get('[data-cy="submit-code"]').should('have.focus');
+      cy.press(Cypress.Keyboard.Keys.TAB);
+      cy.contains('button', 'Actualizar historial').should('have.focus');
+      cy.press(Cypress.Keyboard.Keys.TAB);
       cy.contains('button', 'Descartar borrador').should('have.focus');
       cy.viewport(390, 844);
       cy.contains('Devuelve la suma de los dos argumentos.').should(
@@ -481,8 +487,8 @@ describe('IMP-02 · Contenido y editor con servicios reales', () => {
       cy.get('[data-cy="student-code"]').should('contain.value', 'return 0;');
       cy.reload();
       cy.get('[data-cy="student-code"]').should('contain.value', 'return 0;');
-      cy.contains('button', /^Ejecutar$/).should('not.exist');
-      cy.contains('button', /^Enviar intento$/).should('not.exist');
+      cy.contains('button', /^Ejecutar$/).should('be.enabled');
+      cy.contains('button', /^Enviar intento$/).should('be.enabled');
     });
   });
 

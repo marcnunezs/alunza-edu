@@ -55,6 +55,8 @@ export class DatabaseService implements OnModuleDestroy {
     };
     try {
       client = await this.pool.connect();
+      // pg-pool only listens while a client is idle. A borrowed connection can
+      // emit an error independently of the current query promise.
       client.on('error', onClientError);
       await this.assertLimitedRole(client);
       await client.query(`
@@ -70,6 +72,19 @@ export class DatabaseService implements OnModuleDestroy {
         ; SELECT id,current_version_id FROM app.concept_tags LIMIT 0
         ; SELECT id,current_version_id FROM app.exercises LIMIT 0
         ; SELECT id,state,revision FROM app.activities LIMIT 0
+        ; SELECT id,lifecycle_status,lease_until FROM app.executions LIMIT 0
+        ; SELECT id,execution_id,attempt_number,technical_result FROM app.attempts LIMIT 0
+        ; SELECT id,current_version_id,visibility FROM app.sources LIMIT 0
+        ; SELECT id,current_generation_id FROM app.source_versions LIMIT 0
+        ; SELECT id,index_status FROM app.source_index_generations LIMIT 0
+        ; SELECT id,lifecycle_status,attempt_count FROM app.material_jobs LIMIT 0
+        ; SELECT 'app_private.stage_practice_submit_result(uuid,uuid,jsonb,jsonb)'::regprocedure,
+          'app_private.finish_practice_submit(uuid,uuid,boolean)'::regprocedure,
+          'app_private.list_practice_attempts(uuid,uuid,bigint,integer)'::regprocedure,
+          'app_private.practice_activity_progress(uuid)'::regprocedure,
+          'app_private.help_claim()'::regprocedure,
+          'app_private.help_feedback(uuid)'::regprocedure,
+          'app_private.help_configuration_matches(uuid,uuid,jsonb)'::regprocedure
       `);
       if (discard) throw databaseUnavailable();
     } catch {
@@ -204,9 +219,62 @@ export class DatabaseService implements OnModuleDestroy {
             'El estado de la actividad no permite esta operación.',
             409,
           ],
+          RESOURCE_NOT_FOUND: [
+            'RESOURCE_NOT_FOUND',
+            'Recurso no encontrado.',
+            404,
+          ],
+          VERSION_CONFLICT: [
+            'VERSION_CONFLICT',
+            'La versión del ejercicio cambió. Recarga la actividad.',
+            409,
+          ],
+          IDEMPOTENCY_CONFLICT: [
+            'IDEMPOTENCY_CONFLICT',
+            'La clave ya se utilizó con otros datos.',
+            409,
+          ],
+          IDEMPOTENCY_EXPIRED: [
+            'IDEMPOTENCY_EXPIRED',
+            'La respuesta temporal venció. Ejecuta de nuevo con una solicitud nueva.',
+            409,
+          ],
+          REQUEST_IN_PROGRESS: [
+            'REQUEST_IN_PROGRESS',
+            'La ejecución sigue en curso. Reintenta con la misma solicitud.',
+            409,
+          ],
+          ACTIVITY_CLOSED: [
+            'ACTIVITY_CLOSED',
+            'La actividad está cerrada y no admite ejecuciones nuevas.',
+            409,
+          ],
+          ACTIVITY_NOT_AVAILABLE: [
+            'ACTIVITY_NOT_AVAILABLE',
+            'La actividad está fuera de su ventana de disponibilidad.',
+            409,
+          ],
+          DEPENDENCY_UNAVAILABLE: [
+            'DEPENDENCY_UNAVAILABLE',
+            'El servicio de ejecución no está disponible. Conserva tu código.',
+            503,
+          ],
+          RATE_LIMITED: [
+            'RATE_LIMITED',
+            'Se alcanzó el cupo de ejecución. Conserva tu código y espera antes de reintentar.',
+            429,
+          ],
         };
         const rule = rules[error.message];
-        if (rule) throw new ApiError(...rule);
+        if (rule)
+          throw new ApiError(
+            ...rule,
+            [
+              'REQUEST_IN_PROGRESS',
+              'DEPENDENCY_UNAVAILABLE',
+              'RATE_LIMITED',
+            ].includes(error.message),
+          );
       }
       if (code === '23505')
         throw new ApiError(

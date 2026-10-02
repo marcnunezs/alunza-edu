@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { performance } from 'node:perf_hooks';
 import {
   mkdir,
   cp,
@@ -13,6 +14,7 @@ import {
 import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import pg from 'pg';
+import { randomUUID } from 'node:crypto';
 import {
   root,
   context,
@@ -60,18 +62,32 @@ export function buildTestConfig(source) {
 export async function report(name, summary, group = 'imp-00-05') {
   if (!/^[a-z0-9-]+$/.test(name))
     throw new Error('Nombre de informe inválido.');
-  if (!['imp-00-05', 'imp-00-06-08', 'imp-01', 'imp-02'].includes(group))
+  if (
+    ![
+      'imp-00-05',
+      'imp-00-06-08',
+      'imp-01',
+      'imp-02',
+      'imp-03',
+      'imp-03-submissions',
+      'imp-04',
+    ].includes(group)
+  )
     throw new Error('Grupo de informe inválido.');
   const directory = join(root, '.local/reports', group);
   await mkdir(directory, { recursive: true });
-  await writeFile(
-    join(directory, `${name}.json`),
+  const content =
     JSON.stringify(
       { recordedAt: new Date().toISOString(), ...summary },
       null,
       2,
-    ) + '\n',
+    ) + '\n';
+  await mkdir(join(directory, 'history'), { recursive: true });
+  await writeFile(
+    join(directory, 'history', `${name}-${Date.now()}-${randomUUID()}.json`),
+    content,
   );
+  await writeFile(join(directory, `${name}.json`), content);
 }
 
 export async function withTestEnvironment(
@@ -262,11 +278,20 @@ export function publicTestEnvironment(state) {
   };
 }
 
-export function nodeService(args, environment, cwd = root) {
+export function nodeService(
+  args,
+  environment,
+  cwd = root,
+  { spawnProcess = spawn } = {},
+) {
   let child;
   let spawnError;
   let output = '';
+  const startupMeasurements = [];
   return {
+    get startupMeasurements() {
+      return [...startupMeasurements];
+    },
     get output() {
       return output;
     },
@@ -279,31 +304,57 @@ export function nodeService(args, environment, cwd = root) {
       );
     },
     async start(url) {
-      if (!this.running) {
-        spawnError = undefined;
-        child = spawn(process.execPath, args, {
-          cwd,
-          windowsHide: true,
-          env: {
-            PATH: process.env.PATH,
-            SystemRoot: process.env.SystemRoot,
-            TEMP: process.env.TEMP,
-            TMP: process.env.TMP,
-            ...environment,
-          },
-          stdio: ['ignore', 'pipe', 'pipe'],
-        });
-        child.stdout.on('data', (chunk) => {
-          output += chunk;
-        });
-        child.stderr.on('data', (chunk) => {
-          output += chunk;
-        });
-        child.on('error', (error) => {
-          spawnError = error;
+      const startedAt = performance.now();
+      let status = 'FAILED';
+      let failureCode = 'PROCESS_SPAWN_FAILED';
+      try {
+        if (!this.running) {
+          spawnError = undefined;
+          child = spawnProcess(process.execPath, args, {
+            cwd,
+            windowsHide: true,
+            env: {
+              PATH: process.env.PATH,
+              SystemRoot: process.env.SystemRoot,
+              USERPROFILE: process.env.USERPROFILE,
+              HOME: process.env.HOME,
+              TEMP: process.env.TEMP,
+              TMP: process.env.TMP,
+              ...environment,
+            },
+            stdio: ['ignore', 'pipe', 'pipe'],
+          });
+          child.stdout.on('data', (chunk) => {
+            output += chunk;
+          });
+          child.stderr.on('data', (chunk) => {
+            output += chunk;
+          });
+          child.on('error', (error) => {
+            spawnError = error;
+          });
+        }
+        failureCode = 'READINESS_FAILED';
+        try {
+          await this.wait(url, 200);
+        } catch (error) {
+          if (spawnError) failureCode = 'PROCESS_SPAWN_FAILED';
+          else if (!this.running) failureCode = 'PROCESS_EXITED';
+          throw error;
+        }
+        status = 'READY';
+      } finally {
+        const durationMs =
+          Math.round((performance.now() - startedAt) * 100) / 100;
+        startupMeasurements.push({
+          status,
+          readyMs: status === 'READY' ? durationMs : null,
+          durationMs,
+          timeoutMs: 30_000,
+          failureCode: status === 'READY' ? null : failureCode,
+          at: new Date().toISOString(),
         });
       }
-      await this.wait(url, 200);
     },
     async wait(url, expectedStatus, timeout = 30_000) {
       const deadline = Date.now() + timeout;
@@ -341,18 +392,21 @@ export function nodeService(args, environment, cwd = root) {
   };
 }
 
-export function testApi(ctx, state, webPort = ctx.webPort) {
-  return nodeService([join(root, 'apps/api/dist/main.js')], {
+export function testApi(ctx, state, webPort = ctx.webPort, overrides = {}) {
+  return nodeService([join(root, 'tests/materials-api.cjs')], {
     ...apiEnvironment(ctx, state),
     APP_ORIGIN: `http://127.0.0.1:${webPort}`,
     ALLOWED_ORIGINS: `http://127.0.0.1:${webPort}`,
     INVITATION_CALLBACK_URL: `http://127.0.0.1:${webPort}/acceso/invitacion`,
+    ...overrides,
   });
 }
 
 export async function buildApi() {
   for (const configuration of [
     'packages/contracts/tsconfig.json',
+    'packages/runner/tsconfig.json',
+    'packages/ai/tsconfig.json',
     'apps/api/tsconfig.build.json',
   ]) {
     await run(

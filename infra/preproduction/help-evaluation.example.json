@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 2,
+  "operation": "help-product-evaluation",
+  "environment": "LAB-EVAL",
+  "provider": "AZURE",
+  "destination": {
+    "apiOrigin": "http://127.0.0.1:4400",
+    "authOrigin": "http://127.0.0.1:19421",
+    "operationsOrigin": "http://127.0.0.1:4401",
+    "projectId": "alunza-edu-laboratorio-eval"
+  },
+  "candidateFingerprint": null,
+  "corpusVersion": "help-evaluation-1",
+  "tokenizerVersion": "js-tiktoken-1.0.21-cl100k_base",
+  "queryVersion": "help-query-1",
+  "authorization": null,
+  "priceVersion": null,
+  "budgets": null,
+  "profiles": null,
+  "azure": null,
+  "latency": {
+    "serialAttempts": 25,
+    "concurrentAttempts": 25,
+    "concurrency": 4,
+    "helpsPerAttempt": 4
+  }
+}

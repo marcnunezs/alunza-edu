@@ -16,7 +16,7 @@ Antes de editar, inspecciona el código realmente existente, las instrucciones a
 | --- | --- | --- |
 | DEC-003 | Puerto del ejecutor, fixtures, supervisor experimental y medición de límites | Fijar unidades, clasificación y protocolo; demostrar memoria total, plazo total y confidencialidad de pruebas ocultas. |
 | DEC-004 | DTO propuestos, reserva idempotente y pruebas de concurrencia | Registrar contrato de ejecución, persistencia y reconciliación; publicar OpenAPI coherente. |
-| DEC-002 | Validación de estados y prueba de carrera cierre–envío | Ratificar el orden de admisión y cierre; no inventar reapertura ni aceptar nuevos envíos tras cierre. |
+| DEC-002 | Validación de estados y prueba de carrera cierre–envío | Aplicar la resolución del 26/09/2026: admitidos antes del cierre pueden persistir después, con autorización vigente para entregar; rechazar nuevas admisiones posteriores y no inventar reapertura. |
 | DEC-006/007 | Diseño de repositorios y selección reproducible de runtime | Resolver el modelo antes de la primera migración según su decisión y comprobar compatibilidad real de versiones. |
 | DEC-008 | Instrumentación y perfil de medición | Medir regiones y recorrido completo desde Chile con carga y muestra registradas. |
 

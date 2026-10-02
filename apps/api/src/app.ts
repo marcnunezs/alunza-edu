@@ -1,5 +1,7 @@
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
+import type { EmbeddingsPort } from '@alunza/ai';
+import type { HelpProviderFactory } from './help/help.ports';
 import { performance } from 'node:perf_hooks';
 import { NestFactory } from '@nestjs/core';
 import type { INestApplication } from '@nestjs/common';
@@ -91,6 +93,7 @@ function normalizedPath(path: string): string {
       'activities',
       'publish',
       'close',
+      'progress',
     ]) {
       if (new RegExp(`^/api/v1/${collection}/[^/]+/${suffix}/?$`).test(path))
         return `/api/v1/${collection}/:id/${suffix}`;
@@ -102,17 +105,81 @@ function normalizedPath(path: string): string {
     return '/api/v1/classes/:id/join-codes/:codeId/revoke';
   if (/^\/api\/v1\/activities\/[^/]+\/exercises\/[^/]+\/?$/.test(path))
     return '/api/v1/activities/:id/exercises/:assignmentId';
+  if (
+    /^\/api\/v1\/activities\/[^/]+\/exercises\/[^/]+\/executions\/?$/.test(path)
+  )
+    return '/api/v1/activities/:id/exercises/:assignmentId/executions';
+  if (
+    /^\/api\/v1\/activities\/[^/]+\/exercises\/[^/]+\/attempts\/?$/.test(path)
+  )
+    return '/api/v1/activities/:id/exercises/:assignmentId/attempts';
+  if (/^\/api\/v1\/attempts\/[^/]+\/?$/.test(path))
+    return '/api/v1/attempts/:id';
+  for (const [pattern, template] of [
+    [
+      /^\/api\/v1\/attempts\/[^/]+\/feedback-requests\/?$/,
+      '/api/v1/attempts/:id/feedback-requests',
+    ],
+    [
+      /^\/api\/v1\/attempts\/[^/]+\/feedback\/?$/,
+      '/api/v1/attempts/:id/feedback',
+    ],
+    [
+      /^\/api\/v1\/feedback-requests\/[^/]+\/?$/,
+      '/api/v1/feedback-requests/:id',
+    ],
+    [/^\/api\/v1\/feedback\/[^/]+\/?$/, '/api/v1/feedback/:id'],
+    [/^\/api\/v1\/feedback\/[^/]+\/viewed\/?$/, '/api/v1/feedback/:id/viewed'],
+    [
+      /^\/api\/v1\/feedback\/[^/]+\/sources\/[^/]+\/?$/,
+      '/api/v1/feedback/:id/sources/:chunkId',
+    ],
+    [
+      /^\/api\/v1\/feedback\/[^/]+\/sources\/[^/]+\/content\/?$/,
+      '/api/v1/feedback/:id/sources/:chunkId/content',
+    ],
+    [/^\/api\/v1\/classes\/[^/]+\/sources\/?$/, '/api/v1/classes/:id/sources'],
+    [
+      /^\/api\/v1\/classes\/[^/]+\/source-scopes\/?$/,
+      '/api/v1/classes/:id/source-scopes',
+    ],
+    [/^\/api\/v1\/sources\/[^/]+\/?$/, '/api/v1/sources/:id'],
+    [
+      /^\/api\/v1\/sources\/[^/]+\/versions\/?$/,
+      '/api/v1/sources/:id/versions',
+    ],
+    [
+      /^\/api\/v1\/sources\/[^/]+\/versions\/[^/]+\/content\/?$/,
+      '/api/v1/sources/:id/versions/:versionId/content',
+    ],
+    [
+      /^\/api\/v1\/sources\/[^/]+\/jobs\/[^/]+\/?$/,
+      '/api/v1/sources/:id/jobs/:jobId',
+    ],
+    [/^\/api\/v1\/sources\/[^/]+\/reindex\/?$/, '/api/v1/sources/:id/reindex'],
+    [
+      /^\/api\/v1\/sources\/[^/]+\/visibility\/?$/,
+      '/api/v1/sources/:id/visibility',
+    ],
+    [/^\/api\/v1\/sources\/[^/]+\/archive\/?$/, '/api/v1/sources/:id/archive'],
+  ] as Array<[RegExp, string]>)
+    if (pattern.test(path)) return template;
   return '<unmatched>';
 }
 
 export async function createApp(
   config: AppConfig = loadConfig(),
+  testEmbeddings?: EmbeddingsPort,
+  testHelpFactory?: HelpProviderFactory,
 ): Promise<INestApplication> {
-  const app = await NestFactory.create(AppModule.register(config), {
-    logger: false,
-    abortOnError: false,
-    bodyParser: false,
-  });
+  const app = await NestFactory.create(
+    AppModule.register(config, testEmbeddings, testHelpFactory),
+    {
+      logger: false,
+      abortOnError: false,
+      bodyParser: false,
+    },
+  );
   const expressApp = app.getHttpAdapter().getInstance() as {
     disable(name: string): void;
   };
@@ -178,6 +245,13 @@ export async function createApp(
     strict: true,
     type: 'application/json',
   });
+  // 64 KiB source can expand sixfold through JSON escapes; the decoded source
+  // still has an independent 65536-byte limit at the controller boundary.
+  const executionJson = json({
+    limit: '512kb',
+    strict: true,
+    type: 'application/json',
+  });
   app.use((request: ApiRequest, response: Response, next: NextFunction) => {
     // The eight test definitions may each contain 64 KiB arguments and expected
     // JSON; only authoring routes need this envelope. All other routes keep 32 KiB.
@@ -189,7 +263,16 @@ export async function createApp(
         /^\/api\/v1\/exercises\/[0-9a-f-]{36}\/versions\/?$/i.test(
           request.path,
         ));
-    (authoring ? exerciseJson : standardJson)(request, response, next);
+    const execution =
+      request.method === 'POST' &&
+      /^\/api\/v1\/activities\/[0-9a-f-]{36}\/exercises\/[0-9a-f-]{36}\/(?:executions|attempts)\/?$/i.test(
+        request.path,
+      );
+    (execution ? executionJson : authoring ? exerciseJson : standardJson)(
+      request,
+      response,
+      next,
+    );
   });
   app.useGlobalFilters(new SafeExceptionFilter());
   app.enableShutdownHooks(['SIGINT', 'SIGTERM']);

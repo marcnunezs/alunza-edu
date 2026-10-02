@@ -3,6 +3,8 @@ import { format } from 'prettier';
 import { z } from 'zod';
 import * as contracts from '@alunza/contracts';
 import { addAcademicOpenApi } from './academic-openapi.mjs';
+import { addMaterialsOpenApi } from './materials-openapi.mjs';
+import { addHelpOpenApi } from './help-openapi.mjs';
 import { developmentTarget } from './local-target.mjs';
 
 const schemas = Object.fromEntries(
@@ -23,6 +25,12 @@ const schemas = Object.fromEntries(
     InvitationCreate: contracts.invitationCreateSchema,
     InvitationAccept: contracts.invitationAcceptSchema,
     InvitationProof: contracts.invitationProofSchema,
+    RunExecutionInput: contracts.runExecutionInputSchema,
+    RunExecution: contracts.runExecutionResponseSchema,
+    SubmitAttemptInput: contracts.submitAttemptInputSchema,
+    Attempt: contracts.attemptResponseSchema,
+    Attempts: contracts.attemptListResponseSchema,
+    ActivityProgress: contracts.activityProgressResponseSchema,
     Error: contracts.errorResponseSchema,
   }).map(([name, schema]) => [
     name,
@@ -48,6 +56,7 @@ function response(schema, description) {
         'Exercise',
         'Activity',
         'JoinCode',
+        'MaterialSource',
       ].includes(schema)
         ? {
             ETag: {
@@ -91,10 +100,10 @@ function operation(id, schema, errors, protectedRoute = false) {
 export const specification = {
   openapi: '3.0.3',
   info: {
-    title: 'Alunza — identidad, estructura académica y contenido',
-    version: '0.2.0',
+    title: 'Alunza — identidad, práctica y materiales',
+    version: '0.4.0',
     description:
-      'IMP-02. Autorización vigente por organización/clase; publicación y editor. Ejecución estudiantil y progreso todavía fuera del corte.',
+      'IMP-04.01–04.03. Materiales privados y generaciones recuperables; conserva RUN, SUBMIT e historial. Azure remoto, Sandbox productivo y ayuda sobre intentos pendientes.',
   },
   servers: [
     { url: developmentTarget.apiUrl, description: 'Laboratorio local' },
@@ -303,10 +312,75 @@ specification.paths['/api/v1/organizations/{orgId}'].patch = domainOperation(
   { ...org, input: 'OrganizationUpdate', versioned: true },
 );
 addAcademicOpenApi(specification, domainOperation);
+addMaterialsOpenApi(specification, domainOperation);
+specification.paths['/api/v1/activities/{id}/exercises/{aeId}/executions'] = {
+  post: {
+    ...domainOperation('runExercise', 'RunExecution', {
+      ids: ['id', 'aeId'],
+      input: 'RunExecutionInput',
+      idempotent: true,
+      status: 201,
+    }),
+    description:
+      'RUN temporal: fuente hasta 65536 bytes UTF-8 y envoltorio JSON hasta 512 KiB. La admisión previa al cierre puede terminar; el acceso se revalida antes de responder. Replays conservan ejecución y resultado durante 24 horas; una clave expirada nunca vuelve a ejecutar. No crea intentos, progreso ni ayuda.',
+  },
+};
+specification.paths['/api/v1/activities/{id}/exercises/{aeId}/attempts'] = {
+  post: {
+    ...domainOperation('submitAttempt', 'Attempt', {
+      ids: ['id', 'aeId'],
+      input: 'SubmitAttemptInput',
+      idempotent: true,
+      status: 201,
+    }),
+    description:
+      'SUBMIT ejecuta pruebas requeridas y responde 201 solo tras confirmar intento, resultado y eventos. Fuente hasta 65536 bytes UTF-8; envoltorio JSON hasta 512 KiB. Una admisión anterior al cierre puede persistir después; entrega y replay exigen acceso vigente. Misma clave/payload recupera el mismo intento durante 24 h; una clave expirada no reejecuta. previousAttemptId pertenece al mismo estudiante/asignación. No invoca IA.',
+  },
+  get: {
+    ...domainOperation('listOwnAttempts', 'Attempts', { ids: ['id', 'aeId'] }),
+    description:
+      'Historial propio, sin código en la lista, ordenado por número de admisión descendente. Incluye CLOSED con permiso vigente. No concede acceso docente ni administrativo.',
+    parameters: [
+      pathId('id'),
+      pathId('aeId'),
+      {
+        name: 'limit',
+        in: 'query',
+        schema: { type: 'integer', minimum: 1, maximum: 20, default: 10 },
+      },
+      {
+        name: 'cursor',
+        in: 'query',
+        schema: { type: 'string', pattern: '^[1-9][0-9]{0,15}$' },
+      },
+    ],
+  },
+};
+specification.paths['/api/v1/attempts/{id}'] = {
+  get: domainOperation('getOwnAttempt', 'Attempt', { ids: ['id'] }),
+};
+specification.paths['/api/v1/activities/{id}/progress'] = {
+  get: {
+    ...domainOperation('getOwnActivityProgress', 'ActivityProgress', {
+      ids: ['id'],
+    }),
+    description:
+      'Avance propio por asignación y versión, desde intentos confirmados que superan todas las pruebas requeridas. RUN no cuenta y un fallo posterior no elimina éxito previo. 0/0 tiene ratio null; la falta de intentos difiere de un error de servicio.',
+  },
+};
+for (const route of ['executions', 'attempts'])
+  for (const status of [409, 429]) {
+    specification.paths[
+      `/api/v1/activities/{id}/exercises/{aeId}/${route}`
+    ].post.responses[status].headers['Retry-After'] = {
+      description:
+        'Segundos antes de recuperar una operación en curso o reintentar tras un cupo agotado.',
+      schema: { type: 'integer', minimum: 1 },
+    };
+  }
+addHelpOpenApi(specification, domainOperation);
 await writeFile(
   new URL('../packages/contracts/openapi.json', import.meta.url),
   await format(JSON.stringify(specification), { parser: 'json' }),
 );
-console.log(
-  'OpenAPI generado desde schemas compartidos de identidad y gobierno.',
-);
+console.log('OpenAPI generado desde los contratos compartidos de producto.');

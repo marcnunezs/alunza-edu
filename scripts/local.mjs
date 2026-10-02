@@ -9,10 +9,13 @@ import net from 'node:net';
 import pg from 'pg';
 import { createClient } from '@supabase/supabase-js';
 import { seedAcademic } from './academic-fixture.mjs';
+import { ensureMaterialsStorage } from './materials-storage.mjs';
 import { normalizeSigningKeys } from './local-signing-keys.mjs';
 import {
   developmentTarget,
   testTarget,
+  evaluationTarget,
+  targetFor,
   assertLocalTarget,
   assertRuntimeTarget,
 } from './local-target.mjs';
@@ -25,7 +28,11 @@ const cliPath = join(
 );
 export function context(projectDir = root, test = false) {
   return {
-    ...(test ? testTarget : developmentTarget),
+    ...(test === 'evaluation'
+      ? evaluationTarget
+      : test
+        ? testTarget
+        : developmentTarget),
     projectDir,
     statePath: join(projectDir, '.local/runtime.json'),
   };
@@ -92,11 +99,17 @@ export async function cli(ctx, args, options = {}) {
 export async function readState(ctx) {
   assertLocalTarget(ctx);
   const state = JSON.parse(await readFile(ctx.statePath, 'utf8'));
-  assertRuntimeTarget(state, ctx.test ? testTarget : developmentTarget);
+  assertRuntimeTarget(state, targetFor(ctx));
   return state;
 }
 export function assertLocalDatabase(url, expectedPort) {
-  if (![developmentTarget.dbPort, testTarget.dbPort].includes(expectedPort))
+  if (
+    ![
+      developmentTarget.dbPort,
+      testTarget.dbPort,
+      evaluationTarget.dbPort,
+    ].includes(expectedPort)
+  )
     throw new Error('Puerto ajeno a las bases aisladas del laboratorio.');
   const parsed = new URL(url);
   if (parsed.protocol !== 'postgresql:' && parsed.protocol !== 'postgres:')
@@ -272,7 +285,7 @@ export async function up(ctx) {
 }
 export function applicationUrl(ctx, state, hostname = '127.0.0.1') {
   assertLocalTarget(ctx);
-  assertRuntimeTarget(state, ctx.test ? testTarget : developmentTarget);
+  assertRuntimeTarget(state, targetFor(ctx));
   const url = new URL(state.migrationUrl);
   url.hostname = hostname;
   url.username = 'alunza_app';
@@ -293,8 +306,11 @@ export function apiEnvironment(ctx, state, hostname = '127.0.0.1') {
     SUPABASE_PUBLISHABLE_KEY: state.publishableKey,
     SUPABASE_SECRET_KEY: state.authAdminKey,
     INVITATION_WORKER_ENABLED: 'true',
+    MATERIALS_WORKER_ENABLED: 'true',
+    HELP_WORKER_ENABLED: 'true',
     INVITATION_CALLBACK_URL: `http://localhost:${ctx.webPort}/acceso/invitacion`,
-    ENVIRONMENT: ctx.test ? 'test' : 'local',
+    ENVIRONMENT: ctx.evaluation ? 'evaluation' : ctx.test ? 'test' : 'local',
+    PRACTICE_RUNNER_ENABLED: hostname === '127.0.0.1' ? 'true' : 'false',
   };
 }
 async function writeEnv(path, values) {
@@ -349,6 +365,9 @@ export async function migrate(ctx) {
      DROP POLICY IF EXISTS alunza_current_identity ON auth.users;
      CREATE POLICY alunza_current_identity ON auth.users FOR SELECT TO alunza_identity
        USING (id = nullif(current_setting('app.actor_id',true),'')::uuid);
+     DROP POLICY IF EXISTS alunza_materials_private ON storage.objects;
+     CREATE POLICY alunza_materials_private ON storage.objects AS RESTRICTIVE FOR ALL TO anon,authenticated
+       USING (bucket_id <> 'materials') WITH CHECK (bucket_id <> 'materials');
      COMMIT;`,
   ]);
   const client = new pg.Client({ connectionString: state.migrationUrl });
@@ -363,7 +382,7 @@ export async function migrate(ctx) {
   } finally {
     await client.end();
   }
-  if (!ctx.test) {
+  if (!ctx.test && !ctx.evaluation) {
     await writeEnv(
       join(root, 'apps/api/.env.local'),
       apiEnvironment(ctx, state),
@@ -375,6 +394,7 @@ export async function migrate(ctx) {
     });
     await writeComposeEnvironment(ctx, state);
   }
+  await ensureMaterialsStorage(ctx, state);
   console.log(
     'Migraciones aplicadas. Rol de aplicación limitado y configuración por consumidor preparados.',
   );

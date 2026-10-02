@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "environment": "preproduction",
+  "operation": "probe:help-product",
+  "remote": {
+    "enabled": false,
+    "approvedBy": null,
+    "approvalRef": null,
+    "approvedAt": null,
+    "expiresAt": null
+  },
+  "releaseSha": null,
+  "targets": {
+    "apiOrigin": null,
+    "azureBaseURL": null,
+    "organizationId": null,
+    "classId": null,
+    "activityId": null,
+    "attemptId": null,
+    "sourceVersionIds": null,
+    "embedding": null,
+    "generation": null
+  },
+  "corpus": {
+    "fixtureVersion": "help-corpus-1",
+    "content": "fictitious-only",
+    "expectedHash": null,
+    "calibrationArtifact": null
+  },
+  "budget": {
+    "maxHelpRequests": 4,
+    "maxAiRequests": 12,
+    "maxHttpRequests": 128,
+    "maxDurationSeconds": 120,
+    "currency": "USD",
+    "maxCost": null,
+    "pricePerMillionTokens": null
+  }
+}

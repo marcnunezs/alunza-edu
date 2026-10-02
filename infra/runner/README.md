@@ -122,9 +122,9 @@ Esto no acredita paridad remota ni aceptación de RF de negocio.
   daemon, controladores e imagen local, sin crear ni descargar imágenes.
 - Si se pierde o cancela la respuesta de creación, un 404 inmediato no acredita
   limpieza: el supervisor conserva incertidumbre hasta observar esa cápsula o
-  vencer su etiqueta de 60 s. El runner expone `sweepExpiredDockerExecutions`
-  para una integración posterior con recuperación persistida en la API.
-  El barrido exige nombre,
+  vencer su etiqueta de 60 s. La API conserva el período de recuperación en BD
+  y llama `sweepExpiredDockerExecutions` al arrancar y cada 15 s, incluso para
+  apariciones tardías de ejecuciones ya finalizadas. El barrido exige nombre,
   etiqueta propia y vencimiento; una falla del daemon no acredita limpieza.
   Esta recuperación es eventual al volver el daemon, no una garantía absoluta
   de atomicidad distribuida entre una respuesta perdida y la creación remota.

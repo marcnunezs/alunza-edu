@@ -34,10 +34,33 @@ export const testTarget = target({
   studioPort: 18423,
   mailPort: 18424,
 });
+export const evaluationTarget = target({
+  test: false,
+  evaluation: true,
+  projectId: 'alunza-edu-laboratorio-eval',
+  networkName: 'alunza-laboratorio-eval-local',
+  apiPort: 4400,
+  operationsPort: 4401,
+  webPort: 3400,
+  authPort: 19421,
+  dbPort: 19422,
+  shadowPort: 19420,
+  studioPort: 19423,
+  mailPort: 19424,
+});
 export const testWorkspaceDirectory = '.local/lab-integration-workspace';
+export const evaluationWorkspaceDirectory = '.local/lab-evaluation-workspace';
+
+export function targetFor(ctx) {
+  return ctx?.evaluation === true
+    ? evaluationTarget
+    : ctx?.test === true
+      ? testTarget
+      : developmentTarget;
+}
 
 export function assertLocalTarget(ctx) {
-  const expected = ctx?.test === true ? testTarget : developmentTarget;
+  const expected = targetFor(ctx);
   if (Object.entries(expected).some(([key, value]) => ctx?.[key] !== value))
     throw new Error('El contexto no pertenece al laboratorio local aislado.');
 }
@@ -45,7 +68,7 @@ export function assertLocalTarget(ctx) {
 export function assertRuntimeTarget(state, expected) {
   const database = new URL(state?.migrationUrl);
   if (
-    ![developmentTarget, testTarget].includes(expected) ||
+    ![developmentTarget, testTarget, evaluationTarget].includes(expected) ||
     state.projectId !== expected.projectId ||
     state.authUrl !== expected.authUrl ||
     !['postgresql:', 'postgres:'].includes(database.protocol) ||

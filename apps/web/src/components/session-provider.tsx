@@ -22,6 +22,7 @@ type SessionContextValue = {
   session: Session | null;
   initialized: boolean;
   revision: number;
+  sessionGeneration: number;
   identity: Identity;
   authError: string | null;
   closed: boolean;
@@ -46,8 +47,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [auth, setAuth] = useState<{
     session: Session | null;
     revision: number;
+    sessionGeneration: number;
     initialized: boolean;
-  }>({ session: null, revision: 0, initialized: false });
+  }>({ session: null, revision: 0, sessionGeneration: 0, initialized: false });
   const [identity, setIdentity] = useState<Identity>({
     status: 'loading',
     key: '',
@@ -76,18 +78,27 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     void browserAuth()
       .then((client) => {
         if (disposed) return;
-        subscription = client.auth.onAuthStateChange((_event, session) => {
+        subscription = client.auth.onAuthStateChange((event, session) => {
           if (disposed) return;
           window.clearTimeout(timeout);
           setAuth((previous) => {
             const next = suppressed.current ? null : session;
             const changed =
               previous.session?.access_token !== next?.access_token;
+            // A refreshed credential revalidates permissions, but does not
+            // replace the current account's in-memory editor operation.
+            const sameSessionRefresh =
+              event === 'TOKEN_REFRESHED' &&
+              !!next &&
+              previous.session?.user.id === next.user.id;
             if (changed) active.current?.abort();
             return {
               session: next,
               initialized: true,
               revision: previous.revision + (changed ? 1 : 0),
+              sessionGeneration:
+                previous.sessionGeneration +
+                (changed && !sameSessionRefresh ? 1 : 0),
             };
           });
           if (session && !suppressed.current) setAuthError(null);
@@ -180,6 +191,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       ...previous,
       session: null,
       revision: previous.revision + 1,
+      sessionGeneration: previous.sessionGeneration + 1,
     }));
     try {
       const { error } = await (

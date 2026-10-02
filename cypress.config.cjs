@@ -4,15 +4,70 @@ const { defineConfig } = require('cypress');
 const { readFileSync, mkdirSync, writeFileSync } = require('node:fs');
 const { resolve, join } = require('node:path');
 const { identityTasks } = require('./tests/identity-fixture.cjs');
+const { helpFaultTasks } = require('./tests/help-fault-controls.cjs');
 const {
   assertLaboratoryTestState,
 } = require('./tests/laboratory-test-state.cjs');
 
-const reportDirectory = resolve(__dirname, '.local/reports/imp-01');
+const suite = process.env.ALUNZA_E2E_SUITE ?? 'full';
+if (!['full', 'materials', 'help'].includes(suite))
+  throw new Error('ALUNZA_E2E_SUITE debe ser full, materials o help.');
+const materialsOnly = suite === 'materials';
+const helpOnly = suite === 'help';
+const specPattern = helpOnly
+  ? 'tests/e2e/help.cy.ts'
+  : materialsOnly
+    ? 'tests/e2e/materials.cy.ts'
+    : 'tests/e2e/*.cy.ts';
+const reportDirectory = resolve(
+  __dirname,
+  '.local/reports',
+  materialsOnly || helpOnly ? 'imp-04' : 'imp-01',
+);
+const reportName = helpOnly
+  ? 'e2e-help.json'
+  : materialsOnly
+    ? 'e2e-materials.json'
+    : 'e2e.json';
+const materialCases = ['IMP04-01', 'IMP04-02', 'IMP04-03'];
+const helpCases = [
+  'IMP04-04',
+  'IMP04-05',
+  'IMP04-06',
+  'IMP04-07',
+  'IMP04-08',
+  'IMP04-09',
+  'IMP04-10',
+];
+const requiredCases = helpOnly
+  ? helpCases
+  : materialsOnly
+    ? materialCases
+    : [
+        ...Array.from(
+          { length: 8 },
+          (_, i) => `FND-${String(i + 1).padStart(2, '0')}`,
+        ),
+        ...Array.from(
+          { length: 8 },
+          (_, i) => `IMP01-${String(i + 1).padStart(2, '0')}`,
+        ),
+        ...Array.from(
+          { length: 8 },
+          (_, i) => `IMP02-${String(i + 1).padStart(2, '0')}`,
+        ),
+        ...Array.from(
+          { length: 11 },
+          (_, i) => `IMP03-${String(i + 1).padStart(2, '0')}`,
+        ),
+        ...materialCases,
+        ...helpCases,
+      ];
 
 module.exports = defineConfig({
   video: false,
   screenshotOnRunFailure: false,
+  downloadsFolder: '.local/evidence/cypress-downloads',
   numTestsKeptInMemory: 0,
   retries: 0,
   viewportWidth: 1280,
@@ -24,7 +79,7 @@ module.exports = defineConfig({
   reporter: 'dot',
   e2e: {
     baseUrl: 'http://127.0.0.1:3300',
-    specPattern: 'tests/e2e/*.cy.ts',
+    specPattern,
     supportFile: 'tests/e2e/support.ts',
     testIsolation: true,
     setupNodeEvents(on, config) {
@@ -92,6 +147,7 @@ module.exports = defineConfig({
       }
       on('task', {
         ...identityTasks(state),
+        ...helpFaultTasks(state),
         'foundation:apiStop': () => control('stop'),
         'foundation:apiStart': () => control('start'),
         'academic:performance': ({ operation, samples }) => {
@@ -141,14 +197,34 @@ module.exports = defineConfig({
             id:
               (test.title || [])
                 .join(' ')
-                .match(/\b(?:FND-\d{2}|IMP01-\d{2}|IMP02-\d{2})\b/)?.[0] ||
-              'UNKNOWN',
+                .match(
+                  /\b(?:FND-\d{2}|IMP01-\d{2}|IMP02-\d{2}|IMP03-\d{2}|IMP04-\d{2})\b/,
+                )?.[0] || 'UNKNOWN',
             state: states.has(test.state) ? test.state : 'unknown',
           })),
         );
+        const completed = new Set(
+          tests
+            .filter((test) => test.state === 'passed')
+            .map((test) => test.id),
+        );
+        const scopeComplete =
+          result.totalTests === requiredCases.length &&
+          tests.length === requiredCases.length &&
+          completed.size === requiredCases.length &&
+          requiredCases.every((id) => completed.has(id)) &&
+          (!(materialsOnly || helpOnly) ||
+            result.runs.every(
+              (run) => run.spec?.relative?.replace(/\\/g, '/') === specPattern,
+            ));
         const report = {
           schemaVersion: 1,
-          increment: 'IMP-01',
+          increment: helpOnly
+            ? 'IMP-04.04–04.07'
+            : materialsOnly
+              ? 'IMP-04.01–04.03'
+              : 'IMP-04.01–04.07',
+          suite,
           recordedAt: new Date().toISOString(),
           browser: /^[a-z]+$/i.test(result.browserName)
             ? result.browserName
@@ -159,11 +235,12 @@ module.exports = defineConfig({
           cypressVersion: /^[0-9.]+$/.test(result.cypressVersion)
             ? result.cypressVersion
             : 'unknown',
-          spec: 'tests/e2e/*.cy.ts',
+          spec: specPattern,
           status:
             result.totalFailed > 0
               ? 'failed'
-              : result.totalPassed > 0 &&
+              : scopeComplete &&
+                  result.totalPassed > 0 &&
                   result.totalPending === 0 &&
                   result.totalSkipped === 0
                 ? 'passed'
@@ -178,7 +255,7 @@ module.exports = defineConfig({
         };
         mkdirSync(reportDirectory, { recursive: true });
         writeFileSync(
-          join(reportDirectory, 'e2e.json'),
+          join(reportDirectory, reportName),
           JSON.stringify(report, null, 2) + '\n',
         );
       });

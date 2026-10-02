@@ -98,10 +98,11 @@ export function usePagedResource<T>(
   path: string,
   schema: z.ZodType<T>,
   enabled = true,
+  pageSize = 100,
 ) {
   const [cursor, setCursor] = useState<string | null>(null);
   const resource = useApiResource(
-    `${path}${path.includes('?') ? '&' : '?'}limit=100${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
+    `${path}${path.includes('?') ? '&' : '?'}limit=${pageSize}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`,
     schema,
     enabled,
   );

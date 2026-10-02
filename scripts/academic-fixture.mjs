@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import {
   developmentTarget,
   testTarget,
+  evaluationTarget,
   assertRuntimeTarget,
 } from './local-target.mjs';
 import {
@@ -15,7 +16,7 @@ import {
 } from '../fixtures/demo/academic.mjs';
 
 export async function seedAcademic(state) {
-  const expected = [developmentTarget, testTarget].find(
+  const expected = [developmentTarget, testTarget, evaluationTarget].find(
     (target) => target.projectId === state.projectId,
   );
   assertRuntimeTarget(state, expected);

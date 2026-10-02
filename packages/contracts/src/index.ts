@@ -1,6 +1,9 @@
 import { z } from 'zod';
 export * from './rag';
 export * from './academic';
+export * from './practice';
+export * from './submissions';
+export * from './materials';
 
 export const roleSchema = z.enum(['ADMIN', 'TEACHER', 'STUDENT']);
 export const accountStateSchema = z.enum(['INVITED', 'ACTIVE', 'DISABLED']);
@@ -52,6 +55,7 @@ export const errorResponseSchema = z.strictObject({
       'RESOURCE_NOT_FOUND',
       'DEPENDENCY_UNAVAILABLE',
       'PERSISTENCE_UNAVAILABLE',
+      'STORAGE_UNAVAILABLE',
       'INTERNAL_ERROR',
       'VALIDATION_FAILED',
       'DUPLICATE',
@@ -74,6 +78,10 @@ export const errorResponseSchema = z.strictObject({
       'ACTIVITY_NOT_AVAILABLE',
       'INVALID_TRANSITION',
       'CONCEPT_CYCLE',
+      'CODE_TOO_LARGE',
+      'VERSION_CONFLICT',
+      'ACTIVITY_CLOSED',
+      'IDEMPOTENCY_EXPIRED',
     ]),
     message: z.string().min(1).max(240),
     fields: z.array(z.strictObject({ field: z.string(), message: z.string() })),
@@ -196,3 +204,5 @@ export const invitationAcceptanceResponseSchema = z.strictObject({
 export type Member = z.infer<typeof memberSchema>;
 export type Invitation = z.infer<typeof invitationSchema>;
 export type InvitationAcceptance = z.infer<typeof invitationAcceptanceSchema>;
+export * from './help';
+export * from './evaluation';

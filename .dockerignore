@@ -15,10 +15,20 @@
 !packages/contracts/**
 !packages/runner/
 !packages/runner/package.json
+!packages/runner/src/
+!packages/runner/src/**
+!packages/runner/tsconfig.json
 !packages/ai/
 !packages/ai/package.json
+!packages/ai/src/
+!packages/ai/src/**
+!packages/ai/tsconfig.json
 !infra/
 !infra/Dockerfile
+!infra/runner/
+!infra/runner/**
+!infra/materials/
+!infra/materials/**
 
 # Never send local environments, build output, dependencies or credentials.
 **/.env*

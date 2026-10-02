@@ -1,5 +1,17 @@
 import { z } from 'zod';
 import { X509Certificate } from 'node:crypto';
+import {
+  azureEmbeddingConfigurationFromEnv,
+  azureGenerationConfigurationFromEnv,
+  parseHelpCalibrationArtifact,
+  parseVerifiedHelpCalibrationArtifact,
+} from '@alunza/ai';
+import type {
+  AzureEmbeddingConfiguration,
+  AzureGenerationConfiguration,
+  HelpCalibrationArtifact,
+  VerifiedHelpCalibrationArtifact,
+} from '@alunza/ai';
 
 export const APP_CONFIG = Symbol('APP_CONFIG');
 
@@ -17,7 +29,7 @@ const webUrl = z.url().refine((value) => {
 
 const environmentSchema = z.object({
   ENVIRONMENT: z
-    .enum(['local', 'test', 'preproduction', 'production'])
+    .enum(['local', 'test', 'evaluation', 'preproduction', 'production'])
     .default('local'),
   RELEASE_ID: z
     .string()
@@ -39,6 +51,39 @@ const environmentSchema = z.object({
   SUPABASE_JWT_ISSUER: webUrl,
   SUPABASE_JWT_AUDIENCE: z.literal('authenticated').default('authenticated'),
   INVITATION_WORKER_ENABLED: z.enum(['true', 'false']).default('false'),
+  MATERIALS_WORKER_ENABLED: z.enum(['true', 'false']).default('false'),
+  HELP_WORKER_ENABLED: z.enum(['true', 'false']).default('false'),
+  EVALUATION_ENABLED: z.enum(['true', 'false']).default('false'),
+  EVALUATION_OPERATIONS_PORT: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(65535)
+    .default(4401),
+  HELP_CALIBRATION_CORPUS_SHA256: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
+  PRACTICE_RUNNER_ENABLED: z.enum(['true', 'false']).default('false'),
+  PRACTICE_ACTOR_CONCURRENCY: z.coerce.number().int().min(1).max(10).default(1),
+  PRACTICE_SUBMIT_ACTOR_CONCURRENCY: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(10)
+    .default(2),
+  PRACTICE_ORGANIZATION_CONCURRENCY: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(32)
+    .default(4),
+  PRACTICE_ACTOR_REQUESTS_PER_MINUTE: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(120)
+    .default(10),
   SUPABASE_URL: z.url().optional(),
   SUPABASE_PUBLISHABLE_KEY: z.string().min(1).optional(),
   SUPABASE_SECRET_KEY: z.string().min(1).optional(),
@@ -46,7 +91,8 @@ const environmentSchema = z.object({
 });
 
 export interface AppConfig {
-  environment: 'local' | 'test' | 'preproduction' | 'production';
+  environment: 'local' | 'test' | 'evaluation' | 'preproduction' | 'production';
+  evaluation?: Readonly<{ enabled: boolean; operationsPort: number }>;
   releaseId: string;
   port: number;
   host: string;
@@ -59,6 +105,23 @@ export interface AppConfig {
   jwtIssuer: string;
   jwtAudience: 'authenticated';
   invitationWorkerEnabled: boolean;
+  materialsWorkerEnabled: boolean;
+  materialsLeaseMs: number;
+  materialsPollMs: number;
+  materialsRetryDelaysMs: readonly number[];
+  azureEmbeddingConfiguration: AzureEmbeddingConfiguration | null;
+  azureGenerationConfiguration: AzureGenerationConfiguration | null;
+  helpCalibration:
+    HelpCalibrationArtifact | VerifiedHelpCalibrationArtifact | null;
+  helpCalibrationCorpusHash: string | null;
+  helpWorkerEnabled: boolean;
+  practiceRunnerEnabled: boolean;
+  practiceQuotas: Readonly<{
+    actorConcurrency: number;
+    submitActorConcurrency: number;
+    organizationConcurrency: number;
+    actorRequestsPerMinute: number;
+  }>;
   supabaseUrl?: string;
   supabasePublishableKey?: string;
   supabaseSecretKey?: string;
@@ -79,7 +142,73 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     ]);
   }
   const value = result.data;
-  const local = ['local', 'test'].includes(value.ENVIRONMENT);
+  const local = ['local', 'test', 'evaluation'].includes(value.ENVIRONMENT);
+  if (value.ENVIRONMENT === 'evaluation') {
+    const database = new URL(value.DATABASE_URL);
+    if (
+      value.EVALUATION_ENABLED !== 'true' ||
+      value.HOST !== '127.0.0.1' ||
+      !['127.0.0.1', 'localhost'].includes(database.hostname) ||
+      database.port !== '19422' ||
+      value.PORT !== 4400 ||
+      value.EVALUATION_OPERATIONS_PORT !== 4401 ||
+      value.SUPABASE_JWT_ISSUER !== 'http://127.0.0.1:19421/auth/v1'
+    )
+      throw new ConfigurationError(['EVALUATION_ISOLATION']);
+  } else if (
+    value.EVALUATION_ENABLED === 'true' &&
+    value.ENVIRONMENT !== 'test'
+  ) {
+    throw new ConfigurationError(['EVALUATION_ENABLED']);
+  }
+  let azureEmbeddingConfiguration: AzureEmbeddingConfiguration | null = null;
+  const generationSpecified = Object.keys(env).some(
+    (key) => /^(AI_GENERATION_|AI_VERIFICATION_)/.test(key) && env[key],
+  );
+  const embeddingSpecified = Object.keys(env).some(
+    (key) =>
+      (/^AI_EMBEDDING_/.test(key) || key === 'AI_CONFIGURATION_ID') && env[key],
+  );
+  if (
+    embeddingSpecified ||
+    (!generationSpecified &&
+      Object.keys(env).some((key) => key.startsWith('AI_') && env[key]))
+  ) {
+    try {
+      azureEmbeddingConfiguration = azureEmbeddingConfigurationFromEnv(env);
+    } catch {
+      throw new ConfigurationError(['AI_EMBEDDING_CONFIGURATION']);
+    }
+  }
+  let azureGenerationConfiguration: AzureGenerationConfiguration | null = null;
+  if (generationSpecified) {
+    try {
+      azureGenerationConfiguration = azureGenerationConfigurationFromEnv(env);
+    } catch {
+      throw new ConfigurationError(['AI_GENERATION_CONFIGURATION']);
+    }
+  }
+  let helpCalibration: AppConfig['helpCalibration'] = null;
+  if (env.HELP_CALIBRATION_JSON) {
+    try {
+      const supplied = JSON.parse(env.HELP_CALIBRATION_JSON) as {
+        version?: unknown;
+      };
+      helpCalibration =
+        supplied.version === 'help-evidence-2'
+          ? parseVerifiedHelpCalibrationArtifact(supplied)
+          : parseHelpCalibrationArtifact(supplied);
+    } catch {
+      throw new ConfigurationError(['HELP_CALIBRATION_JSON']);
+    }
+  }
+  if (
+    value.MATERIALS_WORKER_ENABLED === 'true' &&
+    (!value.SUPABASE_URL || !value.SUPABASE_SECRET_KEY)
+  )
+    throw new ConfigurationError(['SUPABASE_URL', 'SUPABASE_SECRET_KEY']);
+  if (!local && value.PRACTICE_RUNNER_ENABLED === 'true')
+    throw new ConfigurationError(['PRACTICE_RUNNER_ENABLED']);
   const jwksUrl = new URL(value.SUPABASE_JWKS_URL);
   const dockerLocalJwks =
     local &&
@@ -208,6 +337,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   }
   return Object.freeze({
     environment: value.ENVIRONMENT,
+    evaluation: Object.freeze({
+      enabled: value.EVALUATION_ENABLED === 'true',
+      operationsPort: value.EVALUATION_OPERATIONS_PORT,
+    }),
     releaseId: value.RELEASE_ID ?? 'foundation-local',
     port: value.PORT,
     host: value.HOST,
@@ -218,6 +351,22 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     jwtIssuer: value.SUPABASE_JWT_ISSUER,
     jwtAudience: value.SUPABASE_JWT_AUDIENCE,
     invitationWorkerEnabled: value.INVITATION_WORKER_ENABLED === 'true',
+    materialsWorkerEnabled: value.MATERIALS_WORKER_ENABLED === 'true',
+    materialsLeaseMs: 60_000,
+    materialsPollMs: 500,
+    materialsRetryDelaysMs: Object.freeze([5_000, 30_000]),
+    azureEmbeddingConfiguration,
+    azureGenerationConfiguration,
+    helpCalibration,
+    helpCalibrationCorpusHash: value.HELP_CALIBRATION_CORPUS_SHA256 ?? null,
+    helpWorkerEnabled: value.HELP_WORKER_ENABLED === 'true',
+    practiceRunnerEnabled: value.PRACTICE_RUNNER_ENABLED === 'true',
+    practiceQuotas: Object.freeze({
+      actorConcurrency: value.PRACTICE_ACTOR_CONCURRENCY,
+      submitActorConcurrency: value.PRACTICE_SUBMIT_ACTOR_CONCURRENCY,
+      organizationConcurrency: value.PRACTICE_ORGANIZATION_CONCURRENCY,
+      actorRequestsPerMinute: value.PRACTICE_ACTOR_REQUESTS_PER_MINUTE,
+    }),
     supabaseUrl: value.SUPABASE_URL,
     supabasePublishableKey: value.SUPABASE_PUBLISHABLE_KEY,
     supabaseSecretKey: value.SUPABASE_SECRET_KEY,

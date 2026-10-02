@@ -19,9 +19,12 @@ import {
   type DraftScope,
 } from '@/lib/exercise-draft';
 import { difficultyLabels, LoadState, Section } from './shared';
+import { RunPracticePanel } from './run-result-panel';
+import { SubmitAttemptPanel } from './submit-attempt-panel';
 
 type EditorResource = {
   key: string;
+  credentialRevision: number;
   data?: StudentExercise;
   error?: ApiError;
   pending: boolean;
@@ -29,11 +32,12 @@ type EditorResource = {
 };
 
 function useAuthorizedExercise(path: string) {
-  const { session, revision } = useSession();
+  const { session, revision, sessionGeneration } = useSession();
   const token = session?.access_token;
-  const key = `${revision}:${session?.user.id ?? ''}:${path}`;
+  const key = `${sessionGeneration}:${session?.user.id ?? ''}:${path}`;
   const [state, setState] = useState<EditorResource>({
     key,
+    credentialRevision: revision,
     pending: true,
     verified: false,
   });
@@ -51,6 +55,7 @@ function useAuthorizedExercise(path: string) {
         if (!controller.signal.aborted)
           setState({
             key,
+            credentialRevision: revision,
             data: response.body.data,
             pending: false,
             verified: true,
@@ -64,28 +69,34 @@ function useAuthorizedExercise(path: string) {
         // Authorization denial removes the content instead of trusting stale access.
         setState((previous) => ({
           key,
+          credentialRevision: revision,
           data: !denied && previous.key === key ? previous.data : undefined,
           pending: false,
           verified: false,
           error,
         }));
       });
-  }, [key, token, path]);
+  }, [key, token, path, revision]);
   const reload = useCallback(async () => {
     setState((previous) => ({
       key,
+      credentialRevision: revision,
       data: previous.key === key ? previous.data : undefined,
       pending: true,
       verified: false,
     }));
     await load();
-  }, [key, load]);
+  }, [key, load, revision]);
   useEffect(() => {
     void load();
     return () => active.current?.abort();
   }, [load]);
   const current: EditorResource =
-    state.key === key ? state : { key, pending: true, verified: false };
+    state.key !== key
+      ? { key, credentialRevision: revision, pending: true, verified: false }
+      : state.credentialRevision !== revision
+        ? { ...state, pending: true, verified: false }
+        : state;
   return { state: current, reload };
 }
 
@@ -127,6 +138,9 @@ function AuthorizedEditor({
           : 'Plantilla lista. Tus cambios se conservarán solo en este navegador.',
   );
   const [discardOpen, setDiscardOpen] = useState(false);
+  const [previousAttemptId, setPreviousAttemptId] = useState<
+    string | undefined
+  >();
   const [now, setNow] = useState(Date.parse(exercise.serverNow));
   const monotonic = useRef({
     server: Date.parse(exercise.serverNow),
@@ -270,17 +284,58 @@ function AuthorizedEditor({
           <p id="draft-status" role="status" className="text-sm">
             {draftStatus}
           </p>
+          <RunPracticePanel
+            activityId={exercise.activityId}
+            assignmentId={exercise.activityExerciseId}
+            exerciseVersionId={exercise.exerciseVersionId}
+            code={code}
+            canRun={canEdit}
+            verified={verified}
+            reload={reload}
+          />
+          <SubmitAttemptPanel
+            activityId={exercise.activityId}
+            scope={scope}
+            code={code}
+            previousAttemptId={previousAttemptId}
+            canSubmit={canEdit}
+            verified={verified}
+            reload={reload}
+            onCopy={(attempt) => {
+              if (
+                !canEdit ||
+                attempt.assignmentId !== scope.assignmentId ||
+                attempt.exerciseVersionId !== scope.exerciseVersionId
+              )
+                return;
+              setCode(attempt.code);
+              setPreviousAttemptId(attempt.attemptId);
+              try {
+                setDraftStatus(
+                  saveDraft(window.localStorage, scope, attempt.code)
+                    ? `Copia del intento #${attempt.attemptNumber} guardada como borrador. El original se conserva.`
+                    : 'Copia preparada en el editor. No se pudo guardar el borrador local; conserva una copia antes de salir.',
+                );
+              } catch {
+                setDraftStatus(
+                  'Copia preparada en el editor. No se pudo guardar el borrador local; conserva una copia antes de salir.',
+                );
+              }
+              editor.current?.focus();
+            }}
+          />
           <div className="flex flex-wrap gap-3">
             <FormDialog
               title="Descartar borrador"
               description="Se eliminará el borrador de esta cuenta y ejercicio en este navegador. La plantilla original volverá a mostrarse."
               trigger={<Button variant="outline">Descartar borrador</Button>}
-              open={discardOpen}
-              onOpenChange={setDiscardOpen}
+              open={discardOpen && verified}
+              onOpenChange={(open) => setDiscardOpen(open && verified)}
             >
               <div className="flex flex-wrap gap-3">
                 <Button
                   onClick={() => {
+                    if (!verified) return;
                     let removed = false;
                     try {
                       removed = discardDraft(window.localStorage, scope);
@@ -289,6 +344,7 @@ function AuthorizedEditor({
                     }
                     if (removed) {
                       setCode(exercise.starterCode);
+                      setPreviousAttemptId(undefined);
                       setDraftStatus(
                         'Borrador descartado. Se muestra la plantilla original.',
                       );
@@ -328,7 +384,7 @@ export function EditorPanel({
   activityId: string;
   assignmentId: string;
 }) {
-  const { identity } = useSession();
+  const { identity, session } = useSession();
   const resource = useAuthorizedExercise(
     `/api/v1/activities/${encodeURIComponent(activityId)}/exercises/${encodeURIComponent(assignmentId)}`,
   );
@@ -343,7 +399,7 @@ export function EditorPanel({
         reload={resource.reload}
       />
     );
-  if (identity.status !== 'ready') return null;
+  if (!session) return null;
   const exercise = resource.state.data;
   return (
     <div className="space-y-5">
@@ -351,11 +407,11 @@ export function EditorPanel({
         <RequestError error={resource.state.error} />
       ) : null}
       <AuthorizedEditor
-        key={`${identity.data.id}:${exercise.organizationId}:${exercise.classId}:${exercise.activityExerciseId}:${exercise.exerciseVersionId}`}
+        key={`${session.user.id}:${exercise.organizationId}:${exercise.classId}:${exercise.activityExerciseId}:${exercise.exerciseVersionId}`}
         exercise={exercise}
-        userId={identity.data.id}
+        userId={session.user.id}
         reload={resource.reload}
-        verified={resource.state.verified}
+        verified={resource.state.verified && identity.status === 'ready'}
       />
     </div>
   );

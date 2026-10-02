@@ -22,6 +22,8 @@ import { Button } from '@/components/ui/button';
 import { useApiResource } from '@/lib/use-api-resource';
 import { useSession } from '@/components/session-provider';
 import { localDateTime, toInstant } from '@/lib/academic-time';
+import { ActivityProgress } from './activity-progress';
+import { MaterialsPanel } from './materials-panel';
 import {
   ConfirmAction,
   LoadState,
@@ -470,6 +472,15 @@ function ActivityContent({
           disponibles en modo de lectura.
         </p>
       ) : null}
+      {role === 'STUDENT' ? (
+        <ActivityProgress activityId={activity.id} />
+      ) : null}
+      <MaterialsPanel
+        classId={activity.classId}
+        activityId={activity.id}
+        canUpload={teacher}
+        manage={role === 'TEACHER'}
+      />
       <Section title="Ejercicios">
         {activity.exercises.length === 0 ? (
           <p>No se han agregado ejercicios.</p>

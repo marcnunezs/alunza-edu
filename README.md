@@ -2,7 +2,7 @@
 
 Alunza es un tutor universitario web para Programación I con JavaScript. Combina ejecución controlada, pruebas deterministas, pistas sustentadas en material docente y seguimiento explicable por clase.
 
-Este repositorio conserva la documentación CAPSTONE y las especificaciones del MVP, la fundación IMP-00, la identidad institucional IMP-01 y el contenido/editor IMP-02. Integra Next.js, NestJS y Supabase local. El alcance, resultados y límites del primer corte funcional están en [IMP-02](docs/work/IMP-02-content.md); no acredita despliegue remoto ni aceptación académica.
+Este repositorio conserva la documentación CAPSTONE y las especificaciones del MVP, la fundación IMP-00, la identidad institucional IMP-01 y el contenido/editor IMP-02. El corte [IMP-03.01–03.03](docs/work/IMP-03-practice.md) añade RUN desde el editor con resultados temporales y Docker local; [IMP-03.04–03.06](docs/work/IMP-03-submissions.md) añade envíos persistidos, historial propio, reintentos y avance mínimo por actividad. [IMP-04.01–04.03](docs/work/IMP-04-materials.md) integra materiales docentes privados, versiones e indexación recuperable, implementados y probados localmente. [IMP-04.04–04.06](docs/work/IMP-04-help.md) incorpora explicación, pistas y referencias sobre intentos guardados: implementado y probado localmente. [IMP-04.07 y preparación ejecutable de IMP-04.08](docs/work/IMP-04-evaluation.md) están implementados y probados en TEST; señales y tablero conservan sus siguientes incrementos. Los registros distinguen implementación, pruebas e integración; no acreditan despliegue remoto ni aceptación académica.
 
 ## Arranque local
 
@@ -17,6 +17,8 @@ npm run local:doctor
 npm run local:up
 npm run db:migrate
 npm run db:seed
+npm run runner:prepare
+npm run runner:doctor
 npm run dev
 ```
 
@@ -31,6 +33,22 @@ El fixture es incremental: conserva las seis identidades originales y completa d
 `Ctrl+C` detiene el desarrollo. `npm run local:down` detiene únicamente Supabase de Alunza y conserva sus volúmenes. No hay reset destructivo en el arranque normal. Una migración ya aplicada se corrige con una migración nueva; no se promete recuperar datos borrados mediante rollback automático.
 
 ## Comprobaciones
+
+Para RUN usa la API nativa local y la imagen preparada. El botón Ejecutar muestra
+pruebas visibles y resultados temporales; repetir una solicitud incierta recupera
+la misma ejecución. La base guarda metadatos operativos durante la recuperación,
+sin crear intentos ni progreso. Compose conserva RUN deshabilitado porque no
+recibe acceso al daemon Docker. El [registro IMP-03](docs/work/IMP-03-practice.md)
+explica límites, cuotas y tratamiento de errores.
+
+Para guardar evidencia, usa **Enviar intento** y confirma el código capturado.
+SUBMIT ejecuta pruebas visibles y ocultas; el historial permite consultar, comparar
+las pruebas visibles y copiar un intento al borrador antes de confirmar otro.
+**Recuperar envío** reutiliza la clave de una respuesta incierta. Los envíos que
+el servidor admitió antes del cierre pueden terminar después; CLOSED conserva
+historial autorizado. El avance requiere todas las pruebas superadas, y un fallo
+posterior no borra un éxito anterior. El [registro de envíos](docs/work/IMP-03-submissions.md)
+detalla persistencia, cuotas compartidas y reproducción.
 
 ```powershell
 npm run format:check
@@ -50,6 +68,13 @@ npm audit
 `test:artifacts`, después del build y de preparar Supabase local, recorre los bundles públicos y HTML de Next para detectar las credenciales administrativas, contraseñas y clave privada de firma de ese entorno. Falla si faltan los artefactos o el estado necesario para comprobarlos; no imprime los secretos.
 
 ## CI y recorrido Cypress
+
+El corte IMP-03 incorpora `npm run test:practice:performance` y su variante
+`npm run test:practice:performance -- --submit` a la CI: cada perfil usa 50 muestras
+secuenciales y 50 a concurrencia cuatro en TEST aislado. SUBMIT mide también su
+persistencia y exige una suite visible/oculta. Los reportes actuales quedan en
+`.local/reports/imp-03-submissions/`; `.local/reports/imp-03/` conserva el cierre RUN
+previo. El perfil documenta su límite de frecuencia elevado solo durante medición.
 
 Con Node/npm fijados, Docker Linux activo y Chrome instalado, ejecuta desde esta raíz:
 
@@ -129,7 +154,73 @@ Con las migraciones y el seed locales aplicados, entra a `/academia` desde el in
 
 El código se muestra una vez; si se pierde, se regenera. Las habilitaciones por curso no reasignan clases existentes. Solo ADMIN cambia profesor o archiva clases, y debe cerrar antes sus actividades publicadas. TEACHER cierra actividades; la consulta histórica se conserva. Las fechas de curso/clase son civiles y las ventanas se muestran en la zona institucional.
 
-El editor conserva borradores durante treinta días desde la última edición en ese navegador y cuenta. Cerrar sesión los conserva; volver a abrirlos requiere autorización actual. Hay descarte manual y aviso si el almacenamiento falla. No hay ejecución, envío, ayuda ni avance desde intentos en este corte. El [manual web](apps/web/README.md) detalla rutas y comportamiento. `npm run test:academic:fixtures` valida diez soluciones correctas y diez incorrectas en Docker; CI lo incluye. Los reportes académicos están en `.local/reports/imp-02/`.
+El editor conserva borradores durante treinta días desde la última edición en ese navegador y cuenta. Cerrar sesión los conserva; volver a abrirlos requiere autorización actual. Hay descarte manual y aviso si el almacenamiento falla. El corte histórico IMP-02 no incluía ejecución, envío, ayuda ni avance desde intentos; sus incrementos posteriores se describen en este README. El [manual web](apps/web/README.md) detalla rutas y comportamiento. `npm run test:academic:fixtures` valida diez soluciones correctas y diez incorrectas en Docker; CI lo incluye. Los reportes académicos están en `.local/reports/imp-02/`.
+
+## Materiales docentes
+
+En una clase o actividad, profesor y ADMIN autorizado pueden cargar PDF con
+texto, TXT o Markdown de hasta 10.000.000 bytes. Materiales muestra recepción,
+procesamiento y versión disponible por separado. El docente puede reemplazar
+sus archivos creando otra versión o reintentar un fallo; ADMIN dispone de
+reindexación, visibilidad y archivo. Un reemplazo fallido conserva la versión
+anterior. Las descargas pasan por NestJS y requieren autorización vigente.
+El historial autorizado permite consultar versiones y fragmentos con su
+localizador; los estudiantes acceden únicamente al material disponible de su
+ámbito.
+
+El worker utiliza Storage privado y Azure OpenAI para embeddings. Configura
+`MATERIALS_WORKER_ENABLED` y el bloque de embeddings documentado en
+[.env.example](.env.example) solo en servidor. Sin proveedor configurado se
+informa un fallo recuperable, sin simular disponibilidad. El perfil de embeddings
+queda fijado para ese ambiente; un cambio incompatible requiere migración
+explícita. La generación de explicaciones y pistas se integra en IMP-04.04–04.06,
+implementado y probado localmente con proveedor TEST explícito.
+
+El [manifiesto de materiales](fixtures/demo/materials.mjs) contiene seis archivos
+ficticios, dos por clase canónica. `npm run materials:demo` los carga mediante la
+API local con claves idempotentes; consulta su estado en Materiales después de
+la recepción. Si Azure está configurado, esa carga puede generar consumo real.
+Las pruebas TEST usan un doble de embeddings explícito y conservan Auth,
+extracción, Storage y pgvector reales. El
+[registro del corte](docs/work/IMP-04-materials.md) separa esa evidencia del ensayo
+Azure pendiente. Vercel Sandbox, IMP-03.07, sigue pendiente antes de producción.
+
+## Ayuda sobre intentos guardados
+
+IMP-04.04–04.06 está **implementado y probado localmente**. En el resultado de
+un envío confirmado o su historial, el estudiante solicita una explicación o
+una de tres pistas progresivas. La ayuda usa el código guardado y conserva el
+borrador. Abrir una pista preparada confirma su presentación; consultar estado
+no consume niveles. Los fallbacks conservan el diagnóstico y permiten continuar.
+Las referencias muestran documento, versión, fragmento y ubicación; la descarga
+privada revalida permisos incluso para una versión histórica citada.
+
+La ayuda propia está disponible también para actividades CLOSED. SUCCESS admite
+explicación y un fallo de infraestructura recibe una explicación determinista
+sin IA. RUN y un envío pendiente no habilitan ayuda. Este corte no habilita
+lectura docente de intentos ajenos ni chat libre. El
+[registro de ayuda](docs/work/IMP-04-help.md) detalla contratos, resultados y fallos
+previos. Cypress aprobó **42/42 recorridos**, incluidos los cuatro de ayuda, con
+Auth, API, Storage y pgvector reales y proveedor de IA TEST explícito.
+
+Activa el consumidor con `HELP_WORKER_ENABLED` solo en servidor. El bloque de
+[.env.example](.env.example) separa generación/verificación de embeddings y
+requiere deployment, modelo, ID de configuración, tokenizer comprobado y un
+artefacto de calibración `HELP_CALIBRATION_JSON` vinculado mediante
+`HELP_CALIBRATION_CORPUS_SHA256`. Esas variables no son `NEXT_PUBLIC`.
+
+`npm run help:plan` prepara un plan offline desde el
+[manifiesto de ayuda](infra/preproduction/help-manifest.example.json), sin llamar
+a Azure ni desplegar recursos. El corte IMP-04.07/preparación .08 añade corpus
+adversario, fallos recuperables y un arnés ejecutable en LAB-EVAL aislado, con
+autorización por etapas, límites y recibos privados de llamadas. Está
+**implementado y probado en TEST**. `npm run help:eval -- --mode plan`
+describe el nuevo manifiesto sin llamadas; el
+[manual operacional](docs/work/IMP-04-evaluation-operations.md) explica ambiente,
+consumidor, preparación, autorización, calibración y reanudación.
+Configuración y calibración Azure reales, p95 remoto, calidad semántica,
+evaluación docente y aceptación CAPSTONE siguen pendientes. También siguen
+pendientes Vercel Sandbox IMP-03.07 y operación productiva del consumidor en ACA.
 
 ## Especificaciones del proyecto
 

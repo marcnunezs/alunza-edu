@@ -1,6 +1,6 @@
 # 06 · Modelo de datos
 
-**Estado:** especificación contrastada con la ERS 1.3 del 04/09/2026. Identidad institucional concretada en IMP-01 mediante migración incremental y [diccionario revisado](../docs/work/IMP-01-dictionary.md); el resto continúa como propuesta. La evidencia de ejecución local se registra por separado y no acredita despliegue remoto.
+**Estado:** especificación contrastada con la ERS 1.3 del 04/09/2026. Identidad institucional concretada en IMP-01 mediante migración incremental y [diccionario revisado](../docs/work/IMP-01-dictionary.md). El contrato ejecutable de envíos, historial y avance de IMP-03.04–03.06 se distingue del modelo lógico propuesto en §4.3.1, con persistencia verificada en TEST mediante SQL y HTTP. Materiales, ayuda y ledger de IMP-04.01–04.07, junto con la preparación ejecutable de IMP-04.08, están implementados y probados en TEST; §4.4 y sus diccionarios detallan el contrato. Las entidades futuras conservan su carácter de propuesta. La evidencia local no acredita despliegue remoto ni aceptación completa de IMP-04.08.
 
 **Documentado** identifica una obligación de las fuentes. **Propuesta** identifica cómo materializarla. **Pendiente** identifica una decisión que debe resolverse antes del hito indicado. Salvo las reglas expresamente marcadas como documentadas, los nombres físicos, tipos, tablas, índices y transacciones de este documento son propuestas.
 
@@ -119,21 +119,159 @@ El diagnóstico documentado admite exclusivamente `SUCCESS`, `SYNTAX_ERROR`, `RU
 
 **Propuesta:** `attempts.canonical_result_id` identifica el resultado técnico que cuenta para ese intento. Debe apuntar a una ejecución del mismo intento, usuario, organización, actividad y versión; esta coherencia se valida transaccionalmente. La ejecución se admite y realiza antes de confirmar el intento: resultado, código, versión y eventos se persisten en una sola transacción, sin mantenerla abierta durante el sandbox. La referencia de ejecución al intento puede asignarse dentro de esa transacción, después de crear el intento. Solo entonces se responde `201` y se permite IA/RAG. Las reservas o ejecuciones pendientes no se presentan como intentos confirmados. Las ejecuciones técnicas reintentadas por infraestructura quedan trazadas, sin duplicar el envío lógico. El cliente no aporta resultados confiables ni elige el resultado canónico.
 
+### 4.3.1 Contrato ejecutable de envíos, historial y avance — IMP-03.04–03.06
+
+**Implementado y verificado en TEST mediante SQL y HTTP, 26/09/2026.** La
+[migración incremental de SUBMIT](../supabase/migrations/20260926215711_practice_submissions.sql)
+y el [diccionario de envíos](../docs/work/IMP-03-submissions-dictionary.md)
+materializan este corte autorizado. La tabla lógica de §4.3 y el diagrama de §5
+conservan el diseño futuro; no son un inventario literal del esquema ya creado.
+No se crean ahora `technical_results`, `test_results`, `learning_events` ni
+`attempts.canonical_result_id` como entidades físicas paralelas.
+
+| Objeto físico actual | Contrato implementado |
+| --- | --- |
+| `app.executions` | Conserva únicamente RUN y su respuesta temporal. No guarda código fuente ni concede completitud. La admisión usa los contadores combinados con SUBMIT. |
+| `app_private.submission_reservations` | Reserva privada SUBMIT: código inmutable, contexto académico completo, hashes SHA-256 de código/suite, versión del runner, límites, conteos, número de admisión, intento anterior opcional, lease con token, evidencia normalizada durable y respuesta idempotente temporal. Aún no es un intento. |
+| `app.attempts` | Un intento inmutable por reserva: código, resultado público canónico `technical_result`, contexto, versiones/hashes, `admitted_at`, `submitted_at`, `attempt_number` y `previous_attempt_id`. FK por organización y guardas verifican contexto; el intento anterior exige también estudiante/asignación/versión iguales. |
+| `app_private.attempt_results` | Evidencia privada canónica vinculada por organización/intento: resultados ocultos `{id,passed}`, `result_schema_version = submission.v1`, versión del runner y hash de suite. No contiene argumentos, expectativas ni consola oculta; no se purga junto al snapshot operativo. |
+| `app_private.attempt_events` | Dos hechos inmutables por intento: `ATTEMPT_SUBMITTED` y `EXECUTION_COMPLETED`, deduplicados por intento/tipo, con ámbito completo, hora servidor, secuencia global y `schema_version = submission.v1`. No activa las reglas de IMP-05. |
+| `app.operation_keys` | Operación `practice.submit`, única por organización/actor/operación/clave. Conserva hash y vínculo a reserva o intento. Respuesta de 24 horas; clave expirada queda como tombstone y no genera otro envío. |
+
+La admisión serializa actor y organización con RUN y cierre académico. Verifica
+sesión, perfil, membresía, inscripción, actividad, versión y ventana
+`[opensAt, closesAt)`. Según DEC-002 ratificada por el usuario, un SUBMIT admitido
+antes del cierre puede finalizar después; confirmar la interfaz no concede
+admisión. El archivado de clase/organización considera SUBMIT activos. Los cupos
+predeterminados del corte son un RUN y dos SUBMIT simultáneos por
+estudiante/organización, sujetos a cuatro operaciones combinadas por organización
+y diez admisiones combinadas por minuto/estudiante/organización.
+
+La carga de la suite completa exige una función privada limitada a la reserva y
+su token vigente. No amplía `tests_read` del estudiante. La ejecución ocurre
+fuera de una transacción de base de datos. El resultado normalizado se guarda
+durablemente antes del commit final; las validaciones SQL exigen IDs y conteos
+coherentes, cobertura completa para `SUCCESS`/`FAILED_TEST` y evidencia real para
+`allRequiredPassed`. Confirmar persiste intento, resultado privado, eventos y
+respuesta idempotente en una sola transacción. Si falla ese commit, no existen
+intento parcial ni eventos huérfanos y la evidencia previa permite recuperación.
+El reconciliador rota leases y usa el resultado durable o un `UNKNOWN` operativo
+sin completitud, sin reejecutar código automáticamente. El piso de recuperación
+es de 60 segundos desde admisión ante creación incierta de la cápsula.
+
+El esquema público conserva los seis diagnósticos y campos públicos RUN; añade
+`hiddenChecksPassed` (`null` cuando no corresponde un resumen completo) y
+`allRequiredPassed`. No devuelve IDs, expectativas ni consola de pruebas ocultas.
+Toda entrega, detalle, historia y progreso exige autorización vigente, incluida
+la consulta después del cierre o de la renovación de sesión. RLS de intentos
+restringe al estudiante propietario activo e inscrito; ADMIN no adquiere lectura
+pedagógica. El seguimiento docente permanece fuera de este incremento. Las
+tablas privadas fuerzan RLS y el runtime no recibe SELECT directo; funciones
+limitadas con propietario sin BYPASSRLS implementan la persistencia interna.
+
+La historia usa `attempt_number DESC`, asignado por servidor al admitir cada
+envío dentro de estudiante/asignación. Así conserva el orden aunque dos
+ejecuciones terminen al revés; mientras una reserva esté pendiente puede haber
+huecos en la lista de intentos confirmados. La paginación tiene cursor entero
+exclusivo, diez elementos por defecto y máximo veinte. Una copia al editor no
+modifica el intento; el nuevo envío usa otra clave y, si corresponde, referencia
+el intento anterior propio.
+
+`app_private.practice_activity_progress` es la única proyección SQL de este
+corte: cuenta asignaciones requeridas y aquellas con algún intento confirmado
+de la misma asignación/versión que haya superado todas las pruebas. Un fallo
+posterior no elimina un éxito. RUN y reservas no completan ejercicios. Devuelve
+`completed`, `required`, proporción sin redondear, `asOf` y estados
+`NO_REQUIRED_EXERCISES`, `NO_ATTEMPTS` o `HAS_EVIDENCE`. El caso 0/0 conserva
+proporción nula; su fixture de frontera no habilita publicaciones vacías. No se
+crea una caché, cálculo de conceptos, nota ni señal.
+
+La purga de 24 horas elimina respuestas y copias redundantes de fuente/evidencia
+solo en reservas completadas; intentos, evidencia privada canónica, eventos y
+vínculos idempotentes permanecen. DEC-009 sigue pendiente para datos reales.
+La migración no resetea DEV ni altera las migraciones previas. La suite
+[007](../supabase/tests/007_practice_submissions.test.sql) y la integración HTTP
+cubren las comprobaciones pertinentes de DAT-01/02/04/05/06/09/10. La integración
+coordinada de TEST pasó 110/110 pruebas HTTP y 285 aserciones pgTAP en siete
+archivos; la suite 007 aporta 104 aserciones. El reporte local
+`.local/reports/imp-03-submissions/integration.json` registra Supabase/Docker
+reales y limpieza completada a las 23:19:32Z del 26/09/2026. La verificación de
+interfaz se registra por separado. IA/RAG, señales, aceptación académica e
+integración productiva conservan sus alcances pendientes.
+
 ### 4.4 Fuentes y feedback
+
+Fuentes e ingestión están concretadas para IMP-04.01–04.03 en el
+[diccionario de materiales](../docs/work/IMP-04-materials-dictionary.md) y la
+migración incremental `20260927155718_materials_ingestion.sql`. Feedback se
+concreta en IMP-04.04–04.06 y evaluación/recibos en IMP-04.07 y la preparación
+ejecutable de IMP-04.08, implementados y probados en TEST. El
+[registro del corte](../docs/work/IMP-04-evaluation.md) distingue las pruebas
+locales de los pendientes de Azure y aceptación académica.
 
 | Entidad | Campos específicos | Relaciones y restricciones |
 | --- | --- | --- |
 | `sources` | `class_id`, `activity_id?`, `title`, `owner_id`, `current_version_id?`, `visibility`, `archived_at?` | Toda fuente tiene una clase. Si tiene actividad, esta pertenece a esa clase. La visibilidad siempre se intersecta con los permisos vigentes. |
-| `source_versions` | `source_id`, `version`, `storage_object_key`, `original_name`, `mime_type`, `size_bytes`, `content_hash`, `current_generation_id?` | Fuente PDF con texto, TXT o Markdown de hasta 10 MB. Versiones únicas; identidad, binario y hash inmutables tras indexación. No reemplazar el archivo de una versión citada. El puntero de generación activa puede cambiar de forma auditada. |
-| `source_index_generations` | `source_version_id`, `generation_number`, `index_status`, `index_error_code?`, `extraction_version`, `embedding_model?`, `embedding_dimension?`, `configuration_version`, `indexed_at?`, `chunk_count` | Generación única por versión y número. Cada reindexación crea una generación separada; estado según [IA/RAG](08-ia-y-procesamiento.md). Solo una generación completa `READY` se activa para una versión. |
-| `source_chunks` | `class_id`, `activity_id?`, `source_id`, `source_version_id`, `generation_id`, `chunk_index`, `text`, `token_count`, `locator`, `content_hash`, `embedding` | Único `(generation_id, chunk_index)`. Fragmentos de 500 tokens, solapamiento de 50 y recuperación top-k=5 según la línea base; fragmento final puede ser menor. `locator` conserva página o sección/líneas según formato. Versión y generación deben corresponder. |
-| `feedback_requests` | `class_id`, `attempt_id`, `requested_by`, `kind`, `hint_level?`, `idempotency_key`, `lifecycle_status`, `requested_at`, `completed_at?`, `provider_request_id?`, `request_schema_version` | `kind` propuesto `FEEDBACK` o `HINT`. Solo para intento y resultado técnico persistidos. Progreso de trabajo separado del estado pedagógico. Reintentos de proveedor no duplican el nivel de ayuda entregado. |
-| `feedbacks` | `feedback_request_id`, `attempt_id`, `diagnosis_code`, `explanation`, `hint`, `status`, `source_refs`, `provider`, `model`, `prompt_version`, `response_schema_version`, `generated_at`, `usage_metadata?` | Contrato RAG validado antes de persistir. Estado exacto `SUPPORTED`, `NO_EVIDENCE`, `PROVIDER_UNAVAILABLE`. No tiene puntaje, porcentaje de dominio ni probabilidad de aprobar. |
+| `source_versions` | `source_id`, `version`, `storage_object_key`, `original_name`, `format`, `mime_type`, `size_bytes`, `content_hash`, `current_generation_id?` | PDF textual/TXT/Markdown de hasta 10.000.000 bytes. Versiones únicas e identidad/binario/hash inmutables. Reemplazar crea otra versión; el puntero activo cambia únicamente al publicar un índice completo. |
+| `source_index_generations` | `source_id`, `source_version_id`, `generation_number`, `index_status`, `index_error_code?`, `extraction_version`, `tokenizer_version`, `embedding_model?`, `embedding_dimension?`, `configuration_id`, `expected_chunk_count`, `manifest_hash`, `indexed_at?`, `chunk_count` | Generación única por versión y número. Cada reindexación crea una generación separada; solo una generación completa `READY` se activa. Un manifiesto y perfil coherentes permiten continuar lotes tras reinicio. |
+| `source_chunks` | `organization_id`, `source_id`, `source_version_id`, `generation_id`, `chunk_index`, `text`, `token_count`, `locator`, `content_hash`, `embedding` | Único `(generation_id, chunk_index)` y FK compuesta que fija fuente/versión/generación. Clase/actividad se resuelven desde la fuente; 500 tokens, solapamiento 50 y top-k=5. No hay SELECT directo de texto de fragmentos para el rol de aplicación; funciones autorizadas gestionan consulta docente y recuperación. |
+| `material_jobs` | `source_id`, `source_version_id`, `generation_id`, `requested_by`, `kind`, `operation_id`, `lifecycle_status`, `attempt_count`, `available_at`, tokens/leases, error y correlación | Trabajo durable de carga/reemplazo/reindexación; como máximo uno activo por fuente. Tokens privados impiden terminar trabajo desde un lease anterior. El DTO público excluye tokens y reserva interna. |
+| `feedback_requests` | `organization_id`, `class_id`, `activity_id`, `student_id`, `attempt_id`, `kind`, `hint_level?`, `level_reserved`, `lifecycle_status`, `requested_at`, `deadline_at`, token/lease, `completed_at?`, `last_error_code?`, `context_fixed` | `kind=FEEDBACK/HINT`. Solo para intento y resultado técnico persistidos; idempotencia vinculada a operaciones privadas. Estado del trabajo separado del estado RAG; reserva de pista hasta ACK, sin consumo por fallback. |
+| `feedbacks` | `request_id`, `attempt_id`, `organization_id`, `diagnosis_code`, `explanation`, `hint`, `rag_status`, `metadata`, `presentation_token`, `presented_at?`, `viewed_at?`, `suppressed_at?` | Resultado validado y referencias normalizadas. Estado exacto `SUPPORTED/NO_EVIDENCE/PROVIDER_UNAVAILABLE`; supresión irreversible del contenido revocado. No tiene puntaje, porcentaje de dominio ni probabilidad de aprobar. |
 | `feedback_source_refs` | `organization_id`, `feedback_id`, `source_id`, `source_version_id`, `chunk_id`, `locator`, `position` | Proyección normalizada de `source_refs` para integridad y consulta. Cada referencia debe existir, pertenecer al mismo ámbito y haber sido recuperada para esa solicitud. |
 
-`source_refs` expuesto y `feedback_source_refs` persistido representan el mismo conjunto; se escriben de forma coherente o el JSON se construye desde la relación, evitando dos verdades independientes. La dimensión de `embedding`, el modelo y el umbral de pertinencia quedan pendientes de DEC-010; no asumir un número de dimensiones ni mezclar vectores de modelos incompatibles.
+`source_refs` expuesto y `feedback_source_refs` persistido representan el mismo conjunto;
+el JSON público se construye desde la relación. IMP-04.04–04.06 concreta su
+persistencia en el [diccionario de ayuda](../docs/work/IMP-04-help-dictionary.md):
+`feedback_requests`, `feedbacks`, `feedback_source_refs` y relaciones privadas
+`help_calls`, `help_inputs`, `help_context_refs`, `help_events`. El contexto usado
+incluye las fuentes no citadas para revalidación y supresión. El ACK no reutiliza
+`attempt_events`; tiene unicidad por feedback/tipo y por intento/nivel entregado.
+Modelo y dimensión reales requieren configuración verificada de Azure. El perfil
+privado de embeddings rechaza configuraciones incompatibles y la calibración
+remota permanece pendiente de medición bajo DEC-010.
 
-**Documentado:** ALZ-RF-006/012/013/025 y RNF-IA-02/03/04 fijan formatos, límites, estados, trazabilidad y filtrado autorizado. **Propuesta:** reindexar el mismo archivo crea una generación de índice validada antes de cambiar `current_generation_id`; reemplazar el contenido crea una nueva versión de fuente y activa `current_version_id` solo cuando esté lista. Los fragmentos fallidos o parciales nunca son recuperables. La conservación de generaciones antiguas citadas sigue la política de retención y autorización.
+**Documentado:** ALZ-RF-006/012/013/025 y RNF-IA-02/03/04 fijan formatos, límites, estados, trazabilidad y filtrado autorizado. **Implementación del corte:** reindexar crea una generación validada antes de cambiar `current_generation_id`; reemplazar crea otra versión y cambia `current_version_id` solo al completarla. Las FK compuestas mantienen organización, clase y actividad; la fuente conserva su ámbito inicial. La publicación, archivo y cambios de permisos se coordinan para impedir activación tardía. Una generación fallida no sustituye la anterior ni habilita fragmentos parciales.
+
+`app_private.material_upload_objects` conserva reservas y compensación de
+objetos propios de Storage, sin pretender una transacción distribuida con
+PostgreSQL. El bucket privado se provisiona por bootstrap; el acceso de usuario
+a archivos pasa por la API. `app_private.material_embedding_profile` fija el
+perfil del ambiente desde el primer procesamiento; cambiarlo requiere migración
+explícita futura. El historial de metadatos se conserva al archivar; retención
+institucional, citas futuras y datos reales permanecen sujetos a DEC-009. Las
+pruebas ejecutadas y pendientes constan en el
+[registro IMP-04](../docs/work/IMP-04-materials.md).
+
+### 4.4.1 Ledger de IA y evaluación acotada — IMP-04.07/preparación .08
+
+La migración `20261002001227_evaluation_ledger.sql` incorpora relaciones en
+`app_private`, con RLS forzada y acceso de aplicación mediante funciones
+autorizadas. El [diccionario de evaluación](../docs/work/IMP-04-evaluation-dictionary.md)
+es el contrato detallado; la implementación y su recuperación están probadas
+en TEST. La CI completa del 02/10/2026 aprobó 146 pruebas HTTP y 471 aserciones
+SQL del conjunto integrado. El arnés TEST cerró 43/43 casos, conservó 763
+recibos y verificó tres reanudaciones; véase el
+[registro de evidencia](../docs/work/IMP-04-evaluation.md). Esto acredita la
+preparación ejecutable de IMP-04.08, no la evaluación semántica, el ensayo Azure
+ni la aceptación docente/CAPSTONE de la fase.
+
+| Relación | Alcance e integridad |
+| --- | --- |
+| `evaluation_runs`, `evaluation_stages` | Manifiesto/hash, hash de credencial, origen/destino y expiración; cuatro etapas y presupuestos inmutables; un run activo por base y una etapa activa por run |
+| `evaluation_bindings`, `evaluation_owners` | Autorización por organización/clase/actividad/actor y archivo/hash u intento/hash; FK compuestas y máximo de operaciones; trabajo real ligado una sola vez al binding |
+| `evaluation_calibrations` | Consulta/hash, candidatos y llamada observados con lease; casos de calibración y de revisión ficticia vinculados al corpus y al intento autorizado |
+| `ai_call_receipts` | Despacho previo al proveedor, fase/clave lógica/intento, perfil y hash de entrada, reservas, observación y resultado/fallo privados; estados `DISPATCHED/COMPLETED/UNKNOWN` |
+
+Los recibos se utilizan también fuera de evaluación, con run/etapa nulos. No son
+eventos pedagógicos ni alteran `attempt_events`, diagnóstico o progreso. Un
+resultado durable permite reconciliar un checkpoint de ayuda perdido; un
+despacho incierto no permite repetir el proveedor. Las observaciones tardías
+pueden completar consumo pese a la revocación, pero no publicar contenido.
+Tokens/costos no observados permanecen nulos. La calibración aceptada liga
+consultas, corpus, distancias y recibos del mismo origen y perfil; TEST no
+acredita medición Azure. La credencial del listener nunca se guarda en claro en
+estas tablas ni sustituye autorización de producto.
 
 ### 4.5 Progreso, señales y auditoría
 
@@ -256,4 +394,4 @@ No crear índices por intuición en todas las columnas. Validar planes y latenci
 | DAT-09 | Migrar un entorno vacío, inicializar la demo y reconstruir las proyecciones genera relaciones válidas y los conteos canónicos. |
 | DAT-10 | Las proyecciones estudiantiles, consultas directas expuestas y exportaciones operativas no revelan pruebas ocultas, filas de otra clase ni campos privados. |
 
-Estas pruebas están **planificadas**, no ejecutadas por redactar este documento. Su ejecución y evidencia corresponden a [calidad y pruebas](10-calidad-y-pruebas.md) y [operación](11-operacion-y-despliegue.md).
+Esta tabla fija criterios de aceptación; no acredita su ejecución por redactarlos. §4.3.1 registra la evidencia local efectivamente obtenida para el corte de envíos y los criterios de capacidades futuras siguen pendientes. La ejecución y evidencia corresponden a [calidad y pruebas](10-calidad-y-pruebas.md) y [operación](11-operacion-y-despliegue.md).

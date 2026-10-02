@@ -2,6 +2,15 @@
 
 Estado inicial: **pendiente de implementación**. Este plan propone el orden del trabajo; no acredita código, integración, pruebas ni aceptación. Las rutas de artefactos son orientativas y se adaptarán al árbol real del repositorio. La fase desarrolla ALZ-RF-007/009/010/011/014 y revalida la integración de ALZ-RF-008 construida en IMP-02.
 
+**Actualización, 26/09/2026:** IMP-03.01–03.03 dispone de
+[implementación y evidencia local](../work/IMP-03-practice.md). El usuario autorizó
+el [plan IMP-03.04–03.06: envíos, historial y avance](../work/IMP-03-submissions-plan.md).
+Su implementación y comprobaciones se registran en [el corte de envíos](../work/IMP-03-submissions.md).
+El usuario resolvió DEC-002 para SUBMIT:
+guardar los admitidos antes del cierre y rechazar admisiones posteriores.
+Las tablas siguientes conservan el desglose de la fase; su estado inicial no
+sustituye los registros de ejecución ni acredita cierre remoto.
+
 ## Resultado y demostración de la fase
 
 Un estudiante inscrito abre una actividad publicada, modifica su borrador, ejecuta JavaScript y consulta un resultado temporal. Al enviar, confirma la acción y obtiene un intento persistido con diagnóstico determinista. Puede recuperar el intento después de recargar, copiarlo al editor y enviar una nueva versión sin perder la anterior. La lista de actividades refleja avance real basado en pruebas requeridas, incluidas las ocultas.
@@ -22,7 +31,7 @@ Entradas necesarias de IMP-01/02:
 
 | Decisión | Trabajo previo o dentro de la fase | Qué impide dar por aceptado si sigue pendiente |
 | --- | --- | --- |
-| DEC-002 | Registrar semántica de confirmación, admisión, cierre y acceso histórico; preparar carreras reproducibles | Envíos concurrentes al cierre e historial CLOSED sin interpretación ratificada |
+| DEC-002 | Aplicar historial autorizado y regla SUBMIT ratificada el 26/09/2026: admisión anterior al cierre puede persistir después; preparar carreras reproducibles | Falta de evidencia de serialización de admisión/cierre y autorización vigente; consultar el registro del corte |
 | DEC-003 | Fijar unidades exactas, restricciones de función, mecanismo de límites y precedencia de diagnóstico con ensayos reales | Seguridad del ejecutor, fronteras y confidencialidad de pruebas ocultas |
 | DEC-004 | Concretar DTO, idempotencia, reserva, resultado durable, reconciliación y orden de eventos | Confirmación fiable del intento y recuperación después de una caída |
 | DEC-006/007 | Revisar diccionario de intentos/resultados y compatibilidad de runtime, SDK y herramientas | Esquema compartido o adaptador presentado como compatible sin evidencia |
@@ -92,7 +101,7 @@ Las pruebas ocultas requieren separación adicional dentro del sandbox: comparad
 6. Si se pierde la respuesta tras commit, repetir clave/payload recupera el mismo resultado. Si el payload cambia con la misma clave, se devuelve conflicto. Un reintento intencional lleva nueva clave.
 7. Al vencer una reserva o caer el backend, un proceso durable reconcilia el resultado y los efectos ya ejecutados antes de repetirlos. No se presume entrega exactamente una vez ni se usa una cola en memoria como garantía.
 
-La propuesta DEC-002 admite solo mientras la actividad está PUBLISHED; una admisión anterior al cierre puede terminar y persistirse después, mientras una posterior se rechaza. Se registran por separado confirmación del estudiante, admisión, cierre y commit. Su aceptación sigue pendiente de la decisión correspondiente; el plan no la ratifica.
+La regla DEC-002, ratificada por el usuario el 26/09/2026, admite solo mientras la actividad está PUBLISHED y dentro de su ventana; una admisión anterior al cierre puede terminar y persistirse después, mientras una posterior se rechaza. Se registran por separado confirmación del estudiante, admisión, cierre y commit. SUBMIT está implementado; su verificación y pendientes se registran en [IMP-03.04–03.06](../work/IMP-03-submissions.md). La resolución de producto por sí sola no acredita esas pruebas ni aceptación académica.
 
 ### Proyección mínima para RF-007
 

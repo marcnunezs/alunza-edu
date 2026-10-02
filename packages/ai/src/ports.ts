@@ -1,4 +1,5 @@
 import type { DiagnosisCode, RagHelp, SourceRef } from '@alunza/contracts';
+import type { AiSettlementObserver } from './settlement';
 
 export interface EmbeddingConfiguration {
   id: string;
@@ -7,9 +8,18 @@ export interface EmbeddingConfiguration {
 }
 export interface EmbeddingsPort {
   readonly configuration: EmbeddingConfiguration;
+  /** Bounded observation of the last completed call, persisted with its batch. */
+  readonly lastUsage?:
+    | {
+        inputTokens: number;
+        model: string;
+        requestId?: string;
+      }
+    | undefined;
   embed(
     texts: readonly string[],
     signal: AbortSignal,
+    observe?: AiSettlementObserver,
   ): Promise<readonly (readonly number[])[]>;
 }
 export interface RetrievedChunk extends SourceRef {

@@ -74,7 +74,7 @@ jobs:
         run: npm run ci:verify
 
       - name: Upload public verification reports
-        if: ${{ always() && hashFiles('.local/reports/imp-00-05/*.json', '.local/reports/imp-00-06-08/*.json', '.local/reports/imp-01/*.json') != '' }}
+        if: ${{ always() && hashFiles('.local/reports/imp-00-05/*.json', '.local/reports/imp-00-06-08/*.json', '.local/reports/imp-01/*.json', '.local/reports/imp-02/*.json', '.local/reports/imp-03/*.json', '.local/reports/imp-03-submissions/*.json', '.local/reports/imp-04/*.json') != '' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: foundation-${{ github.run_id }}-${{ github.run_attempt }}
@@ -87,6 +87,11 @@ jobs:
             .local/reports/imp-00-06-08/ai-integration.json
             .local/reports/imp-01/*.json
             .local/reports/imp-02/*.json
+            .local/reports/imp-03/*.json
+            .local/reports/imp-03-submissions/*.json
+            .local/reports/imp-03-submissions/history/*-performance-*.json
+            .local/reports/imp-04/*.json
+            .local/reports/imp-04/history/evaluation-*.json
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 7

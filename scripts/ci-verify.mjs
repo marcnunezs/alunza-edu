@@ -27,8 +27,15 @@ try {
     ['run', 'test:academic:fixtures'],
     ['run', 'cypress:install'],
     ['run', 'test:integration'],
+    ['run', 'test:practice:performance'],
+    ['run', 'test:practice:performance', '--', '--submit'],
+    // Three consecutive identical profiles retain every sample and the same
+    // p95 gate; a failure stops CI instead of selecting a favorable rerun.
+    ['run', 'test:practice:performance', '--', '--submit'],
+    ['run', 'test:practice:performance', '--', '--submit'],
     ['run', 'test:ai:integration'],
     ['run', 'test:e2e'],
+    ['run', 'test:help:evaluation'],
   ]) {
     const command = `npm ${args.join(' ')}`;
     console.log(`Verificando: ${command}`);
@@ -69,11 +76,11 @@ try {
       } catch {
         /* State may not exist before infrastructure starts. */
       }
-      await mkdir(join(root, '.local/evidence/imp-00-06-08'), {
+      await mkdir(join(root, '.local/evidence/imp-03-submissions'), {
         recursive: true,
       });
       await writeFile(
-        join(root, '.local/evidence/imp-00-06-08/ci-error.log'),
+        join(root, '.local/evidence/imp-03-submissions/ci-error.log'),
         redactDiagnostics(diagnostic),
         { mode: 0o600 },
       );
@@ -94,7 +101,7 @@ try {
         process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
       steps,
     },
-    'imp-00-06-08',
+    'imp-03-submissions',
   );
 } catch (error) {
   await report(
@@ -105,8 +112,21 @@ try {
         process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
       steps,
     },
-    'imp-00-06-08',
+    'imp-03-submissions',
   );
   console.error(error.message);
   process.exitCode = 1;
 }
+await report(
+  'ci',
+  {
+    status: process.exitCode === 1 ? 'failed' : 'passed',
+    execution:
+      process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
+    embeddings: 'explicit-test-double',
+    azureRemote: 'not-tested',
+    academicAcceptance: 'pending',
+    steps,
+  },
+  'imp-04',
+);

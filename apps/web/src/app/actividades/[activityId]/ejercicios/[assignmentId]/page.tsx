@@ -9,7 +9,7 @@ export default async function EditorPage({
 }) {
   const ids = await params;
   return (
-    <ProtectedView>
+    <ProtectedView preserveOnRefresh>
       <EditorPanel {...ids} />
     </ProtectedView>
   );

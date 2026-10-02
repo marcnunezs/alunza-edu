@@ -40,9 +40,17 @@ select ok(not has_schema_privilege('authenticated', 'app', 'USAGE'), 'Authentica
 select ok(not has_schema_privilege('service_role', 'app', 'USAGE'), 'Auth administrative adapter is not granted domain schema access');
 
 select ok(
-  (select bool_and(has_table_privilege('alunza_app', format('app.%I', tablename), 'SELECT'))
+  (select bool_and(case when tablename = 'executions' then
+      has_column_privilege('alunza_app', 'app.executions', 'id', 'SELECT')
+      and not has_column_privilege('alunza_app', 'app.executions', 'lease_token', 'SELECT')
+    when tablename='material_jobs' then has_column_privilege('alunza_app','app.material_jobs','id','SELECT')
+      and not has_column_privilege('alunza_app','app.material_jobs','lease_token','SELECT')
+      and not has_column_privilege('alunza_app','app.material_jobs','upload_token','SELECT')
+    when tablename in('feedback_requests','feedbacks','feedback_source_refs') then
+      not has_table_privilege('alunza_app',format('app.%I',tablename),'SELECT')
+    else has_table_privilege('alunza_app', format('app.%I', tablename), 'SELECT') end)
     from pg_catalog.pg_tables where schemaname = 'app'),
-  'Application has explicit read grants for the identity tables'
+  'Application has explicit grants; lease tokens and feedback tables require authorized helpers'
 );
 
 select ok(

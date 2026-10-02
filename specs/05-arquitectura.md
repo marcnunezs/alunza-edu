@@ -98,7 +98,7 @@ sequenceDiagram
 
 El feedback es una solicitud separada; se puede iniciar desde la interfaz tras la confirmación. La persistencia del intento antecede tanto a la recuperación RAG como a la llamada del modelo. No se mantiene una transacción de BD abierta mientras se espera a proveedores externos.
 
-**Propuesta:** cerrar la actividad bloquea solicitudes admitidas después de ese cierre. Una ejecución ya admitida puede confirmar su intento asociado a la versión y hora de admisión. La transacción serializa admisión/cierre y permite demostrar el orden. Confirmar esta política con DEC-002 antes de RF-005/010.
+**DEC-002, resuelta por el usuario el 26/09/2026 para SUBMIT:** cerrar la actividad bloquea nuevas admisiones. Una ejecución admitida antes del cierre puede confirmar su intento asociado a la versión y hora de admisión. La transacción serializa admisión/cierre y permite demostrar el orden; entregar o consultar resultados exige autorización vigente. La implementación y las pruebas de esta política en RF-005/010 siguen pendientes; véase el [plan del siguiente corte](../docs/work/IMP-03-submissions-plan.md).
 
 ## Trabajos durables y concurrencia
 
