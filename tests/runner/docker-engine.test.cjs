@@ -376,15 +376,86 @@ test('Cleanup requires an accepted delete and an explicit 404 absence observatio
       .fn()
       .mockResolvedValueOnce({ status: removed })
       .mockResolvedValueOnce({ status: observed });
+    const timings = [];
     expect(
-      await engine.removeAndVerify({ request }, 'owned-name', undefined),
+      await engine.removeAndVerify(
+        { request },
+        'owned-name',
+        undefined,
+        (event) => timings.push(event),
+      ),
     ).toBe(expected);
     expect(request.mock.calls.map((args) => args[0])).toEqual([
       'DELETE',
       'GET',
     ]);
+    expect(timings.map((event) => event.phase)).toEqual([
+      'delete',
+      'verifyAbsent',
+    ]);
+    for (const event of timings) {
+      expect(Object.keys(event).sort()).toEqual([
+        'completed',
+        'durationMs',
+        'phase',
+      ]);
+      expect(Number.isFinite(event.durationMs)).toBe(true);
+      expect(event.durationMs).toBeGreaterThanOrEqual(0);
+    }
   }
 });
+
+test.each(['delete', 'verifyAbsent'])(
+  'A %s transport rejection retains its identity and incomplete timing without repeating cleanup',
+  async (phase) => {
+    const failure = new Error('private cleanup diagnostic');
+    const request = jest.fn();
+    if (phase === 'verifyAbsent')
+      request.mockResolvedValueOnce({ status: 204 });
+    request.mockRejectedValueOnce(failure);
+    const timings = [];
+    await expect(
+      engine.removeAndVerify({ request }, 'owned-name', undefined, (event) =>
+        timings.push(event),
+      ),
+    ).rejects.toBe(failure);
+    expect(request.mock.calls.map((args) => args[0])).toEqual(
+      phase === 'delete' ? ['DELETE'] : ['DELETE', 'GET'],
+    );
+    expect(timings.at(-1)).toMatchObject({ phase, completed: false });
+    expect(JSON.stringify(timings)).not.toContain(failure.message);
+  },
+);
+
+test.each(['throw', 'rejected promise'])(
+  'An observer %s cannot suppress deletion or change verified absence',
+  async (kind) => {
+    for (const [observed, expected] of [
+      [404, true],
+      [200, false],
+    ]) {
+      const request = jest
+        .fn()
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({ status: observed });
+      const observe = jest.fn(() => {
+        if (kind === 'throw') throw new Error('private observer failure');
+        return Promise.reject(new Error('private observer failure'));
+      });
+      await expect(
+        engine.removeAndVerify({ request }, 'owned-name', undefined, observe),
+      ).resolves.toBe(expected);
+      expect(request.mock.calls.map((args) => args[0])).toEqual([
+        'DELETE',
+        'GET',
+      ]);
+      expect(observe.mock.calls.map(([event]) => event.phase)).toEqual([
+        'delete',
+        'verifyAbsent',
+      ]);
+    }
+  },
+);
 
 test('A controlled orphan clock rejects missing, invalid, or unbounded fixture scope before Docker access', async () => {
   const { collectExpired } = await import('../../infra/runner/capsule.mjs');
@@ -465,6 +536,7 @@ test('Lost and cancelled create responses retain cleanup uncertainty; a late exp
       try {
         for (mode of ['lost', 'cancelled']) {
           const executionId = randomUUID();
+          const timings = [];
           await expect(
             runCapsule(
               {
@@ -476,12 +548,37 @@ test('Lost and cancelled create responses retain cleanup uncertainty; a late exp
               },
               {
                 image: 'sha256:' + 'b'.repeat(64),
+                observeTiming(event) {
+                  timings.push(event);
+                  if (mode === 'lost')
+                    throw new Error('private observer failure');
+                  return Promise.reject(new Error('private observer failure'));
+                },
                 ...(mode === 'cancelled'
                   ? { signal: AbortSignal.timeout(60) }
                   : {}),
               },
             ),
           ).rejects.toThrow('cleanup failed');
+          expect(timings.map((event) => event.phase)).toEqual([
+            'engineResolve',
+            'create',
+            'delete',
+            'verifyAbsent',
+          ]);
+          expect(
+            timings.find((event) => event.phase === 'create'),
+          ).toMatchObject({
+            completed: false,
+          });
+          for (const event of timings)
+            expect(Object.keys(event).sort()).toEqual([
+              'completed',
+              'durationMs',
+              'phase',
+            ]);
+          expect(JSON.stringify(timings)).not.toContain(executionId);
+          expect(JSON.stringify(timings)).not.toContain('module.exports.solve');
           expect(await cleanupDockerExecution(executionId)).toEqual({
             cleanupVerified: false,
             removed: 0,

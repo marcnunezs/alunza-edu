@@ -1,4 +1,5 @@
 import { Agent, request } from 'node:http';
+import { measureTiming } from './timing.mjs';
 
 const RESPONSE_LIMIT = 524288;
 let endpointPromise;
@@ -360,7 +361,13 @@ export async function engineStartAttach(
   socketPath,
   apiVersion,
   name,
-  { input, signal, timeoutMs = 30000, maxBytes = RESPONSE_LIMIT },
+  {
+    input,
+    signal,
+    timeoutMs = 30000,
+    maxBytes = RESPONSE_LIMIT,
+    observeTiming,
+  },
 ) {
   signal?.throwIfAborted();
   if (
@@ -386,41 +393,54 @@ export async function engineStartAttach(
   try {
     // Register output before input and start, so no packet can be lost.
     // Separate attachments preserve output through Windows named-pipe EOF.
-    output = await attachDockerStream(
-      socketPath,
-      `${path}/attach?stream=1&logs=0&stdin=0&stdout=1&stderr=1`,
-      { signal: operationSignal, output: true, maxBytes },
+    output = await measureTiming(observeTiming, 'attachOutput', () =>
+      attachDockerStream(
+        socketPath,
+        `${path}/attach?stream=1&logs=0&stdin=0&stdout=1&stderr=1`,
+        { signal: operationSignal, output: true, maxBytes },
+      ),
     );
     void output.finished.catch(() => scope.abort());
-    stdin = await attachDockerStream(
-      socketPath,
-      `${path}/attach?stream=1&logs=0&stdin=1&stdout=0&stderr=0`,
-      { signal: operationSignal, output: false, maxBytes },
+    stdin = await measureTiming(observeTiming, 'attachInput', () =>
+      attachDockerStream(
+        socketPath,
+        `${path}/attach?stream=1&logs=0&stdin=1&stdout=0&stderr=0`,
+        { signal: operationSignal, output: false, maxBytes },
+      ),
     );
     void stdin.finished.catch(() => scope.abort());
     if (!output.isOpen() || !stdin.isOpen())
       throw new Error('Docker attachment closed before start');
-    const started = await engineRequest(socketPath, 'POST', `${path}/start`, {
-      signal: operationSignal,
-      timeoutMs,
+    await measureTiming(observeTiming, 'start', async () => {
+      const started = await engineRequest(socketPath, 'POST', `${path}/start`, {
+        signal: operationSignal,
+        timeoutMs,
+      });
+      if (started.status !== 204) throw new Error('Docker start failed');
     });
-    if (started.status !== 204) throw new Error('Docker start failed');
-    await stdin.send(input);
-    const [result] = await Promise.all([output.finished, stdin.finished]);
-    // Stream EOF is not an exit acknowledgement. Wait through daemon state
-    // publication, then let the caller inspect state independently as well.
-    const exited = await engineRequest(
-      socketPath,
-      'POST',
-      `${path}/wait?condition=not-running`,
-      { signal: operationSignal, timeoutMs },
+    await measureTiming(observeTiming, 'send', () => stdin.send(input));
+    const streams = measureTiming(observeTiming, 'streams', () =>
+      Promise.all([output.finished, stdin.finished]),
     );
-    if (
-      exited.status !== 200 ||
-      !Number.isInteger(exited.data?.StatusCode) ||
-      (exited.data.Error != null && exited.data.Error.Message !== '')
-    )
-      throw new Error('Docker exit unconfirmed');
+    // Start the daemon exit acknowledgement while output is still draining.
+    // Neither wait nor stream EOF alone confirms the complete exchange; the
+    // caller still inspects state independently after both have completed.
+    const wait = measureTiming(observeTiming, 'wait', async () => {
+      const exited = await engineRequest(
+        socketPath,
+        'POST',
+        `${path}/wait?condition=not-running`,
+        { signal: operationSignal, timeoutMs },
+      );
+      if (
+        exited.status !== 200 ||
+        !Number.isInteger(exited.data?.StatusCode) ||
+        (exited.data.Error != null && exited.data.Error.Message !== '')
+      )
+        throw new Error('Docker exit unconfirmed');
+      return exited;
+    });
+    const [[result], exited] = await Promise.all([streams, wait]);
     return { ...result, exitCode: exited.data.StatusCode };
   } finally {
     clearTimeout(deadline);
@@ -520,15 +540,19 @@ export function capsuleConfiguration(image, labels, probe) {
   };
 }
 
-export async function removeAndVerify(engine, name, signal) {
+export async function removeAndVerify(engine, name, signal, observeTiming) {
   const path = `/containers/${encodeURIComponent(name)}`;
-  const removed = await engine.request('DELETE', `${path}?force=true`, {
-    signal,
-    timeoutMs: 10000,
-  });
-  const remaining = await engine.request('GET', `${path}/json`, {
-    signal,
-    timeoutMs: 10000,
-  });
+  const removed = await measureTiming(observeTiming, 'delete', () =>
+    engine.request('DELETE', `${path}?force=true`, {
+      signal,
+      timeoutMs: 10000,
+    }),
+  );
+  const remaining = await measureTiming(observeTiming, 'verifyAbsent', () =>
+    engine.request('GET', `${path}/json`, {
+      signal,
+      timeoutMs: 10000,
+    }),
+  );
   return [204, 404].includes(removed.status) && remaining.status === 404;
 }

@@ -5,6 +5,10 @@ import type { AppConfig } from '../config';
 import { ExecutionPort } from './execution.port';
 import { failedSubmission } from './submission-execution.port';
 import { SubmissionRepository } from './submission.repository';
+import {
+  createSubmitBackgroundObserver,
+  measureSubmitBackgroundPhase,
+} from './submit-observability';
 
 @Injectable()
 export class SubmissionReconciler implements OnModuleInit, OnModuleDestroy {
@@ -30,27 +34,53 @@ export class SubmissionReconciler implements OnModuleInit, OnModuleDestroy {
       });
   }
   async tick() {
-    const local =
-      this.config.environment !== 'production' &&
-      this.config.environment !== 'preproduction';
-    const sweep = local ? await this.execution.sweepExpired() : undefined;
-    await this.repository.purgeExpired();
-    if (!local || !sweep?.cleanupVerified) return;
-    for (let index = 0; index < 4; index++) {
-      const reservation = await this.repository.claimExpired();
-      if (!reservation) return;
-      const cleaned = await this.execution.cleanup(reservation.executionId);
-      // Prefer already durable evidence. Never rerun an uncertain execution and
-      // never replace its valid staged result with a later operational failure.
-      if (!reservation.stagedResult) {
-        const stored = await this.repository.stage(
-          reservation,
-          failedSubmission(reservation.runnerVersion, reservation.visibleTotal),
+    const observer = createSubmitBackgroundObserver(
+      this.config.environment,
+      'SUBMIT',
+    );
+    return measureSubmitBackgroundPhase(observer, 'total', async () => {
+      const local =
+        this.config.environment !== 'production' &&
+        this.config.environment !== 'preproduction';
+      const sweep = local
+        ? await measureSubmitBackgroundPhase(
+            observer,
+            'sweep',
+            () => this.execution.sweepExpired(),
+            (result) => result.removed,
+          )
+        : undefined;
+      await measureSubmitBackgroundPhase(observer, 'purge', () =>
+        this.repository.purgeExpired(),
+      );
+      if (!local || !sweep?.cleanupVerified) return;
+      for (let index = 0; index < 4; index++) {
+        const reservation = await measureSubmitBackgroundPhase(
+          observer,
+          'claim',
+          () => this.repository.claimExpired(),
+          (result) => (result ? 1 : 0),
         );
-        if (!stored) continue;
+        if (!reservation) return;
+        await measureSubmitBackgroundPhase(observer, 'recover', async () => {
+          const cleaned = await this.execution.cleanup(reservation.executionId);
+          // Prefer already durable evidence. Never rerun an uncertain execution and
+          // never replace its valid staged result with a later operational failure.
+          if (!reservation.stagedResult) {
+            const stored = await this.repository.stage(
+              reservation,
+              failedSubmission(
+                reservation.runnerVersion,
+                reservation.visibleTotal,
+              ),
+            );
+            // Returning from this phase advances the loop just like continue.
+            if (!stored) return;
+          }
+          await this.repository.finish(reservation, cleaned);
+        });
       }
-      await this.repository.finish(reservation, cleaned);
-    }
+    });
   }
   async onModuleDestroy() {
     this.stopped = true;

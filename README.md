@@ -102,6 +102,8 @@ Los resúmenes históricos de fundación están en `.local/reports/imp-00-05/`; 
 
 El job tiene un límite de 90 minutos. La corrida local aprobada que motivó el ajuste tomó 50 min 13 s en sus 17 etapas, sin contar instalación ni preparación del workflow. El primer job remoto duró **43 min 23 s**, superando el límite anterior de 40 minutos. La nueva revalidación local falló en la tercera serie SUBMIT por p95 concurrente de **6.273,51 ms** frente a 5.000 ms; las tres series remotas aprobaron. Integración IA, Cypress y evaluación TEST locales aprobaron por separado después del fallo. El [registro de consolidación y revalidación](docs/work/2026-10-02-git-and-ci.md) conserva ambos resultados y el pendiente de rendimiento local.
 
+El [diagnóstico posterior de SUBMIT](docs/work/2026-10-02-submit-diagnostics.md) añade observación privada TEST por fase y correlación de recuperación. La confirmación de salida Docker se solapa con el drenaje de streams, conservando ambas verificaciones y limpieza. Las nuevas series locales siguen incumpliendo p95; no se cambiaron la carga, el límite ni los resultados fallidos. El registro distingue las fuentes instrumentadas de la CI anterior.
+
 ## Alternativa Compose local
 
 Con Supabase iniciado y `db:migrate` ejecutado, detén primero `npm run dev` para liberar 3200/4200:

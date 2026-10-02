@@ -1,5 +1,10 @@
-import type { ExecutionResult } from '@alunza/runner';
-import { projectSubmission } from './docker-submission.adapter';
+import { jest as esmJest } from '@jest/globals';
+import type { ExecutionResult, TimingObserver } from '@alunza/runner';
+import type { AppConfig } from '../config';
+import {
+  DockerSubmissionAdapter,
+  projectSubmission,
+} from './docker-submission.adapter';
 import type { SubmissionExecutionInput } from './submission-execution.port';
 
 const input: SubmissionExecutionInput = {
@@ -46,6 +51,16 @@ const makeResult = (patch: Partial<ExecutionResult> = {}): ExecutionResult =>
     lifecycleMs: 30,
     ...patch,
   }) as ExecutionResult;
+
+const mockDockerAdapter = jest.fn(
+  (options?: { observeTiming?: TimingObserver }) => ({ options }),
+);
+const mockExecute = jest.fn<Promise<ExecutionResult>, []>();
+esmJest.unstable_mockModule('@alunza/runner', () => ({
+  RUNNER_VERSION: 'unit',
+  DockerAdapter: mockDockerAdapter,
+  execute: mockExecute,
+}));
 
 describe('SUBMIT private result projection', () => {
   it('persists only hidden boolean evidence and publishes only visible console bytes', () => {
@@ -216,5 +231,124 @@ describe('SUBMIT private result projection', () => {
     );
     expect(result.technicalResult.visibleTestResults[0]?.stdout).toBe('a?b');
     expect(result.technicalResult.outputBytes).toBe(3);
+  });
+});
+
+describe('Docker SUBMIT private TEST timing hook', () => {
+  beforeEach(() => {
+    jest.replaceProperty(process, 'env', {
+      ...process.env,
+      ALUNZA_TEST_SUBMIT_TIMINGS: '1',
+    });
+    mockExecute.mockReset();
+    mockExecute.mockResolvedValue(
+      makeResult({
+        evidence: { cleanupVerified: true } as ExecutionResult['evidence'],
+      }),
+    );
+  });
+
+  it('projects Docker phases and public correlation without changing execution or evidence', async () => {
+    const output = jest
+      .spyOn(console, 'log')
+      .mockImplementation(() => undefined);
+    mockExecute.mockImplementation(async () => {
+      const observe = mockDockerAdapter.mock.calls.at(-1)?.[0]?.observeTiming;
+      const withPrivateFields = {
+        phase: 'create',
+        durationMs: 3,
+        completed: true,
+        code: input.code,
+        tests: input.tests,
+        capsuleName: 'PRIVATE_CAPSULE',
+        error: 'PRIVATE_ERROR',
+      };
+      observe?.(withPrivateFields);
+      observe?.({ phase: 'verifyAbsent', durationMs: 1, completed: true });
+      observe?.({ phase: 'PRIVATE_PHASE', durationMs: 0, completed: false });
+      return makeResult({
+        evidence: { cleanupVerified: true } as ExecutionResult['evidence'],
+      });
+    });
+    const adapter = new DockerSubmissionAdapter({
+      environment: 'test',
+    } as AppConfig);
+    const result = await adapter.execute(input);
+    expect(
+      output.mock.calls.map(([line]) => JSON.parse(line as string)),
+    ).toEqual(
+      ['create', 'verifyAbsent'].map((phase) => ({
+        event: 'TEST_SUBMIT_TIMING',
+        version: 2,
+        requestId: input.requestId,
+        executionId: input.executionId,
+        source: 'docker',
+        phase,
+        durationMs: phase === 'create' ? 3 : 1,
+        observedAtMs: expect.any(Number),
+        completed: true,
+      })),
+    );
+    expect(JSON.stringify(output.mock.calls)).not.toContain('PRIVATE_');
+    expect(JSON.stringify(output.mock.calls)).not.toContain('hidden-private');
+    expect(JSON.stringify(output.mock.calls)).not.toContain(input.code);
+    expect(result).toEqual({
+      ...projectSubmission(input, makeResult(), 'unit'),
+      cleanupVerified: true,
+    });
+    expect(mockExecute).toHaveBeenCalledWith(
+      input,
+      expect.anything(),
+      expect.any(AbortSignal),
+    );
+  });
+
+  it.each([
+    ['local', '1'],
+    ['production', '1'],
+    ['evaluation', '1'],
+    ['test', '0'],
+  ])(
+    'keeps the Docker hook disabled for %s / %s',
+    async (environment, flag) => {
+      jest.replaceProperty(process, 'env', {
+        ...process.env,
+        ALUNZA_TEST_SUBMIT_TIMINGS: flag,
+      });
+      const output = jest
+        .spyOn(console, 'log')
+        .mockImplementation(() => undefined);
+      await new DockerSubmissionAdapter({ environment } as AppConfig).execute(
+        input,
+      );
+      expect(
+        mockDockerAdapter.mock.calls.at(-1)?.[0]?.observeTiming,
+      ).toBeUndefined();
+      expect(output).not.toHaveBeenCalled();
+    },
+  );
+
+  it('preserves result and verified cleanup when stdout fails', async () => {
+    jest.spyOn(console, 'log').mockImplementation(() => {
+      throw new Error('PRIVATE_STDOUT_ERROR');
+    });
+    mockExecute.mockImplementation(async () => {
+      mockDockerAdapter.mock.calls.at(-1)?.[0]?.observeTiming?.({
+        phase: 'verifyAbsent',
+        durationMs: 1,
+        completed: true,
+      });
+      return makeResult({
+        evidence: { cleanupVerified: true } as ExecutionResult['evidence'],
+      });
+    });
+    await expect(
+      new DockerSubmissionAdapter({ environment: 'test' } as AppConfig).execute(
+        input,
+      ),
+    ).resolves.toMatchObject({
+      technicalResult: { diagnosisCode: 'SUCCESS' },
+      cleanupVerified: true,
+    });
   });
 });

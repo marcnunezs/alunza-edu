@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
+import { measureTiming } from './timing.mjs';
 import {
   localDockerEngine,
   pinnedDockerEnvironment,
@@ -116,9 +117,16 @@ export async function runCapsule(input, options = {}) {
   )
     throw new Error('Invalid fixed probe');
   options.signal?.throwIfAborted();
-  const engine = await localDockerEngine(command, options.signal);
+  const engine = await measureTiming(
+    options.observeTiming,
+    'engineResolve',
+    () => localDockerEngine(command, options.signal),
+  );
   const image =
-    options.image ?? (await imageIdentity(IMAGE_TAG, options.signal));
+    options.image ??
+    (await measureTiming(options.observeTiming, 'imageResolve', () =>
+      imageIdentity(IMAGE_TAG, options.signal),
+    ));
   if (!/^sha256:[a-f0-9]{64}$/.test(image))
     throw new Error('Runner requires immutable local image ID');
   const name = `${RUNNER_PREFIX}${randomUUID()}`;
@@ -139,31 +147,38 @@ export async function runCapsule(input, options = {}) {
     const expiresAt = Date.now() + 60000;
     options.signal?.throwIfAborted();
     creationTracker.begin(input.executionId, name, expiresAt);
-    const create = await engine.request(
-      'POST',
-      `/containers/create?name=${encodeURIComponent(name)}`,
-      {
-        signal: options.signal,
-        body: capsuleConfiguration(
-          image,
-          {
-            'org.alunza.runner': OWNER_VALUE,
-            'org.alunza.expires': String(expiresAt),
-            'org.alunza.execution': input.executionId,
-          },
-          options.probe,
-        ),
-      },
-    );
-    // A definitive HTTP response has completed this create operation. Transport
-    // failures leave the marker until the container is observed or lease expires.
-    creationTracker.observed(name);
-    if (create.status !== 201)
-      throw new Error('Runner container creation failed');
-    created = true;
-    const inspect = await engine.request('GET', `/containers/${name}/json`, {
-      signal: options.signal,
+    await measureTiming(options.observeTiming, 'create', async () => {
+      const create = await engine.request(
+        'POST',
+        `/containers/create?name=${encodeURIComponent(name)}`,
+        {
+          signal: options.signal,
+          body: capsuleConfiguration(
+            image,
+            {
+              'org.alunza.runner': OWNER_VALUE,
+              'org.alunza.expires': String(expiresAt),
+              'org.alunza.execution': input.executionId,
+            },
+            options.probe,
+          ),
+        },
+      );
+      // A definitive HTTP response has completed this create operation. Transport
+      // failures leave the marker until observed or the ownership lease expires.
+      creationTracker.observed(name);
+      if (create.status !== 201)
+        throw new Error('Runner container creation failed');
     });
+    created = true;
+    const inspect = await measureTiming(
+      options.observeTiming,
+      'preInspect',
+      () =>
+        engine.request('GET', `/containers/${name}/json`, {
+          signal: options.signal,
+        }),
+    );
     if (inspect.status !== 200) throw new Error('Runner inspection failed');
     const effective = inspect.data;
     const h = effective.HostConfig;
@@ -209,6 +224,7 @@ export async function runCapsule(input, options = {}) {
         input: JSON.stringify(input),
         timeoutMs: 30000,
         signal: options.signal,
+        observeTiming: options.observeTiming,
       });
       programWallMs = performance.now() - programStart;
       acknowledgedExitCode = result.exitCode;
@@ -220,9 +236,14 @@ export async function runCapsule(input, options = {}) {
     } finally {
       options.signal?.removeEventListener('abort', abort);
     }
-    const state = await engine.request('GET', `/containers/${name}/json`, {
-      signal: options.signal,
-    });
+    const state = await measureTiming(
+      options.observeTiming,
+      'postInspect',
+      () =>
+        engine.request('GET', `/containers/${name}/json`, {
+          signal: options.signal,
+        }),
+    );
     if (state.status === 200) {
       const data = state.data.State;
       if (
@@ -253,7 +274,12 @@ export async function runCapsule(input, options = {}) {
           );
           if (observed.status === 200) creationTracker.observed(name);
         }
-        cleanupVerified = await removeAndVerify(engine, name, cleanupSignal);
+        cleanupVerified = await removeAndVerify(
+          engine,
+          name,
+          cleanupSignal,
+          options.observeTiming,
+        );
         cleanupVerified &&= !creationTracker.uncertain(input.executionId);
       } catch {
         cleanupVerified = false;

@@ -186,6 +186,50 @@ function execute(state, options = {}) {
   });
 }
 
+function expectTiming(events, phases) {
+  expect(events.map((event) => event.phase)).toEqual(phases);
+  for (const event of events) {
+    expect(Object.keys(event).sort()).toEqual([
+      'completed',
+      'durationMs',
+      'phase',
+    ]);
+    expect(typeof event.completed).toBe('boolean');
+    expect(Number.isFinite(event.durationMs)).toBe(true);
+    expect(event.durationMs).toBeGreaterThanOrEqual(0);
+  }
+}
+
+function expectSuccessfulTiming(events) {
+  expectTiming(events.slice(0, 4), [
+    'attachOutput',
+    'attachInput',
+    'start',
+    'send',
+  ]);
+  expectTiming(
+    [...events.slice(4)].sort((left, right) =>
+      left.phase.localeCompare(right.phase),
+    ),
+    ['streams', 'wait'],
+  );
+  expect(events.every((event) => event.completed)).toBe(true);
+}
+
+async function within(promise, message) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(message)), 500);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 test('Attaches output and stdin before starting; input EOF preserves independent output and demultiplexes fragmented UTF-8', async () => {
   const letter = Buffer.from('á');
   const prefix = frame(
@@ -220,11 +264,15 @@ test('Attaches output and stdin before starting; input EOF preserves independent
       },
     },
     async (state) => {
-      await expect(execute(state)).resolves.toEqual({
+      const timings = [];
+      await expect(
+        execute(state, { observeTiming: (event) => timings.push(event) }),
+      ).resolves.toEqual({
         stdout: 'head:á fin🧪',
         stderr: 'error:é',
         exitCode: 0,
       });
+      expectSuccessfulTiming(timings);
       expect(state.events.slice(0, 4)).toEqual([
         'output-attach',
         'stdin-attach',
@@ -333,9 +381,12 @@ test('Rejecting the stdin upgrade releases the already attached output without s
       rejection: 'HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n',
     },
     async (state) => {
-      await expect(execute(state)).rejects.toThrow(
-        'Local Docker attachment failed',
-      );
+      const timings = [];
+      await expect(
+        execute(state, { observeTiming: (event) => timings.push(event) }),
+      ).rejects.toThrow('Local Docker attachment failed');
+      expectTiming(timings, ['attachOutput', 'attachInput']);
+      expect(timings.map((event) => event.completed)).toEqual([true, false]);
       expect(state.events).toEqual(['output-attach', 'stdin-attach']);
       expect(state.input).toEqual([]);
     },
@@ -347,13 +398,28 @@ test.each(['output-handshake', 'stdin-handshake', 'start', 'stream', 'wait'])(
   async (hold) => {
     await withDaemon({ hold }, async (state) => {
       const controller = new AbortController();
-      const pending = execute(state, { signal: controller.signal });
+      const timings = [];
+      const pending = execute(state, {
+        signal: controller.signal,
+        observeTiming: (event) => timings.push(event),
+      });
       const rejected = expect(pending).rejects.toThrow();
       const reached =
         hold === 'stream' ? 'stdin-eof' : hold.replace('-handshake', '-attach');
       await state.stage(reached);
       controller.abort();
       await rejected;
+      const phase = {
+        'output-handshake': 'attachOutput',
+        'stdin-handshake': 'attachInput',
+        start: 'start',
+        stream: 'streams',
+        wait: 'wait',
+      }[hold];
+      expect(timings.find((event) => event.phase === phase)).toMatchObject({
+        phase,
+        completed: false,
+      });
       expect(state.events.filter((event) => event === 'start')).toHaveLength(
         ['start', 'stream', 'wait'].includes(hold) ? 1 : 0,
       );
@@ -378,7 +444,16 @@ test.each(['output-handshake', 'stdin-handshake', 'start', 'stream', 'wait'])(
 
 test('A lost POST start response never retries start or delivers input', async () => {
   await withDaemon({ dropStart: true }, async (state) => {
-    await expect(execute(state)).rejects.toThrow('Local Docker request failed');
+    const timings = [];
+    await expect(
+      execute(state, { observeTiming: (event) => timings.push(event) }),
+    ).rejects.toThrow('Local Docker request failed');
+    expectTiming(timings, ['attachOutput', 'attachInput', 'start']);
+    expect(timings.map((event) => event.completed)).toEqual([
+      true,
+      true,
+      false,
+    ]);
     expect(state.events).toEqual(['output-attach', 'stdin-attach', 'start']);
     expect(state.input).toEqual([]);
   });
@@ -477,27 +552,125 @@ test('Output EOF does not confirm completion until wait returns the independent 
     },
     async (state) => {
       let settled = false;
-      const pending = execute(state).finally(() => {
+      const timings = [];
+      const pending = execute(state, {
+        observeTiming(event) {
+          timings.push(event);
+          if (event.phase === 'streams') state.mark('streams-observed');
+        },
+      }).finally(() => {
         settled = true;
       });
-      await state.stage('wait');
+      void pending.catch(() => {});
+      await within(
+        Promise.all([state.stage('wait'), state.stage('streams-observed')]),
+        'Output EOF and wait were not observed',
+      );
       expect(settled).toBe(false);
-      expect(state.events.indexOf('wait')).toBeGreaterThan(
-        state.events.indexOf('output-end'),
-      );
-      expect(state.events.indexOf('wait')).toBeGreaterThan(
-        state.events.indexOf('stdin-eof'),
-      );
+      expect(timings.find((event) => event.phase === 'streams')).toMatchObject({
+        completed: true,
+      });
+      expect(timings.some((event) => event.phase === 'wait')).toBe(false);
       state.replyWait({ StatusCode: 7 });
       await expect(pending).resolves.toEqual({
         stdout: 'captured',
         stderr: '',
         exitCode: 7,
       });
+      expectSuccessfulTiming(timings);
       expect(state.events.filter((event) => event === 'wait')).toHaveLength(1);
     },
   );
 });
+
+test('Wait is requested before output EOF and an early acknowledgement still waits for the complete tail', async () => {
+  await withDaemon(
+    { hold: 'wait', outputHead: frame(1, 'head:'), afterInput() {} },
+    async (state) => {
+      let settled = false;
+      const timings = [];
+      const pending = execute(state, {
+        observeTiming(event) {
+          timings.push(event);
+          if (event.phase === 'wait') state.mark('wait-observed');
+        },
+      }).finally(() => {
+        settled = true;
+      });
+      void pending.catch(() => {});
+      await within(
+        state.stage('wait'),
+        'Wait was serialized behind output EOF',
+      );
+      expect(state.events).not.toContain('output-end');
+      expect(settled).toBe(false);
+      state.replyWait({ StatusCode: 7 });
+      await within(
+        state.stage('wait-observed'),
+        'Wait acknowledgement was not observed',
+      );
+      expect(timings.find((event) => event.phase === 'wait')).toMatchObject({
+        completed: true,
+      });
+      expect(timings.some((event) => event.phase === 'streams')).toBe(false);
+      expect(settled).toBe(false);
+      state.output.write(frame(1, 'tail'));
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(settled).toBe(false);
+      state.mark('output-end');
+      state.output.end();
+      await expect(pending).resolves.toEqual({
+        stdout: 'head:tail',
+        stderr: '',
+        exitCode: 7,
+      });
+      expectSuccessfulTiming(timings);
+      expect(state.events.indexOf('wait')).toBeLessThan(
+        state.events.indexOf('output-end'),
+      );
+      expect(state.events.filter((event) => event === 'start')).toHaveLength(1);
+      expect(
+        state.events.filter((event) => event === 'stdin-eof'),
+      ).toHaveLength(1);
+      expect(state.events.filter((event) => event === 'wait')).toHaveLength(1);
+    },
+  );
+});
+
+test.each([
+  ['invalid acknowledgement', { waitStatus: 500 }, 'Docker exit unconfirmed'],
+  ['lost response', { dropWait: true }, 'Local Docker request failed'],
+])(
+  'A wait %s aborts pending output without waiting for its EOF or retrying',
+  async (_label, options, failure) => {
+    await withDaemon({ ...options, hold: 'stream' }, async (state) => {
+      const timings = [];
+      const pending = execute(state, {
+        observeTiming: (event) => timings.push(event),
+      });
+      await within(
+        expect(pending).rejects.toThrow(failure),
+        'Wait failure remained blocked behind output EOF',
+      );
+      await within(
+        state.stage('stdin-eof'),
+        'Input EOF was not observed after the wait failure',
+      );
+      expect(timings.find((event) => event.phase === 'wait')).toMatchObject({
+        completed: false,
+      });
+      expect(timings.find((event) => event.phase === 'streams')).toMatchObject({
+        completed: false,
+      });
+      expect(state.events).not.toContain('output-end');
+      expect(state.events.filter((event) => event === 'start')).toHaveLength(1);
+      expect(
+        state.events.filter((event) => event === 'stdin-eof'),
+      ).toHaveLength(1);
+      expect(state.events.filter((event) => event === 'wait')).toHaveLength(1);
+    });
+  },
+);
 
 test.each([
   ['non-success HTTP status', { waitStatus: 500 }],
@@ -545,10 +718,57 @@ test.each([null, { Message: '' }])(
 test('A lost wait response never repeats start, input delivery or wait', async () => {
   await withDaemon({ dropWait: true }, async (state) => {
     await expect(execute(state)).rejects.toThrow('Local Docker request failed');
+    await within(
+      state.stage('stdin-eof'),
+      'Input EOF was not observed after the lost wait response',
+    );
     expect(state.events.filter((event) => event === 'start')).toHaveLength(1);
     expect(state.events.filter((event) => event === 'stdin-eof')).toHaveLength(
       1,
     );
     expect(state.events.filter((event) => event === 'wait')).toHaveLength(1);
+  });
+});
+
+test.each(['throw', 'rejected promise'])(
+  'An observer %s preserves the attachment result, single delivery and socket cleanup',
+  async (kind) => {
+    await withDaemon({}, async (state) => {
+      const observeTiming = jest.fn(() => {
+        if (kind === 'throw') throw new Error('private observer failure');
+        return Promise.reject(new Error('private observer failure'));
+      });
+      await expect(execute(state, { observeTiming })).resolves.toEqual({
+        stdout: 'result',
+        stderr: '',
+        exitCode: 0,
+      });
+      await new Promise((resolve) => setImmediate(resolve));
+      expectSuccessfulTiming(observeTiming.mock.calls.map(([event]) => event));
+      expect(state.events.filter((event) => event === 'start')).toHaveLength(1);
+      expect(
+        state.events.filter((event) => event === 'stdin-eof'),
+      ).toHaveLength(1);
+      expect(state.events.filter((event) => event === 'wait')).toHaveLength(1);
+    });
+  },
+);
+
+test('An asynchronously rejected observer cannot mask a transport failure or retain attachments', async () => {
+  await withDaemon({ dropStart: true }, async (state) => {
+    const observeTiming = jest.fn(() =>
+      Promise.reject(new Error('private observer failure')),
+    );
+    await expect(execute(state, { observeTiming })).rejects.toThrow(
+      'Local Docker request failed',
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    expectTiming(
+      observeTiming.mock.calls.map(([event]) => event),
+      ['attachOutput', 'attachInput', 'start'],
+    );
+    expect(observeTiming.mock.calls.at(-1)[0].completed).toBe(false);
+    expect(state.events).toEqual(['output-attach', 'stdin-attach', 'start']);
+    expect(state.input).toEqual([]);
   });
 });

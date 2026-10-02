@@ -1,3 +1,6 @@
+import type { TimingObserver } from './timing.mjs';
+export type { TimingEvent, TimingObserver } from './timing.mjs';
+
 export const OWNER_LABEL: string;
 export const IMAGE_TAG: string;
 export const RUNNER_PREFIX: string;
@@ -32,6 +35,7 @@ export function runCapsule(
   options?: {
     image?: string;
     signal?: AbortSignal;
+    observeTiming?: TimingObserver;
     probe?:
       | 'identity'
       | 'memory'

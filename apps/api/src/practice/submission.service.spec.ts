@@ -55,7 +55,7 @@ const suite = {
     { id: 'hidden', visibility: 'hidden', args: [9], expected: 18 },
   ],
 };
-function setup(enabled = true) {
+function setup(enabled = true, environment = 'local') {
   const events: string[] = [];
   const repository = {
     authorize: jest.fn(async () => {
@@ -92,6 +92,7 @@ function setup(enabled = true) {
     }),
   };
   const config = loadConfig({
+    ENVIRONMENT: environment,
     APP_ORIGIN: 'http://localhost:3000',
     DATABASE_URL: 'postgresql://alunza_app:unit@localhost/test',
     SUPABASE_JWKS_URL: 'http://localhost/auth/v1/.well-known/jwks.json',
@@ -306,5 +307,199 @@ describe('SUBMIT durability and current access', () => {
       service.submit(who, activity, assignment, input, 'submit-key-1'),
     ).rejects.toMatchObject({ code: 'DEPENDENCY_UNAVAILABLE' });
     expect(lifecycle.cleanup).not.toHaveBeenCalled();
+  });
+});
+
+describe('SUBMIT private TEST timing without domain changes', () => {
+  beforeEach(() => {
+    jest.replaceProperty(process, 'env', {
+      ...process.env,
+      ALUNZA_TEST_SUBMIT_TIMINGS: '1',
+    });
+  });
+
+  function capture() {
+    const output = jest
+      .spyOn(console, 'log')
+      .mockImplementation(() => undefined);
+    return () =>
+      output.mock.calls.map(([line]) => JSON.parse(line as string)) as Array<{
+        requestId: string;
+        executionId?: string;
+        source: string;
+        phase: string;
+        durationMs: number;
+        completed: boolean;
+      }>;
+  }
+
+  it('preserves admission, evidence and delivery order and excludes private input', async () => {
+    const timings = capture();
+    const { service, repository, events } = setup(true, 'test');
+    await expect(
+      service.submit(who, activity, assignment, input, 'submit-key-1'),
+    ).resolves.toBe(response);
+    expect(events).toEqual([
+      'authorize',
+      'admit-committed',
+      'suite',
+      'execute',
+      'result-committed',
+      'attempt-committed',
+      'authorize',
+    ]);
+    expect(timings().map(({ phase }) => phase)).toEqual([
+      'authorizeInitial',
+      'inspect',
+      'admit',
+      'suite',
+      'execute',
+      'stage',
+      'finish',
+      'authorizeFinal',
+      'total',
+    ]);
+    expect(timings().every((event) => event.completed)).toBe(true);
+    expect(timings().every((event) => event.requestId === who.requestId)).toBe(
+      true,
+    );
+    expect(
+      timings()
+        .slice(0, 3)
+        .every((event) => !event.executionId),
+    ).toBe(true);
+    expect(
+      timings()
+        .slice(3)
+        .every((event) => event.executionId === reservation.executionId),
+    ).toBe(true);
+    expect(JSON.stringify(timings())).not.toContain(input.code);
+    expect(JSON.stringify(timings())).not.toContain('hidden');
+    expect(JSON.stringify(timings())).not.toContain('submit-key-1');
+    expect(repository.stage).toHaveBeenCalledWith(reservation, canonical);
+  });
+
+  it('times replay without loading a suite or executing student code', async () => {
+    const timings = capture();
+    const { service, repository, execution } = setup(false, 'test');
+    repository.admit.mockResolvedValueOnce({
+      kind: 'replay',
+      response,
+    } as never);
+    await expect(
+      service.submit(who, activity, assignment, input, 'submit-key-1'),
+    ).resolves.toBe(response);
+    expect(timings().map(({ phase }) => phase)).toEqual([
+      'authorizeInitial',
+      'admit',
+      'authorizeFinal',
+      'total',
+    ]);
+    expect(timings().at(-1)?.executionId).toBe(response.executionId);
+    expect(execution.execute).not.toHaveBeenCalled();
+    expect(repository.suite).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'authorizeInitial',
+    'inspect',
+    'admit',
+    'suite',
+    'execute',
+    'cleanupFallback',
+    'stage',
+    'finish',
+    'authorizeFinal',
+  ])(
+    'records %s rejection while preserving its existing treatment',
+    async (phase) => {
+      const timings = capture();
+      const { service, repository, lifecycle, execution } = setup(true, 'test');
+      const original = new Error('PRIVATE_PHASE_ERROR');
+      switch (phase) {
+        case 'authorizeInitial':
+          repository.authorize.mockRejectedValueOnce(original);
+          break;
+        case 'inspect':
+          lifecycle.inspect.mockRejectedValueOnce(original);
+          break;
+        case 'admit':
+          repository.admit.mockRejectedValueOnce(original);
+          break;
+        case 'suite':
+          repository.suite.mockRejectedValueOnce(original);
+          break;
+        case 'execute':
+          execution.execute.mockRejectedValueOnce(original);
+          break;
+        case 'cleanupFallback':
+          execution.execute.mockRejectedValueOnce(
+            new Error('PRIVATE_EXECUTION'),
+          );
+          lifecycle.cleanup.mockRejectedValueOnce(original);
+          break;
+        case 'stage':
+          repository.stage.mockRejectedValueOnce(original);
+          break;
+        case 'finish':
+          repository.finish.mockRejectedValueOnce(original);
+          break;
+        case 'authorizeFinal':
+          repository.authorize
+            .mockResolvedValueOnce(undefined)
+            .mockRejectedValueOnce(original);
+          break;
+      }
+      const operation = service.submit(
+        who,
+        activity,
+        assignment,
+        input,
+        'submit-key-1',
+      );
+      const normalized = phase === 'suite' || phase === 'execute';
+      if (normalized) await expect(operation).resolves.toBe(response);
+      else await expect(operation).rejects.toBe(original);
+      expect(timings().find((event) => event.phase === phase)?.completed).toBe(
+        false,
+      );
+      expect(timings().at(-1)).toMatchObject({
+        phase: 'total',
+        completed: normalized,
+      });
+      expect(JSON.stringify(timings())).not.toContain('PRIVATE_');
+      if (normalized) {
+        expect(lifecycle.cleanup).toHaveBeenCalledTimes(1);
+        expect(repository.stage).toHaveBeenCalledWith(
+          reservation,
+          expect.objectContaining({
+            technicalResult: expect.objectContaining({
+              diagnosisCode: 'UNKNOWN',
+            }),
+            privateTestResults: [],
+          }),
+        );
+      }
+    },
+  );
+
+  it('keeps success, persistence and ordering when stdout throws', async () => {
+    jest.spyOn(console, 'log').mockImplementation(() => {
+      throw new Error('PRIVATE_STDOUT_ERROR');
+    });
+    const { service, repository, events } = setup(true, 'test');
+    await expect(
+      service.submit(who, activity, assignment, input, 'submit-key-1'),
+    ).resolves.toBe(response);
+    expect(repository.stage).toHaveBeenCalledWith(reservation, canonical);
+    expect(events).toEqual([
+      'authorize',
+      'admit-committed',
+      'suite',
+      'execute',
+      'result-committed',
+      'attempt-committed',
+      'authorize',
+    ]);
   });
 });

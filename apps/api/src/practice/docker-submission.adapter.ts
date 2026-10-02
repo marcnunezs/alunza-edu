@@ -1,6 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { submitTechnicalResultSchema } from '@alunza/contracts';
 import type { ExecutionResult } from '@alunza/runner';
+import { APP_CONFIG } from '../config';
+import type { AppConfig } from '../config';
+import { createSubmitTimingObserver } from './submit-observability';
 import {
   failedSubmission,
   SubmissionExecutionPort,
@@ -96,11 +99,23 @@ export function projectSubmission(
 
 @Injectable()
 export class DockerSubmissionAdapter extends SubmissionExecutionPort {
+  constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {
+    super();
+  }
   async execute(input: SubmissionExecutionInput) {
     const runner = await import('@alunza/runner');
+    const observer = createSubmitTimingObserver(this.config.environment, {
+      requestId: input.requestId,
+      executionId: input.executionId,
+    });
     const result = await runner.execute(
       input,
-      new runner.DockerAdapter(),
+      new runner.DockerAdapter({
+        observeTiming: observer
+          ? ({ phase, durationMs, completed }) =>
+              observer({ source: 'docker', phase, durationMs, completed })
+          : undefined,
+      }),
       AbortSignal.timeout(30_000),
     );
     return {

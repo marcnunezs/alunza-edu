@@ -3,6 +3,15 @@ import { performance } from 'node:perf_hooks';
 import { StringDecoder } from 'node:string_decoder';
 import { z } from 'zod';
 import { imageIdentity, runCapsule } from '../../../infra/runner/capsule.mjs';
+import type { TimingObserver } from '../../../infra/runner/capsule.mjs';
+import {
+  measureTiming,
+  observeDuration,
+} from '../../../infra/runner/timing.mjs';
+export type {
+  TimingEvent,
+  TimingObserver,
+} from '../../../infra/runner/capsule.mjs';
 
 export const RUNNER_VERSION = 'imp-03-quickjs.4';
 export const LIMITS = Object.freeze({
@@ -89,9 +98,40 @@ export interface CapsuleAdapter {
 export class DockerAdapter implements CapsuleAdapter {
   readonly provider = 'docker' as const;
   private image?: string;
+  private readonly observeTiming?: TimingObserver;
+  constructor(options: { observeTiming?: TimingObserver } = {}) {
+    this.observeTiming = options.observeTiming;
+  }
   async execute(input: CapsuleInput, signal?: AbortSignal) {
-    this.image ??= await imageIdentity(undefined, signal);
-    return runCapsule(input, { image: this.image, signal });
+    this.image ??= await measureTiming(this.observeTiming, 'imageResolve', () =>
+      imageIdentity(undefined, signal),
+    );
+    const response = await runCapsule(input, {
+      image: this.image,
+      signal,
+      observeTiming: this.observeTiming,
+    });
+    if (this.observeTiming) {
+      observeDuration(
+        this.observeTiming,
+        'hostStartAttach',
+        response.programWallMs,
+      );
+      if (response.containerWallMs !== null)
+        observeDuration(
+          this.observeTiming,
+          'containerWall',
+          response.containerWallMs,
+        );
+      const parsed = packetSchema.safeParse(response.packet);
+      if (parsed.success)
+        observeDuration(
+          this.observeTiming,
+          'supervisor',
+          parsed.data.runtimeMs,
+        );
+    }
+    return response;
   }
   async close() {
     /* Every capsule is removed in runCapsule finally. */
