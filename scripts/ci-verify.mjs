@@ -1,6 +1,7 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { root, run, doctor, redactDiagnostics } from './local.mjs';
+import { summarizeUnitFailures } from './ci-unit-failures.mjs';
 import {
   publicTestEnvironment,
   report,
@@ -62,6 +63,22 @@ try {
     } catch (error) {
       entry.status = 'failed';
       let diagnostic = error.output ?? error.message;
+      if (args.length === 1 && args[0] === 'test') {
+        try {
+          const tracked = await run('git', ['ls-files', '-z']);
+          entry.unitFailures = summarizeUnitFailures(
+            diagnostic,
+            tracked.stdout.split('\0').filter(Boolean),
+          );
+        } catch {
+          entry.unitFailures = { failedTestFiles: [] };
+        }
+        // Only source paths from the tracked test inventory may be public.
+        // Assertions, test data and the complete log remain private.
+        console.error(
+          JSON.stringify({ event: 'CI_UNIT_FAILURES', ...entry.unitFailures }),
+        );
+      }
       try {
         const state = JSON.parse(await readFile(testContext.statePath, 'utf8'));
         for (const field of [
