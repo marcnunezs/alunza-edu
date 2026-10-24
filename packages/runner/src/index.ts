@@ -1,9 +1,19 @@
 import { isDeepStrictEqual } from 'node:util';
 import { performance } from 'node:perf_hooks';
+import { StringDecoder } from 'node:string_decoder';
 import { z } from 'zod';
 import { imageIdentity, runCapsule } from '../../../infra/runner/capsule.mjs';
+import type { TimingObserver } from '../../../infra/runner/capsule.mjs';
+import {
+  measureTiming,
+  observeDuration,
+} from '../../../infra/runner/timing.mjs';
+export type {
+  TimingEvent,
+  TimingObserver,
+} from '../../../infra/runner/capsule.mjs';
 
-export const RUNNER_VERSION = 'imp-00-06.1';
+export const RUNNER_VERSION = 'imp-03-quickjs-main.1';
 export const LIMITS = Object.freeze({
   memoryBytes: 134217728,
   runtimeMs: 3000,
@@ -12,6 +22,12 @@ export const LIMITS = Object.freeze({
   codeBytes: 65536,
 });
 const json = z.json();
+export const executionLimitsSchema = z.strictObject({
+  memoryBytes: z.number().int().min(1).max(LIMITS.memoryBytes),
+  runtimeMs: z.number().int().min(1).max(LIMITS.runtimeMs),
+  outputBytes: z.number().int().min(1).max(LIMITS.outputBytes),
+});
+export type ExecutionLimits = z.infer<typeof executionLimitsSchema>;
 export const executionSchema = z
   .object({
     executionId: z.uuid(),
@@ -20,6 +36,8 @@ export const executionSchema = z
     testsVersion: z.string().min(1).max(100),
     mode: z.enum(['RUN', 'SUBMIT']),
     entrypoint: z.literal('solve'),
+    // Only the trusted server supplies the published exercise limits.
+    limits: executionLimitsSchema.optional(),
     code: z
       .string()
       .refine(
@@ -73,10 +91,12 @@ export type TerminationReason =
   | 'CAPABILITY_GAP'
   | 'CANCELLED';
 export type CapsuleInput = {
+  executionId: string;
   code: string;
   args: unknown[];
   budgetMs: number;
   outputRemaining: number;
+  memoryBytes: number;
 };
 export type CapsuleResult = Awaited<ReturnType<typeof runCapsule>>;
 export interface CapsuleAdapter {
@@ -87,9 +107,53 @@ export interface CapsuleAdapter {
 export class DockerAdapter implements CapsuleAdapter {
   readonly provider = 'docker' as const;
   private image?: string;
+  private readonly observeTiming?: TimingObserver;
+  constructor(
+    options: { image?: string; observeTiming?: TimingObserver } = {},
+  ) {
+    const image = options.image;
+    if (
+      image !== undefined &&
+      (typeof image !== 'string' ||
+        image.length !== 71 ||
+        !/^sha256:[a-f0-9]{64}$/.test(image))
+    )
+      throw new Error('Runner requires immutable local image ID');
+    // A prepared ID is pinned for this adapter's execution. If it disappears,
+    // creation fails; never replace it by resolving the mutable tag again.
+    this.image = image;
+    this.observeTiming = options.observeTiming;
+  }
   async execute(input: CapsuleInput, signal?: AbortSignal) {
-    this.image ??= await imageIdentity();
-    return runCapsule(input, { image: this.image, signal });
+    this.image ??= await measureTiming(this.observeTiming, 'imageResolve', () =>
+      imageIdentity(undefined, signal),
+    );
+    const response = await runCapsule(input, {
+      image: this.image,
+      signal,
+      observeTiming: this.observeTiming,
+    });
+    if (this.observeTiming) {
+      observeDuration(
+        this.observeTiming,
+        'hostStartAttach',
+        response.programWallMs,
+      );
+      if (response.containerWallMs !== null)
+        observeDuration(
+          this.observeTiming,
+          'containerWall',
+          response.containerWallMs,
+        );
+      const parsed = packetSchema.safeParse(response.packet);
+      if (parsed.success)
+        observeDuration(
+          this.observeTiming,
+          'supervisor',
+          parsed.data.runtimeMs,
+        );
+    }
+    return response;
   }
   async close() {
     /* Every capsule is removed in runCapsule finally. */
@@ -118,12 +182,25 @@ const packetSchema = z
   })
   .strict();
 const returnSchema = z.discriminatedUnion('kind', [
-  z.object({ kind: z.literal('value'), value: json }).strict(),
+  z
+    .object({
+      kind: z.literal('value'),
+      value: json,
+      invocation: z.literal('QUICKJS_SYNC_CALL'),
+    })
+    .strict(),
+  z.object({ kind: z.literal('syntax') }).strict(),
   z.object({ kind: z.literal('exception') }).strict(),
   z
     .object({
       kind: z.literal('invalid'),
-      reason: z.enum(['RETURN_LIMIT', 'CAPABILITY_GAP']),
+      reason: z.enum([
+        'RETURN_LIMIT',
+        'CAPABILITY_GAP',
+        'OUTPUT_LIMIT',
+        'EXECUTION_DEADLINE',
+        'RUNNER_FAILURE',
+      ]),
     })
     .strict(),
 ]);
@@ -152,7 +229,8 @@ export type ExecutionResult = {
     image: string | null;
     cleanupVerified: boolean;
     cgroups: Record<string, string>[];
-    invocationAuthenticity: 'NOT_PROVEN';
+    invocationAuthenticity: 'QUICKJS_SYNC_CALL';
+    engine: 'quickjs-wasm-release-sync@0.32.0';
     bridgeUid: 0;
     bridgeCapabilities: string[];
     studentUid: 10001;
@@ -161,6 +239,12 @@ export type ExecutionResult = {
     oomObserved: boolean;
     hostDeadlineObserved: boolean;
     hostProgramWallMs: number;
+    timings: {
+      hostStartAttachMs: number;
+      containerWallMs: number | null;
+      supervisorProcessMs: number | null;
+      budgetMs: number;
+    }[];
   };
 };
 export function publicResult(result: ExecutionResult) {
@@ -188,6 +272,12 @@ export async function execute(
   signal?: AbortSignal,
 ): Promise<ExecutionResult> {
   const input = executionSchema.parse(raw);
+  const limits = input.limits ?? LIMITS;
+  // Linux cgroup memory is page based. Rounding down never widens a published cap.
+  const memoryBytes = Math.floor(limits.memoryBytes / 4096) * 4096;
+  signal = signal
+    ? AbortSignal.any([signal, AbortSignal.timeout(30000)])
+    : AbortSignal.timeout(30000);
   const started = performance.now();
   const tests = input.tests.filter(
     (item) => input.mode === 'SUBMIT' || item.visibility === 'visible',
@@ -213,7 +303,8 @@ export async function execute(
       image: null,
       cleanupVerified: true,
       cgroups: [],
-      invocationAuthenticity: 'NOT_PROVEN',
+      invocationAuthenticity: 'QUICKJS_SYNC_CALL',
+      engine: 'quickjs-wasm-release-sync@0.32.0',
       bridgeUid: 0,
       bridgeCapabilities: ['CAP_SETUID', 'CAP_SETGID', 'CAP_SETPCAP'],
       studentUid: 10001,
@@ -222,6 +313,7 @@ export async function execute(
       oomObserved: false,
       hostDeadlineObserved: false,
       hostProgramWallMs: 0,
+      timings: [],
     },
   };
   let complete = true;
@@ -231,21 +323,29 @@ export async function execute(
     complete = false;
   };
   try {
+    if (memoryBytes < 6 * 1024 * 1024) {
+      // Docker rejects lower memory caps. Do not silently raise them or launch code.
+      stop('UNKNOWN', 'CAPABILITY_GAP');
+      result.infrastructureStatus = 'FAILED';
+    }
     for (const item of tests) {
+      if (!complete) break;
       if (signal?.aborted) {
         stop('UNKNOWN', 'CANCELLED');
         break;
       }
-      if (result.runtimeMs >= LIMITS.runtimeMs) {
+      if (result.runtimeMs >= limits.runtimeMs) {
         stop('TIMEOUT', 'EXECUTION_DEADLINE');
         break;
       }
       const response = await adapter.execute(
         {
+          executionId: input.executionId,
           code: input.code,
           args: item.args,
-          budgetMs: LIMITS.runtimeMs - result.runtimeMs,
-          outputRemaining: LIMITS.outputBytes - result.outputBytes,
+          budgetMs: limits.runtimeMs - result.runtimeMs,
+          outputRemaining: limits.outputBytes - result.outputBytes,
+          memoryBytes,
         },
         signal,
       );
@@ -253,6 +353,13 @@ export async function execute(
       result.evidence.cleanupVerified &&= response.cleanupVerified;
       result.evidence.oomObserved ||= response.oomKilled;
       result.evidence.hostDeadlineObserved ||= response.timedOut;
+      const parsed = packetSchema.safeParse(response.packet);
+      result.evidence.timings.push({
+        hostStartAttachMs: response.programWallMs,
+        containerWallMs: response.containerWallMs ?? null,
+        supervisorProcessMs: parsed.success ? parsed.data.runtimeMs : null,
+        budgetMs: limits.runtimeMs - result.runtimeMs,
+      });
       if (
         !Number.isFinite(response.programWallMs) ||
         response.programWallMs < 0
@@ -260,7 +367,6 @@ export async function execute(
         stop('UNKNOWN', 'PROTOCOL_INVALID');
         break;
       }
-      result.runtimeMs += response.programWallMs;
       result.evidence.hostProgramWallMs += response.programWallMs;
       if (response.cancelled) {
         stop('UNKNOWN', 'CANCELLED');
@@ -271,11 +377,10 @@ export async function execute(
         break;
       }
       if (response.timedOut) {
-        result.runtimeMs = Math.max(result.runtimeMs, LIMITS.runtimeMs);
+        result.runtimeMs = Math.max(result.runtimeMs, limits.runtimeMs);
         stop('TIMEOUT', 'EXECUTION_DEADLINE');
         break;
       }
-      const parsed = packetSchema.safeParse(response.packet);
       if (
         !parsed.success ||
         response.exitCode !== 0 ||
@@ -285,13 +390,41 @@ export async function execute(
         break;
       }
       const packet = parsed.data;
-      result.runtimeMs += Math.max(
-        0,
-        packet.runtimeMs - response.programWallMs,
-      );
+      result.runtimeMs += packet.runtimeMs;
+      if (
+        packet.cgroup['memory.max'] !== String(memoryBytes) ||
+        packet.cgroup['memory.swap.max'] !== '0' ||
+        packet.cgroup['pids.max'] !== '32' ||
+        packet.cgroup['cpu.max'] !== '100000 100000'
+      ) {
+        stop('UNKNOWN', 'CAPABILITY_GAP');
+        break;
+      }
+      const stdoutBytes = Buffer.from(packet.stdout, 'base64');
+      const stderrBytes = Buffer.from(packet.stderr, 'base64');
+      if (
+        stdoutBytes.length + stderrBytes.length !== packet.outputBytes ||
+        result.outputBytes + packet.outputBytes > limits.outputBytes
+      ) {
+        stop('UNKNOWN', 'PROTOCOL_INVALID');
+        break;
+      }
       result.outputBytes += packet.outputBytes;
       result.outputTruncated ||= packet.outputTruncated;
       result.evidence.cgroups.push(packet.cgroup);
+      // Keep bounded console output even if this case throws or reaches a limit.
+      // write() omits an incomplete trailing UTF-8 sequence instead of expanding
+      // it into a replacement character beyond the captured byte budget.
+      const value: CaseResult = {
+        id: item.id,
+        passed: false,
+        stdout: new StringDecoder('utf8').write(stdoutBytes),
+        stderr: new StringDecoder('utf8').write(stderrBytes),
+      };
+      (item.visibility === 'visible'
+        ? result.visibleTestResults
+        : result.privateTestResults
+      ).push(value);
       if (/^oom_kill [1-9]\d*$/m.test(packet.cgroup['memory.events'] ?? '')) {
         stop('UNKNOWN', 'MEMORY_LIMIT');
         break;
@@ -304,7 +437,7 @@ export async function execute(
         stop('UNKNOWN', 'CAPABILITY_GAP');
         break;
       }
-      if (packet.status === 'timeout' || result.runtimeMs >= LIMITS.runtimeMs) {
+      if (packet.status === 'timeout' || result.runtimeMs >= limits.runtimeMs) {
         stop('TIMEOUT', 'EXECUTION_DEADLINE');
         break;
       }
@@ -330,7 +463,15 @@ export async function execute(
         break;
       }
       if (returned.kind === 'invalid') {
-        stop('UNKNOWN', returned.reason);
+        if (returned.reason === 'OUTPUT_LIMIT') result.outputTruncated = true;
+        stop(
+          returned.reason === 'EXECUTION_DEADLINE' ? 'TIMEOUT' : 'UNKNOWN',
+          returned.reason,
+        );
+        break;
+      }
+      if (returned.kind === 'syntax') {
+        stop('SYNTAX_ERROR', 'STUDENT_SYNTAX');
         break;
       }
       if (returned.kind === 'exception') {
@@ -341,16 +482,7 @@ export async function execute(
         stop('UNKNOWN', 'PROTOCOL_INVALID');
         break;
       }
-      const value: CaseResult = {
-        id: item.id,
-        passed: isDeepStrictEqual(returned.value, item.expected),
-        stdout: Buffer.from(packet.stdout, 'base64').toString('utf8'),
-        stderr: Buffer.from(packet.stderr, 'base64').toString('utf8'),
-      };
-      (item.visibility === 'visible'
-        ? result.visibleTestResults
-        : result.privateTestResults
-      ).push(value);
+      value.passed = isDeepStrictEqual(returned.value, item.expected);
     }
     if (complete) {
       result.allRequiredPassed =
@@ -392,3 +524,9 @@ export async function execute(
   return result;
 }
 export { VercelAdapter, SandboxRequestBudget } from './vercel.js';
+export {
+  getDockerAvailability,
+  cleanupDockerExecution,
+  sweepExpiredDockerExecutions,
+} from '../../../infra/runner/capsule.mjs';
+export const runExecution = execute;

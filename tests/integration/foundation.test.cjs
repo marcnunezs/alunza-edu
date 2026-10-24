@@ -507,6 +507,7 @@ describe('Real PostgreSQL grants, constraints and RLS', () => {
     expect(tables.rows.map((row) => row.relname)).toEqual([
       'activities',
       'activity_exercises',
+      'attempts',
       'audit_events',
       'class_join_codes',
       'class_memberships',
@@ -514,6 +515,7 @@ describe('Real PostgreSQL grants, constraints and RLS', () => {
       'concept_versions',
       'concepts',
       'courses',
+      'executions',
       'exercise_version_concepts',
       'exercise_versions',
       'exercises',

@@ -67,6 +67,11 @@ function normalizedPath(path: string): string {
   for (const [pattern, template] of routes)
     if (pattern.test(path)) return template;
   const academic = [
+    '/activities/:id/exercises/:assignmentId/executions',
+    '/activities/:id/exercises/:assignmentId/attempts',
+    '/activities/:id/progress',
+    '/attempts/:id',
+    '/classes/:id/attempted-activities',
     '/organizations/:orgId/courses',
     '/organizations/:orgId/classes',
     '/organizations/:orgId/concepts',
@@ -176,16 +181,30 @@ export async function createApp(
     strict: true,
     type: 'application/json',
   });
+  // A 64 KiB source can expand sixfold through JSON escaping. The decoded
+  // source is independently bounded by the public code schema and controller.
+  const executionJson = json({
+    limit: '512kb',
+    strict: true,
+    type: 'application/json',
+  });
   app.use((request: ApiRequest, response: Response, next: NextFunction) => {
+    const acceptsExecution =
+      request.method === 'POST' &&
+      /^\/api\/v1\/activities\/[^/]+\/exercises\/[^/]+\/(?:executions|attempts)\/?$/.test(
+        request.path,
+      );
     const acceptsExercise =
       request.method === 'POST' &&
       (/^\/api\/v1\/organizations\/[^/]+\/exercises\/?$/.test(request.path) ||
         /^\/api\/v1\/exercises\/[^/]+\/versions\/?$/.test(request.path));
-    return (acceptsExercise ? exerciseJson : smallJson)(
-      request,
-      response,
-      next,
-    );
+    return (
+      acceptsExecution
+        ? executionJson
+        : acceptsExercise
+          ? exerciseJson
+          : smallJson
+    )(request, response, next);
   });
   app.useGlobalFilters(new SafeExceptionFilter());
   app.enableShutdownHooks(['SIGINT', 'SIGTERM']);

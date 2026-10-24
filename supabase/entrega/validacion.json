@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-23",
+  "postgres": "17.6",
+  "isolatedContainer": "alunza-sql-entrega-20261023",
+  "inventory": {
+    "tables": 25,
+    "columns": 292,
+    "functions": 71,
+    "triggers": 41,
+    "indexes": 93,
+    "policies": 85,
+    "authPolicies": 2,
+    "constraints": 249,
+    "sequences": 1
+  },
+  "cleanRestore": true,
+  "roleCreation": true,
+  "existingSchemaRejection": true,
+  "normalizedSnapshotMatch": true,
+  "tests": [
+    {
+      "file": "001_foundation_schema.test.sql",
+      "passed": 16,
+      "failed": 0,
+      "plan": 16
+    },
+    {
+      "file": "002_identity_governance.test.sql",
+      "passed": 27,
+      "failed": 0,
+      "plan": 27
+    },
+    {
+      "file": "003_identity_rls_regressions.test.sql",
+      "passed": 9,
+      "failed": 0,
+      "plan": 9
+    },
+    {
+      "file": "004_identity_races.sql",
+      "passed": 15,
+      "failed": 0,
+      "plan": 15
+    },
+    {
+      "file": "005_academic_content.test.sql",
+      "passed": 72,
+      "failed": 0,
+      "plan": 72
+    },
+    {
+      "file": "006_practice_runs.test.sql",
+      "passed": 61,
+      "failed": 0,
+      "plan": 61
+    },
+    {
+      "file": "007_practice_submissions.test.sql",
+      "passed": 113,
+      "failed": 0,
+      "plan": 113
+    }
+  ],
+  "total": 313,
+  "sha256": "cdd0a2af2eaeda7b6d66f22132f713ac1c689b170cc2068b5b7d89b4708d3e03",
+  "bytes": 280280
+}

@@ -27,6 +27,7 @@
 !tests/
 !tests/runner/
 !tests/runner/fixtures.mjs
+!tests/runner/cleanup-probe.mjs
 **/node_modules/**
 **/.env*
 **/dist/**

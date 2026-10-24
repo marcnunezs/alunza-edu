@@ -5,6 +5,8 @@ module.exports = {
   testMatch: [
     '<rootDir>/tests/contracts.test.cjs',
     '<rootDir>/tests/provisioning.test.cjs',
+    '<rootDir>/tests/practice-contracts.test.cjs',
+    '<rootDir>/tests/submission-contracts.test.cjs',
   ],
   transform: {},
 };

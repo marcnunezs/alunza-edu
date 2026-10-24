@@ -15,6 +15,18 @@ import { InvitationService } from './governance/invitation.service';
 import { InvitationWorker } from './governance/invitation.worker';
 import { InvitationAuthAdapter } from './governance/invitation-auth.adapter';
 import { academicControllers, academicProviders } from './academic';
+import { PracticeController } from './practice/practice.controller';
+import { PracticeService } from './practice/practice.service';
+import { PracticeRepository } from './practice/practice.repository';
+import { PracticeReconciler } from './practice/practice.reconciler';
+import { ExecutionPort } from './practice/execution.port';
+import { DockerExecutionAdapter } from './practice/docker-execution.adapter';
+import { SubmissionController } from './practice/submission.controller';
+import { SubmissionService } from './practice/submission.service';
+import { SubmissionRepository } from './practice/submission.repository';
+import { SubmissionReconciler } from './practice/submission.reconciler';
+import { SubmissionExecutionPort } from './practice/submission-execution.port';
+import { DockerSubmissionAdapter } from './practice/docker-submission.adapter';
 import {
   JWT_KEY_RESOLVER,
   JwtVerifier,
@@ -32,6 +44,8 @@ export class AppModule {
         GovernanceController,
         InvitationController,
         ...academicControllers,
+        PracticeController,
+        SubmissionController,
       ],
       providers: [
         { provide: APP_CONFIG, useValue: config },
@@ -50,6 +64,14 @@ export class AppModule {
         InvitationAuthAdapter,
         InvitationWorker,
         ...academicProviders,
+        PracticeService,
+        PracticeRepository,
+        PracticeReconciler,
+        { provide: ExecutionPort, useClass: DockerExecutionAdapter },
+        SubmissionService,
+        SubmissionRepository,
+        SubmissionReconciler,
+        { provide: SubmissionExecutionPort, useClass: DockerSubmissionAdapter },
       ],
     };
   }

@@ -596,7 +596,7 @@ describe('IMP-02 · publicación, disponibilidad y regresiones', () => {
       ]);
     }
   });
-  test('HU-005 E1/E2/E3: orden estable, publicación inválida atómica y ADMIN no publica', async () => {
+  test('HU-005 E1/E2/E3: orden estable, publicación inválida atómica y actores sin autorización no publican ni cierran', async () => {
     const f = await prepare({ published: false });
     const second = await f.create(
       'teacher',
@@ -622,13 +622,19 @@ describe('IMP-02 · publicación, disponibilidad y regresiones', () => {
       revision: f.activity.revision,
     });
     expect(edited.status).toBe(200);
-    reject(
-      await f.api(
-        'admin',
-        `/activities/${f.activity.id}/publish`,
-        mutation({}, edited.data.revision),
-      ),
-    );
+    for (const actor of ['admin', 'student', 'secondTeacher']) {
+      reject(
+        await f.api(
+          actor,
+          `/activities/${f.activity.id}/publish`,
+          mutation({}, edited.data.revision),
+        ),
+      );
+      const unchanged = await f.api('teacher', `/activities/${f.activity.id}`);
+      expect(unchanged.data.state).toBe('DRAFT');
+      expect(unchanged.data.revision).toBe(edited.data.revision);
+      expect(unchanged.data.exercises).toEqual(edited.data.exercises);
+    }
     const result = await f.api(
       'teacher',
       `/activities/${f.activity.id}/publish`,
@@ -639,6 +645,19 @@ describe('IMP-02 · publicación, disponibilidad y regresiones', () => {
       'Segundo ejercicio',
       'Sumar dos valores',
     ]);
+    for (const actor of ['admin', 'student', 'secondTeacher']) {
+      reject(
+        await f.api(
+          actor,
+          `/activities/${f.activity.id}/close`,
+          mutation({}, result.data.revision),
+        ),
+      );
+      const unchanged = await f.api('teacher', `/activities/${f.activity.id}`);
+      expect(unchanged.data.state).toBe('PUBLISHED');
+      expect(unchanged.data.revision).toBe(result.data.revision);
+      expect(unchanged.data.exercises).toEqual(result.data.exercises);
+    }
     const empty = await f.create(
       'teacher',
       `/classes/${f.classroom.id}/activities`,

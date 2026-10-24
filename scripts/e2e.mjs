@@ -135,6 +135,10 @@ async function execute({ ctx, state }) {
         { length: 9 },
         (_, i) => `IMP02-${String(i + 1).padStart(2, '0')}`,
       ),
+      ...Array.from(
+        { length: 9 },
+        (_, i) => `IMP03-${String(i + 1).padStart(2, '0')}`,
+      ),
     ];
     const completed = new Set(
       result.tests
@@ -148,7 +152,7 @@ async function execute({ ctx, state }) {
       result.tests.some((item) => item.id === 'UNKNOWN')
     )
       throw new Error(
-        'El recorrido no completó todos los escenarios requeridos de fundación, identidad y contenido académico.',
+        'El recorrido no completó todos los escenarios requeridos de fundación, identidad, contenido académico y práctica.',
       );
     for (const secret of privateValues) {
       if (api.output.includes(secret) || web.output.includes(secret))
@@ -161,6 +165,7 @@ async function execute({ ctx, state }) {
       { mode: 0o600 },
     );
     console.log(`Cypress: ${result.passed}/${result.total} casos aprobados.`);
+    await report('e2e', result, 'imp-03');
   } finally {
     if (server.listening)
       await new Promise((resolve) => {
@@ -179,6 +184,7 @@ async function execute({ ctx, state }) {
 try {
   await report('e2e', { status: 'not-started' }, 'imp-01');
   await report('e2e', { status: 'not-started' }, 'imp-02');
+  await report('e2e', { status: 'not-started' }, 'imp-03');
   await withTestEnvironment(execute, [3100]);
 } catch (error) {
   let previous;
@@ -193,6 +199,7 @@ try {
     await report('e2e', { status: 'failed-infrastructure' }, 'imp-01');
     await report('e2e', { status: 'failed-infrastructure' }, 'imp-02');
   }
+  await report('e2e', { status: 'failed' }, 'imp-03');
   await mkdir(join(root, '.local/evidence/imp-00-05'), { recursive: true });
   await writeFile(
     join(root, '.local/evidence/imp-00-05/e2e-error.log'),

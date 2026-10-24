@@ -84,6 +84,31 @@ describe('configuration boundary', () => {
     );
   });
 
+  it('keeps Docker execution disabled unless explicitly enabled locally', () => {
+    expect(loadConfig(validEnvironment).practiceRunnerEnabled).toBe(false);
+    expect(
+      loadConfig({ ...validEnvironment, PRACTICE_RUNNER_ENABLED: 'true' })
+        .practiceRunnerEnabled,
+    ).toBe(true);
+    for (const environment of ['preproduction', 'production'])
+      expect(() =>
+        loadConfig({
+          ...remote,
+          ENVIRONMENT: environment,
+          PRACTICE_RUNNER_ENABLED: 'true',
+        }),
+      ).toThrow(ConfigurationError);
+    expect(() =>
+      loadConfig({ ...validEnvironment, PRACTICE_ACTOR_CONCURRENCY: '0' }),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      loadConfig({
+        ...validEnvironment,
+        PRACTICE_ACTOR_REQUESTS_PER_MINUTE: '121',
+      }),
+    ).toThrow(ConfigurationError);
+  });
+
   it('requires separate Auth credentials and an allowlisted invitation callback', () => {
     expect(() =>
       loadConfig({ ...validEnvironment, INVITATION_WORKER_ENABLED: 'true' }),

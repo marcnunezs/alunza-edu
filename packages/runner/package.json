@@ -17,7 +17,9 @@
     "test": "node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config ../../tests/runner/jest.config.cjs --runInBand"
   },
   "dependencies": {
+    "@jitl/quickjs-wasmfile-release-sync": "0.32.0",
     "@vercel/sandbox": "3.2.2",
+    "quickjs-emscripten-core": "0.32.0",
     "zod": "4.6.1"
   }
 }

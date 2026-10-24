@@ -18,12 +18,15 @@ RUN npm ci --workspaces --include-workspace-root=false --no-audit --no-fund
 FROM dependencies AS api-build
 COPY tsconfig.base.json ./
 COPY packages/contracts ./packages/contracts
+COPY packages/runner ./packages/runner
+COPY infra/runner ./infra/runner
 COPY apps/api ./apps/api
 RUN npm run build --workspace @alunza/contracts \
+    && npm run build --workspace @alunza/runner \
     && npm run build --workspace @alunza/api
 
 FROM manifests AS api-production-dependencies
-RUN npm ci --omit=dev --workspace @alunza/api --workspace @alunza/contracts \
+RUN npm ci --omit=dev --workspace @alunza/api --workspace @alunza/contracts --workspace @alunza/runner \
     --include-workspace-root=false --ignore-scripts --no-audit --no-fund
 
 FROM base AS api
@@ -33,6 +36,9 @@ COPY --from=api-production-dependencies --chown=node:node /app/apps/api ./apps/a
 COPY --from=api-build --chown=node:node /app/apps/api/dist ./apps/api/dist
 COPY --from=api-build --chown=node:node /app/packages/contracts/package.json ./packages/contracts/package.json
 COPY --from=api-build --chown=node:node /app/packages/contracts/dist ./packages/contracts/dist
+COPY --from=api-build --chown=node:node /app/packages/runner/package.json ./packages/runner/package.json
+COPY --from=api-build --chown=node:node /app/packages/runner/dist ./packages/runner/dist
+COPY --from=api-build --chown=node:node /app/infra/runner ./infra/runner
 USER node
 EXPOSE 4000
 CMD ["node", "apps/api/dist/main.js"]

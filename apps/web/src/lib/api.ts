@@ -47,6 +47,16 @@ const codeMessages: Record<string, string> = {
     'Esta sesión no corresponde al destinatario de la invitación.',
   ACTIVITY_UNAVAILABLE:
     'La actividad no está disponible para esta operación. Revisa su estado y fechas.',
+  ACTIVITY_CLOSED:
+    'La actividad está cerrada o fuera de su horario y no admite nuevas ejecuciones ni envíos.',
+  ACTIVITY_NOT_AVAILABLE:
+    'La actividad no permite esta operación. Actualiza su disponibilidad.',
+  VERSION_CONFLICT:
+    'La versión del ejercicio cambió. Comprueba la disponibilidad antes de ejecutar.',
+  CODE_TOO_LARGE:
+    'El código supera 65.536 bytes UTF-8. Reduce su tamaño antes de ejecutar.',
+  IDEMPOTENCY_EXPIRED:
+    'La respuesta de esta solicitud venció. Consulta el historial antes de decidir un nuevo envío.',
   RESOURCE_ARCHIVED: 'Este recurso está archivado y solo permite consultas.',
 };
 
@@ -57,6 +67,7 @@ export type ApiOptions = {
   body?: unknown;
   etag?: string;
   idempotencyKey?: string;
+  timeoutMs?: 10_000 | 45_000;
 };
 
 export type ApiResult<T> = { body: T; etag: string | null; status: number };
@@ -72,7 +83,7 @@ export async function apiRequest<T>(
       'INVALID_REQUEST',
       'La ruta solicitada no es válida.',
     );
-  const deadline = AbortSignal.timeout(10_000);
+  const deadline = AbortSignal.timeout(options.timeoutMs ?? 10_000);
   const signal = options.signal
     ? AbortSignal.any([options.signal, deadline])
     : deadline;
@@ -97,7 +108,12 @@ export async function apiRequest<T>(
         ? { body: JSON.stringify(options.body) }
         : {}),
     });
-    const body: unknown = await response.json().catch(() => null);
+    signal.throwIfAborted();
+    const body: unknown = await response.json().catch((cause: unknown) => {
+      if (signal.aborted) throw cause;
+      return null;
+    });
+    signal.throwIfAborted();
     if (!response.ok) {
       const parsed = errorResponseSchema.safeParse(body);
       const code = parsed.success ? parsed.data.error.code : 'INVALID_RESPONSE';
@@ -131,6 +147,17 @@ export async function apiRequest<T>(
     };
   } catch (error) {
     if (error instanceof ApiError || options.signal?.aborted) throw error;
+    if (deadline.aborted)
+      throw new ApiError(
+        504,
+        'API_TIMEOUT',
+        options.timeoutMs === 45_000
+          ? 'La respuesta tardó demasiado. Conservamos tu código; recupera el resultado antes de iniciar otra operación.'
+          : 'La respuesta tardó demasiado. Vuelve a intentar.',
+        undefined,
+        [],
+        true,
+      );
     throw new ApiError(
       503,
       'API_UNAVAILABLE',

@@ -21,8 +21,11 @@ try {
     ['run', 'runner:prepare'],
     ['run', 'runner:doctor'],
     ['run', 'runner:probe', '--', '--adapter', 'docker'],
+    ['run', 'test:migration:practice'],
     ['run', 'cypress:install'],
     ['run', 'test:integration'],
+    ['run', 'test:practice:performance'],
+    ['run', 'test:practice:performance', '--', '--submit'],
     ['run', 'test:ai:integration'],
     ['run', 'test:e2e'],
   ]) {
@@ -70,11 +73,11 @@ try {
       } catch {
         /* State may not exist before infrastructure starts. */
       }
-      await mkdir(join(root, '.local/evidence/imp-00-06-08'), {
+      await mkdir(join(root, '.local/evidence/imp-03'), {
         recursive: true,
       });
       await writeFile(
-        join(root, '.local/evidence/imp-00-06-08/ci-error.log'),
+        join(root, '.local/evidence/imp-03/ci-error.log'),
         redactDiagnostics(diagnostic),
         { mode: 0o600 },
       );
@@ -94,22 +97,11 @@ try {
       execution:
         process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
       steps,
-    },
-    'imp-00-06-08',
-  );
-  await report(
-    'ci',
-    {
-      status: 'passed',
-      execution:
-        process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
-      steps,
       source: await sourceFingerprint(),
     },
-    'imp-02',
+    'imp-03',
   );
 } catch (error) {
-  await report('ci', { status: 'failed', steps }, 'imp-02');
   await report(
     'ci',
     {
@@ -118,7 +110,7 @@ try {
         process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
       steps,
     },
-    'imp-00-06-08',
+    'imp-03',
   );
   console.error(error.message);
   process.exitCode = 1;

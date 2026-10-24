@@ -17,12 +17,13 @@ export async function sourceFingerprint() {
         .split('\0')
         .filter(
           (path) =>
-            /^(apps|packages|scripts|tests|fixtures|supabase|infra|\.github)\//.test(
+            path !== 'apps/web/next-env.d.ts' &&
+            (/^(apps|packages|scripts|tests|fixtures|supabase|infra|\.github)\//.test(
               path,
             ) ||
-            /^(package(-lock)?\.json|cypress\.config\.cjs|tsconfig\.base\.json|eslint\.config\.mjs|\.prettierrc\.json|\.node-version|\.npmrc|\.nvmrc)$/.test(
-              path,
-            ),
+              /^(package(-lock)?\.json|cypress\.config\.cjs|tsconfig\.base\.json|eslint\.config\.mjs|\.prettierrc\.json|\.node-version|\.npmrc|\.nvmrc)$/.test(
+                path,
+              )),
         ),
     ),
   ].sort();
@@ -39,6 +40,6 @@ export async function sourceFingerprint() {
     value: hash.digest('hex'),
     files: files.length,
     scope:
-      'source-contracts-migrations-tests-fixtures-tooling-infra; excludes docs and private/ignored files',
+      'source-contracts-migrations-tests-fixtures-tooling-infra; excludes docs, generated next-env.d.ts and private/ignored files',
   };
 }

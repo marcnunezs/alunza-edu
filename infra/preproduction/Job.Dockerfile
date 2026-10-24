@@ -19,7 +19,7 @@ COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/packages ./packages
 COPY --chown=node:node scripts/preprod-manifest.mjs scripts/preprod-job.mjs scripts/preprod-report.mjs scripts/runner-probe.mjs scripts/ai-probe.mjs ./scripts/
 COPY --chown=node:node infra/runner ./infra/runner
-COPY --chown=node:node tests/runner/fixtures.mjs ./tests/runner/fixtures.mjs
+COPY --chown=node:node tests/runner/fixtures.mjs tests/runner/cleanup-probe.mjs ./tests/runner/
 COPY --chown=node:node fixtures/ai ./fixtures/ai
 RUN mkdir -p /app/.local/reports/imp-00-06-08 && chown -R node:node /app/.local
 USER node

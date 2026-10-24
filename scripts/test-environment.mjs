@@ -36,7 +36,9 @@ export const reportDirectory = join(root, '.local/reports/imp-00-05');
 export async function report(name, summary, group = 'imp-00-05') {
   if (!/^[a-z0-9-]+$/.test(name))
     throw new Error('Nombre de informe inválido.');
-  if (!['imp-00-05', 'imp-00-06-08', 'imp-01', 'imp-02'].includes(group))
+  if (
+    !['imp-00-05', 'imp-00-06-08', 'imp-01', 'imp-02', 'imp-03'].includes(group)
+  )
     throw new Error('Grupo de informe inválido.');
   const directory = join(root, '.local/reports', group);
   await mkdir(directory, { recursive: true });
@@ -53,7 +55,7 @@ export async function report(name, summary, group = 'imp-00-05') {
 export async function withTestEnvironment(
   action,
   extraPorts = [],
-  { upgradeFromFoundation = false } = {},
+  { upgradeFromFoundation = false, upgradeFromAcademic = false } = {},
 ) {
   const ctx = testContext;
   await mkdir(join(root, '.local'), { recursive: true });
@@ -112,14 +114,14 @@ export async function withTestEnvironment(
     // CLI 2.101 has both a global and a reset-local --version flag: invoking
     // it can return version text without resetting. Restrict the owned copy to
     // IMP-00 instead, then restore the incremental migration before migrate.
+    const upgrade = upgradeFromFoundation || upgradeFromAcademic;
+    const cutoff = upgradeFromAcademic
+      ? '20260928222008_academic_content_publication.sql'
+      : '20260910185307_foundation_identity.sql';
     const incrementalNames = (await readdir(join(root, 'supabase/migrations')))
-      .filter(
-        (name) =>
-          /^\d+_.+\.sql$/.test(name) &&
-          name > '20260910185307_foundation_identity.sql',
-      )
+      .filter((name) => /^\d+_.+\.sql$/.test(name) && name > cutoff)
       .sort();
-    if (upgradeFromFoundation) {
+    if (upgrade) {
       for (const name of incrementalNames) {
         await unlink(join(ctx.projectDir, 'supabase/migrations', name));
       }
@@ -133,6 +135,31 @@ export async function withTestEnvironment(
       });
       await database.connect();
       try {
+        if (upgradeFromAcademic) {
+          const snapshotRows = [];
+          for (const relation of [
+            'app.organizations',
+            'app.profiles',
+            'app.organization_memberships',
+            'app.courses',
+            'app.classes',
+            'app.class_memberships',
+            'app.concepts',
+            'app.concept_versions',
+            'app.exercises',
+            'app.exercise_versions',
+            'app.exercise_version_concepts',
+            'app_private.exercise_tests',
+            'app.activities',
+            'app.activity_exercises',
+          ]) {
+            const result = await database.query(
+              `SELECT to_jsonb(t) AS row FROM ${relation} t ORDER BY to_jsonb(t)::text`,
+            );
+            snapshotRows.push({ relation, rows: result.rows });
+          }
+          return JSON.stringify(snapshotRows);
+        }
         const records = await database.query(`
           SELECT 'organization' AS kind, id::text AS id, created_at FROM app.organizations
           UNION ALL SELECT 'profile', id::text, created_at FROM app.profiles
@@ -143,10 +170,15 @@ export async function withTestEnvironment(
         await database.end();
       }
     };
-    if (upgradeFromFoundation) {
+    if (upgrade) {
+      // Seed uses the restricted application role set by migrate. This applies
+      // only migrations already present in the owned baseline copy.
+      if (upgradeFromAcademic) await migrate(ctx);
       await seed(ctx);
+      if (upgradeFromAcademic)
+        await (await import('./academic-seed.mjs')).seedAcademic(ctx);
       foundationSnapshot = await snapshot();
-      if (JSON.parse(foundationSnapshot).length !== 14)
+      if (upgradeFromFoundation && JSON.parse(foundationSnapshot).length !== 14)
         throw new Error(
           'La base IMP-00 de actualización no contiene exclusivamente el fixture canónico.',
         );
@@ -158,7 +190,7 @@ export async function withTestEnvironment(
         const structure = await foundationDatabase.query(
           "SELECT count(*)::int count FROM information_schema.tables WHERE table_schema='app' AND table_type='BASE TABLE'",
         );
-        if (structure.rows[0].count !== 3)
+        if (upgradeFromFoundation && structure.rows[0].count !== 3)
           throw new Error(
             'La actualización debe comenzar con las tres tablas de IMP-00.',
           );
@@ -173,21 +205,20 @@ export async function withTestEnvironment(
       }
     }
     await migrate(ctx);
-    if (upgradeFromFoundation) {
+    if (upgrade) {
       if (foundationSnapshot !== (await snapshot()))
-        throw new Error(
-          'La migración cambió identidades o fechas de fundación existentes.',
-        );
+        throw new Error('La migración cambió datos de la base existente.');
       await report(
         'migration-upgrade',
         {
           status: 'passed',
-          from: '20260910185307',
+          from: cutoff.split('_')[0],
           to: incrementalNames.at(-1)?.split('_')[0],
-          preserved:
-            'organization-profile-membership-identifiers-and-created-at',
+          preserved: upgradeFromAcademic
+            ? 'all-canonical-institutional-and-academic-rows'
+            : 'organization-profile-membership-identifiers-and-created-at',
         },
-        'imp-01',
+        upgradeFromAcademic ? 'imp-03' : 'imp-01',
       );
     }
     await seed(ctx);
@@ -292,18 +323,21 @@ export function nodeService(args, environment, cwd = root) {
   };
 }
 
-export function testApi(ctx, state, webPort = 3000) {
+export function testApi(ctx, state, webPort = 3000, overrides = {}) {
   return nodeService([join(root, 'apps/api/dist/main.js')], {
     ...apiEnvironment(ctx, state),
     APP_ORIGIN: `http://127.0.0.1:${webPort}`,
     ALLOWED_ORIGINS: `http://127.0.0.1:${webPort}`,
     INVITATION_CALLBACK_URL: `http://127.0.0.1:${webPort}/acceso/invitacion`,
+    PRACTICE_RUNNER_ENABLED: 'true',
+    ...overrides,
   });
 }
 
 export async function buildApi() {
   for (const configuration of [
     'packages/contracts/tsconfig.json',
+    'packages/runner/tsconfig.json',
     'apps/api/tsconfig.build.json',
   ]) {
     await run(

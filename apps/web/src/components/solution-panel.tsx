@@ -20,6 +20,69 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useApiResource } from '@/lib/use-api-resource';
 import { apiRequest, asApiError, ApiError } from '@/lib/api';
 import { readDraft, writeDraft, type DraftScope } from '@/lib/academic-local';
+import { RunPracticePanel } from '@/components/run-result-panel';
+import { SubmitAttemptPanel } from '@/components/submit-attempt-panel';
+import { AttemptHistory } from '@/components/attempt-history';
+import { pendingScopesForAssignment } from '@/lib/attempt-state';
+
+function HistoricalSolution({
+  orgId,
+  activityId,
+  assignmentId,
+  reload,
+}: {
+  orgId: string;
+  activityId: string;
+  assignmentId: string;
+  reload: () => Promise<void>;
+}) {
+  const { identity, draftStorageAvailable } = useSession();
+  const accountId = identity.status === 'ready' ? identity.data.id : '';
+  const [scopes] = useState(() => {
+    try {
+      return draftStorageAvailable
+        ? pendingScopesForAssignment(
+            window.sessionStorage,
+            accountId,
+            orgId,
+            assignmentId,
+          )
+        : [];
+    } catch {
+      return [];
+    }
+  });
+  return (
+    <div className="space-y-5">
+      <p>
+        La resolución no está disponible. Puedes recuperar envíos pendientes y
+        consultar únicamente los intentos propios que el servidor autorice.
+      </p>
+      {scopes.length ? (
+        scopes.map((scope) => (
+          <SubmitAttemptPanel
+            key={`${scope.classId}:${scope.versionId}`}
+            activityId={activityId}
+            scope={scope}
+            code=""
+            canSubmit={false}
+            verified={false}
+            reload={reload}
+            onCopy={() => undefined}
+          />
+        ))
+      ) : (
+        <AttemptHistory
+          activityId={activityId}
+          assignmentId={assignmentId}
+          code=""
+          canEdit={false}
+          onCopy={() => undefined}
+        />
+      )}
+    </div>
+  );
+}
 
 function SolutionEditor({ exercise }: { exercise: StudentExercise }) {
   const { identity, session, draftStorageAvailable } = useSession();
@@ -70,6 +133,8 @@ function SolutionEditor({ exercise }: { exercise: StudentExercise }) {
   const [accessError, setAccessError] = useState<ApiError | null>(null);
   const [blocked, setBlocked] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [previousAttemptId, setPreviousAttemptId] = useState<string>();
+  const editor = useRef<HTMLTextAreaElement>(null);
   const current = useRef<AbortController | null>(null);
   const recheck = useCallback(async () => {
     current.current?.abort();
@@ -127,6 +192,8 @@ function SolutionEditor({ exercise }: { exercise: StudentExercise }) {
         : 'No se pudo guardar el borrador local. Tu texto sigue en el editor; cópialo antes de salir o recargar.',
     });
   }
+  const verified = !blocked && !accessError && !checking;
+  const canEdit = verified;
   return (
     <div className="space-y-6">
       <Link
@@ -203,19 +270,21 @@ function SolutionEditor({ exercise }: { exercise: StudentExercise }) {
           </CardHeader>
           <CardContent className="space-y-4">
             {accessError && <RequestError error={accessError} />}
-            {blocked && (
+            {!canEdit && (
               <p role="status" className="text-sm">
-                La resolución ya no está disponible. Conservamos tu texto para
-                que puedas copiarlo.
+                Solo lectura: la resolución no está disponible o se está
+                comprobando el acceso. Conservamos tu texto y el historial
+                autorizado.
               </p>
             )}
             <TextAreaField
               label="Código JavaScript de tu solución"
               name="code"
               data-cy="solution-code"
+              ref={editor}
               value={draft.code}
               onChange={(event) => change(event.target.value)}
-              readOnly={blocked}
+              readOnly={!canEdit}
               rows={20}
               spellCheck={false}
               autoCapitalize="off"
@@ -238,10 +307,35 @@ function SolutionEditor({ exercise }: { exercise: StudentExercise }) {
             >
               {checking ? 'Comprobando…' : 'Comprobar disponibilidad'}
             </Button>
-            <p className="text-sm text-muted-foreground">
-              Puedes preparar tu solución. La ejecución y el envío de intentos
-              se incorporarán en una entrega posterior.
-            </p>
+            <RunPracticePanel
+              activityId={exercise.activityId}
+              assignmentId={exercise.activityExerciseId}
+              exerciseVersionId={exercise.exerciseVersionId}
+              code={draft.code}
+              canRun={canEdit}
+              verified={verified}
+              reload={recheck}
+            />
+            <SubmitAttemptPanel
+              activityId={exercise.activityId}
+              scope={scope}
+              code={draft.code}
+              previousAttemptId={previousAttemptId}
+              canSubmit={canEdit}
+              verified={verified}
+              reload={recheck}
+              onCopy={(attempt) => {
+                if (
+                  !canEdit ||
+                  attempt.assignmentId !== scope.assignmentId ||
+                  attempt.exerciseVersionId !== scope.versionId
+                )
+                  return;
+                change(attempt.code);
+                setPreviousAttemptId(attempt.attemptId);
+                editor.current?.focus();
+              }}
+            />
           </CardContent>
         </Card>
       </div>
@@ -265,7 +359,19 @@ function AuthorizedSolution({
   if (state.status === 'loading')
     return <p role="status">Cargando ejercicio autorizado…</p>;
   if (state.status === 'error')
-    return <LoadError error={state.error} reload={reload} />;
+    return (
+      <div className="space-y-5">
+        <LoadError error={state.error} reload={reload} />
+        {[404, 409].includes(state.error.status) && (
+          <HistoricalSolution
+            orgId={orgId}
+            activityId={activityId}
+            assignmentId={assignmentId}
+            reload={reload}
+          />
+        )}
+      </div>
+    );
   const exercise = state.result.body.data;
   if (exercise.organizationId !== orgId)
     return (
@@ -281,7 +387,7 @@ function AuthorizedSolution({
     );
   return (
     <SolutionEditor
-      key={`${exercise.activityExerciseId}:${exercise.exerciseVersionId}`}
+      key={`${exercise.organizationId}:${exercise.classId}:${exercise.activityExerciseId}:${exercise.exerciseVersionId}`}
       exercise={exercise}
     />
   );

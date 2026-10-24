@@ -55,6 +55,13 @@ const schemas = Object.fromEntries(
     ActivityInput: contracts.activityInputSchema,
     ActivityUpdate: contracts.activityUpdateSchema,
     StudentExercise: contracts.studentExerciseResponseSchema,
+    RunExecutionInput: contracts.runExecutionInputSchema,
+    RunExecution: contracts.runExecutionResponseSchema,
+    SubmitAttemptInput: contracts.submitAttemptInputSchema,
+    Attempt: contracts.attemptResponseSchema,
+    Attempts: contracts.attemptListResponseSchema,
+    ActivityProgress: contracts.activityProgressResponseSchema,
+    AttemptedActivities: contracts.attemptedActivitiesResponseSchema,
   }).map(([name, schema]) => [
     name,
     z.toJSONSchema(schema, { target: 'openapi-3.0', io: 'input' }),
@@ -124,10 +131,10 @@ function operation(id, schema, errors, protectedRoute = false) {
 export const specification = {
   openapi: '3.0.3',
   info: {
-    title: 'Alunza — identidad, estructura académica y contenido',
-    version: '0.2.0',
+    title: 'Alunza — identidad, contenido y práctica',
+    version: '0.3.0',
     description:
-      'IMP-02. Autorización vigente por organización y clase. Incluye publicación y editor; ejecución, intentos e IA siguen fuera de este incremento.',
+      'IMP-03 local. Ejecución aislada, envíos durables, historial propio y avance determinista. IA y ejecución productiva conservan su validación posterior.',
   },
   servers: [{ url: 'http://127.0.0.1:4000', description: 'Desarrollo local' }],
   paths: {
@@ -491,10 +498,61 @@ academicRoute(
   'openStudentExercise',
   'StudentExercise',
 );
+for (const [suffix, operationId, input, output] of [
+  ['executions', 'runExercise', 'RunExecutionInput', 'RunExecution'],
+  ['attempts', 'submitAttempt', 'SubmitAttemptInput', 'Attempt'],
+]) {
+  academicRoute(
+    `/activities/{id}/exercises/{assignmentId}/${suffix}`,
+    'post',
+    operationId,
+    output,
+    {
+      input,
+      idempotent: true,
+      status: 201,
+    },
+  );
+}
+academicRoute(
+  '/activities/{id}/exercises/{assignmentId}/attempts',
+  'get',
+  'listOwnAttempts',
+  'Attempts',
+);
+const history =
+  specification.paths[
+    '/api/v1/activities/{id}/exercises/{assignmentId}/attempts'
+  ].get;
+history.parameters.push(
+  {
+    name: 'limit',
+    in: 'query',
+    schema: { type: 'integer', minimum: 1, maximum: 20, default: 10 },
+  },
+  {
+    name: 'cursor',
+    in: 'query',
+    schema: { type: 'string', pattern: '^[1-9][0-9]{0,15}$' },
+  },
+);
+academicRoute('/attempts/{id}', 'get', 'getOwnAttempt', 'Attempt');
+academicRoute(
+  '/activities/{id}/progress',
+  'get',
+  'getOwnActivityProgress',
+  'ActivityProgress',
+);
+academicRoute(
+  '/classes/{id}/attempted-activities',
+  'get',
+  'listOwnAttemptedActivities',
+  'AttemptedActivities',
+);
 await writeFile(
   new URL('../packages/contracts/openapi.json', import.meta.url),
   await format(JSON.stringify(specification), { parser: 'json' }),
 );
 console.log(
-  'OpenAPI generado desde schemas compartidos de identidad y contenido académico.',
+  'OpenAPI generado desde schemas compartidos de identidad, contenido y práctica.',
 );

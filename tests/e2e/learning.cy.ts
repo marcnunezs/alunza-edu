@@ -225,8 +225,21 @@ describe('IMP-02 · preparación académica con servicios reales', () => {
         { log: false },
       ).then((second) => {
         expect(second.status).to.eq(201);
+        const instructions =
+          'Primero duplica el valor y luego resuelve la suma.';
+        const closingDay = new Date(Date.now() + 7 * 86_400_000)
+          .toISOString()
+          .slice(0, 10);
+        const closingDateLabel = new Intl.DateTimeFormat('es-CL', {
+          dateStyle: 'medium',
+          timeZone: 'UTC',
+        }).format(new Date(`${closingDay}T12:00:00Z`));
+        // Both locale hour cycles must represent precisely 18:00 in Santiago.
+        const closingTime = /,\s*(?:18:00|6:00\s*p\.\s*m\.)\s*$/;
         openAs('teacher', `${basePath(f)}/actividades/${f.activity.id}`);
         cy.get('[name="title"]').should('have.value', 'Primera actividad');
+        replace('instructions', instructions);
+        replace('closesAt', `${closingDay}T18:00`);
         cy.get('[name="exerciseChoice"]').select(second.data.currentVersionId);
         cy.contains('button', /^Agregar ejercicio$/).click();
         cy.get('[aria-label="Subir Duplicar un valor"]').click();
@@ -279,6 +292,41 @@ describe('IMP-02 · preparación académica con servicios reales', () => {
         cy.get('[data-cy="published-exercise-row"]')
           .eq(1)
           .should('contain.text', 'Sumar dos valores');
+        // HU007-E1: verify the published student views, not only authoring.
+        // IMP03-04 separately verifies both views with persisted attempts.
+        openAs('student', `${basePath(f)}/clases/${f.classroom.id}`);
+        cy.get('[data-cy="activity-row"]')
+          .should('contain.text', 'Primera actividad')
+          .and('contain.text', 'Publicada')
+          .and('contain.text', 'Disponible para resolver')
+          .and('contain.text', closingDateLabel);
+        cy.contains('[data-cy="activity-row"] p', 'Cierre:')
+          .invoke('text')
+          .should('match', closingTime);
+        cy.get('[data-cy="activity-progress"]').should('contain.text', '0/2');
+        cy.get(`a[href="${basePath(f)}/actividades/${f.activity.id}"]`).click();
+        cy.location('pathname').should(
+          'eq',
+          `${basePath(f)}/actividades/${f.activity.id}`,
+        );
+        cy.contains('h1', 'Primera actividad').should('be.visible');
+        cy.contains('[role="status"]', 'Publicada').should(
+          'contain.text',
+          'Disponible para resolver',
+        );
+        cy.contains('p', instructions).should('be.visible');
+        cy.contains('dd', closingDateLabel)
+          .invoke('text')
+          .should('match', closingTime);
+        cy.get('[data-cy="published-exercise-row"]')
+          .should('have.length', 2)
+          .first()
+          .should('contain.text', '1. Duplicar un valor');
+        cy.get('[data-cy="published-exercise-row"]')
+          .eq(1)
+          .should('contain.text', '2. Sumar dos valores');
+        cy.get('[data-cy="activity-progress"]').should('contain.text', '0/2');
+        openAs('teacher', `${basePath(f)}/actividades/${f.activity.id}`);
         cy.contains('button', /^Cerrar actividad$/).click();
         dialog().within(() =>
           cy.contains('button', /^Confirmar cerrar actividad$/).click(),
@@ -307,8 +355,8 @@ describe('IMP-02 · preparación académica con servicios reales', () => {
       cy.get('[data-cy="solution-code"]').should('not.have.focus');
       cy.contains('Pruebas visibles').should('be.visible');
       cy.contains('777113').should('not.exist');
-      cy.contains('button', /^Ejecutar$/).should('not.exist');
-      cy.contains('button', /^Enviar intento$/).should('not.exist');
+      cy.contains('button', /^Ejecutar$/).should('be.enabled');
+      cy.contains('button', /^Enviar intento$/).should('be.enabled');
       cy.screenshot('imp02-estudiante-editor', { capture: 'viewport' });
     });
   });

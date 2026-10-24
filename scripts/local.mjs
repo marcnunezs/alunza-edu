@@ -269,6 +269,7 @@ export function apiEnvironment(ctx, state, hostname = '127.0.0.1') {
     SUPABASE_PUBLISHABLE_KEY: state.publishableKey,
     SUPABASE_SECRET_KEY: state.authAdminKey,
     INVITATION_WORKER_ENABLED: 'true',
+    PRACTICE_RUNNER_ENABLED: hostname === '127.0.0.1' ? 'true' : 'false',
     INVITATION_CALLBACK_URL: 'http://localhost:3000/acceso/invitacion',
     ENVIRONMENT: ctx.test ? 'test' : 'local',
   };

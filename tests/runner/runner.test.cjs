@@ -24,12 +24,21 @@ function capsule(value = true, overrides = {}) {
       stdout: '',
       stderr: '',
       returnData: Buffer.from(
-        JSON.stringify({ kind: 'value', value }),
+        JSON.stringify({
+          kind: 'value',
+          value,
+          invocation: 'QUICKJS_SYNC_CALL',
+        }),
       ).toString('base64'),
       outputTruncated: false,
       exitCode: 0,
       signal: null,
-      cgroup: {},
+      cgroup: {
+        'memory.max': '134217728',
+        'memory.swap.max': '0',
+        'pids.max': '32',
+        'cpu.max': '100000 100000',
+      },
     },
     exitCode: 0,
     oomKilled: false,
@@ -69,6 +78,136 @@ test('all required comparisons are outside the untrusted response', async () => 
   const result = await runner.execute(input(), adapter([capsule(false)]));
   expect(result.diagnosisCode).toBe('FAILED_TEST');
   expect(result.allRequiredPassed).toBe(false);
+});
+test('a legacy value packet without invocation provenance cannot grant success', async () => {
+  const response = capsule();
+  response.packet.returnData = Buffer.from(
+    '{"kind":"value","value":true}',
+  ).toString('base64');
+  const result = await runner.execute(input(), adapter([response]));
+  expect(result.diagnosisCode).toBe('UNKNOWN');
+  expect(result.terminationReason).toBe('PROTOCOL_INVALID');
+  expect(result.allRequiredPassed).toBe(false);
+});
+test('execution correlation is propagated to every capsule', async () => {
+  const source = input();
+  const backend = adapter([capsule()]);
+  await runner.execute(source, backend);
+  expect(backend.execute.mock.calls[0][0].executionId).toBe(source.executionId);
+});
+test('published limits reach every capsule and accumulate time and output', async () => {
+  const source = input();
+  source.limits = { memoryBytes: 67108865, runtimeMs: 500, outputBytes: 20 };
+  source.tests.push({ ...source.tests[0], id: 'second' });
+  const first = capsule();
+  first.packet.cgroup['memory.max'] = '67108864';
+  first.packet.stdout = Buffer.from('first').toString('base64');
+  first.packet.outputBytes = 5;
+  const second = capsule();
+  second.packet.cgroup['memory.max'] = '67108864';
+  const backend = adapter([first, second]);
+  const result = await runner.execute(source, backend);
+  expect(result.diagnosisCode).toBe('SUCCESS');
+  expect(backend.execute.mock.calls[0][0]).toMatchObject({
+    memoryBytes: 67108864,
+    budgetMs: 500,
+    outputRemaining: 20,
+  });
+  expect(backend.execute.mock.calls[1][0]).toMatchObject({
+    memoryBytes: 67108864,
+    budgetMs: 400,
+    outputRemaining: 15,
+  });
+});
+test('a provider widening the published memory cap cannot grant success', async () => {
+  const source = input();
+  source.limits = { memoryBytes: 67108864, runtimeMs: 500, outputBytes: 20 };
+  const result = await runner.execute(source, adapter([capsule()]));
+  expect(result.terminationReason).toBe('CAPABILITY_GAP');
+  expect(result.allRequiredPassed).toBe(false);
+});
+test('published output cap is enforced even if a provider returns extra output', async () => {
+  const source = input();
+  source.limits = { memoryBytes: 134217728, runtimeMs: 500, outputBytes: 4 };
+  const response = capsule();
+  response.packet.stdout = Buffer.from('12345').toString('base64');
+  response.packet.outputBytes = 5;
+  const result = await runner.execute(source, adapter([response]));
+  expect(result.terminationReason).toBe('PROTOCOL_INVALID');
+  expect(result.visibleTestResults).toEqual([]);
+});
+test('published time cap prevents running later tests with a fresh budget', async () => {
+  const source = input();
+  source.limits = { memoryBytes: 134217728, runtimeMs: 100, outputBytes: 20 };
+  source.tests.push({ ...source.tests[0], id: 'second' });
+  const backend = adapter([capsule(), capsule()]);
+  const result = await runner.execute(source, backend);
+  expect(result.diagnosisCode).toBe('TIMEOUT');
+  expect(backend.execute).toHaveBeenCalledTimes(1);
+});
+test.each([1, 4095, 6291455])(
+  'unavailable memory cap %s never launches student code',
+  async (memoryBytes) => {
+    const source = input();
+    source.limits = { memoryBytes, runtimeMs: 3000, outputBytes: 65536 };
+    const backend = adapter([]);
+    const result = await runner.execute(source, backend);
+    expect(result.terminationReason).toBe('CAPABILITY_GAP');
+    expect(result.infrastructureStatus).toBe('FAILED');
+    expect(result.evidence.cgroups).toEqual([]);
+    expect(backend.execute).not.toHaveBeenCalled();
+    expect(backend.close).toHaveBeenCalledTimes(1);
+  },
+);
+test.each([
+  { memoryBytes: 134217729, runtimeMs: 3000, outputBytes: 65536 },
+  { memoryBytes: 134217728, runtimeMs: 3001, outputBytes: 65536 },
+  { memoryBytes: 134217728, runtimeMs: 3000, outputBytes: 65537 },
+  { memoryBytes: 134217728, runtimeMs: 0, outputBytes: 65536 },
+])(
+  'invalid published limits reject before external effects: %o',
+  async (limits) => {
+    const backend = adapter([]);
+    await expect(
+      runner.execute({ ...input(), limits }, backend),
+    ).rejects.toThrow();
+    expect(backend.execute).not.toHaveBeenCalled();
+  },
+);
+test('cleanup rejects arbitrary Docker selectors before external effects', async () => {
+  await expect(runner.cleanupDockerExecution('--all')).rejects.toThrow(
+    'Execution UUID required',
+  );
+});
+test('console remains available on exception and partial UTF8 is not expanded', async () => {
+  const response = capsule();
+  const bytes = Buffer.concat([Buffer.alloc(65535, 120), Buffer.from([0xc3])]);
+  response.packet.stdout = bytes.toString('base64');
+  response.packet.outputBytes = bytes.length;
+  response.packet.exitCode = 70;
+  response.packet.returnData = Buffer.from('{"kind":"exception"}').toString(
+    'base64',
+  );
+  const result = await runner.execute(input(), adapter([response]));
+  expect(result.diagnosisCode).toBe('RUNTIME_ERROR');
+  expect(result.visibleTestResults[0].passed).toBe(false);
+  expect(Buffer.byteLength(result.visibleTestResults[0].stdout)).toBe(65535);
+  expect(result.visibleTestResults[0].stdout).not.toContain('\ufffd');
+});
+test('packet byte accounting must match the bounded console payload', async () => {
+  const response = capsule();
+  response.packet.stdout = Buffer.from('undeclared bytes').toString('base64');
+  const result = await runner.execute(input(), adapter([response]));
+  expect(result.terminationReason).toBe('PROTOCOL_INVALID');
+});
+test('a trusted parser failure is syntax while an exception remains runtime', async () => {
+  const response = capsule();
+  response.packet.exitCode = 70;
+  response.packet.returnData =
+    Buffer.from('{"kind":"syntax"}').toString('base64');
+  expect(
+    (await runner.execute(input(), adapter([response]))).diagnosisCode,
+  ).toBe('SYNTAX_ERROR');
 });
 test('public projection contains no hidden identifiers, output or expected inputs', async () => {
   const secret = 'PRIVATE_SENTINEL';
@@ -115,16 +254,32 @@ test('adapter failure does not claim observed cleanup', async () => {
   const result = await runner.execute(input(), backend);
   expect(result.evidence.cleanupVerified).toBe(false);
 });
-test('cumulative external elapsed time reduces the next case budget', async () => {
+test('cumulative trusted supervisor time reduces the next case budget', async () => {
   const source = input();
   source.tests.push({ ...source.tests[0], id: 'second' });
-  const backend = adapter([
-    capsule(true, { programWallMs: 2000 }),
-    capsule(true, { timedOut: true }),
-  ]);
+  const first = capsule(true, { programWallMs: 4000 });
+  first.packet.runtimeMs = 2000;
+  const backend = adapter([first, capsule(true, { timedOut: true })]);
   const result = await runner.execute(source, backend);
   expect(backend.execute.mock.calls[1][0].budgetMs).toBe(1000);
   expect(result.diagnosisCode).toBe('TIMEOUT');
+  expect(result.allRequiredPassed).toBe(false);
+});
+
+test('Docker startup latency is operational time and cannot forge a student timeout', async () => {
+  const backend = adapter([capsule(true, { programWallMs: 5000 })]);
+  const result = await runner.execute(input(), backend);
+  expect(result.diagnosisCode).toBe('SUCCESS');
+  expect(result.runtimeMs).toBe(100);
+  expect(result.evidence.hostProgramWallMs).toBe(5000);
+});
+
+test('missing effective cgroups cannot grant success even with a valid invocation', async () => {
+  const response = capsule();
+  response.packet.cgroup = {};
+  const result = await runner.execute(input(), adapter([response]));
+  expect(result.diagnosisCode).toBe('UNKNOWN');
+  expect(result.terminationReason).toBe('CAPABILITY_GAP');
   expect(result.allRequiredPassed).toBe(false);
 });
 test.each([{ oomKilled: true }, { packet: null }, { exitCode: 137 }])(

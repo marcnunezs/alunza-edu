@@ -44,6 +44,8 @@ import { santiagoInput, santiagoInstant } from '@/lib/academic-local';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { RequestError } from '@/components/request-error';
+import { ActivityProgress } from '@/components/activity-progress';
+import { AttemptedActivities } from '@/components/attempted-activities';
 
 export const availabilityLabels = {
   DRAFT: 'Todavía no publicada',
@@ -224,10 +226,12 @@ function ActivitiesList({
   orgId,
   value,
   teacher,
+  student,
 }: {
   orgId: string;
   value: AcademicClass;
   teacher: boolean;
+  student: boolean;
 }) {
   const [cursor, setCursor] = useState<string | null>(null);
   const { state, reload } = useApiResource(
@@ -277,6 +281,7 @@ function ActivitiesList({
                       Cierre: {formatDate(activity.closesAt)}
                     </p>
                   )}
+                  {student && <ActivityProgress activityId={activity.id} />}
                   <Button asChild variant="outline">
                     <Link
                       href={`${academicBase(orgId)}/actividades/${activity.id}`}
@@ -379,6 +384,13 @@ function ClassDetails({
           orgId={membership.organizationId}
           value={value}
           teacher={membership.role === 'TEACHER' && canManage}
+          student={membership.role === 'STUDENT'}
+        />
+      )}
+      {membership.role === 'STUDENT' && (
+        <AttemptedActivities
+          orgId={membership.organizationId}
+          classId={classId}
         />
       )}
     </div>
@@ -793,6 +805,9 @@ function ActivityDetails({
         {activityLabels[value.state]} · {availabilityLabels[value.availability]}
       </p>
       <p className="whitespace-pre-wrap">{value.instructions}</p>
+      {membership.role === 'STUDENT' && (
+        <ActivityProgress activityId={value.id} />
+      )}
       <dl className="grid gap-2 text-sm">
         <div>
           <dt className="inline font-semibold">Apertura: </dt>

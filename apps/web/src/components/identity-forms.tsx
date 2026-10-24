@@ -238,6 +238,7 @@ export function FormDialog({
   open,
   onOpenChange,
   locked = false,
+  onCloseAutoFocus,
 }: {
   title: string;
   description: string;
@@ -246,6 +247,7 @@ export function FormDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   locked?: boolean;
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
   return (
     <Dialog.Root
@@ -258,6 +260,7 @@ export function FormDialog({
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-foreground/30" />
         <Dialog.Content
+          onCloseAutoFocus={onCloseAutoFocus}
           className="fixed top-1/2 left-1/2 z-50 max-h-[90dvh] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl border bg-card p-6 shadow-xl"
           onEscapeKeyDown={(event) => {
             if (locked) event.preventDefault();

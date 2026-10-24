@@ -17,8 +17,8 @@ select is(
     from pg_catalog.pg_class c
     join pg_catalog.pg_namespace n on n.oid = c.relnamespace
     where n.nspname = 'app' and c.relkind = 'r'),
-  19,
-  'The identity and academic domain contains the nineteen reviewed tables'
+  21,
+  'Identity, academic content and practice contain the twenty-one reviewed tables'
 );
 
 select ok(
@@ -46,9 +46,13 @@ select ok(not has_schema_privilege('authenticated', 'app', 'USAGE'), 'Authentica
 select ok(not has_schema_privilege('service_role', 'app', 'USAGE'), 'Auth administrative adapter is not granted domain schema access');
 
 select ok(
-  (select bool_and(has_table_privilege('alunza_app', format('app.%I', tablename), 'SELECT'))
+  (select bool_and(case when tablename='executions' then
+      has_any_column_privilege('alunza_app','app.executions','SELECT')
+      and not has_table_privilege('alunza_app','app.executions','SELECT')
+      and not has_column_privilege('alunza_app','app.executions','lease_token','SELECT')
+    else has_table_privilege('alunza_app', format('app.%I', tablename), 'SELECT') end)
     from pg_catalog.pg_tables where schemaname = 'app'),
-  'Application has explicit read grants subject to RLS for domain tables'
+  'Application has explicit RLS read grants; RUN projection excludes the lease token'
 );
 
 select ok(

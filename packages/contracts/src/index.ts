@@ -58,6 +58,8 @@ export const errorResponseSchema = z.strictObject({
       'DEPENDENCIES_ACTIVE',
       'REQUEST_IN_PROGRESS',
       'IDEMPOTENCY_CONFLICT',
+      'IDEMPOTENCY_EXPIRED',
+      'VERSION_CONFLICT',
       'PRECONDITION_FAILED',
       'PRECONDITION_REQUIRED',
       'INVITATION_INVALID',
@@ -66,8 +68,11 @@ export const errorResponseSchema = z.strictObject({
       'ORGANIZATION_ARCHIVED',
       'RESOURCE_ARCHIVED',
       'ACTIVITY_UNAVAILABLE',
+      'ACTIVITY_CLOSED',
+      'ACTIVITY_NOT_AVAILABLE',
       'RATE_LIMITED',
       'PAYLOAD_TOO_LARGE',
+      'CODE_TOO_LARGE',
       'UNSUPPORTED_MEDIA_TYPE',
       'OPERATION_DEADLINE_EXCEEDED',
     ]),
@@ -193,3 +198,5 @@ export type Member = z.infer<typeof memberSchema>;
 export type Invitation = z.infer<typeof invitationSchema>;
 export type InvitationAcceptance = z.infer<typeof invitationAcceptanceSchema>;
 export * from './academic';
+export * from './practice';
+export * from './submissions';

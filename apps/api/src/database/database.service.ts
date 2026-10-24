@@ -56,6 +56,11 @@ export class DatabaseService implements OnModuleDestroy {
         ; SELECT id,user_id,consumed_at FROM app.provisioning_grants LIMIT 0
         ; SELECT id,generation,token_digest FROM app.organization_invitations LIMIT 0
         ; SELECT id,state,lease_until FROM app.invitation_deliveries LIMIT 0
+        ; SELECT id,lifecycle_status,lease_until FROM app.executions LIMIT 0
+        ; SELECT id,execution_id,attempt_number,technical_result FROM app.attempts LIMIT 0
+        ; SELECT 'app_private.stage_practice_submit_result(uuid,uuid,jsonb,jsonb)'::regprocedure,
+          'app_private.finish_practice_submit(uuid,uuid,boolean)'::regprocedure,
+          'app_private.practice_activity_progress(uuid)'::regprocedure
       `);
     } catch {
       throw databaseUnavailable();
@@ -127,6 +132,51 @@ export class DatabaseService implements OnModuleDestroy {
           : undefined;
       if (code === 'P0001' && error instanceof Error) {
         const rules: Record<string, [string, string, number]> = {
+          RESOURCE_NOT_FOUND: [
+            'RESOURCE_NOT_FOUND',
+            'El recurso no está disponible o no tienes acceso.',
+            404,
+          ],
+          VERSION_CONFLICT: [
+            'VERSION_CONFLICT',
+            'La versión del ejercicio cambió. Recarga la actividad.',
+            409,
+          ],
+          IDEMPOTENCY_CONFLICT: [
+            'IDEMPOTENCY_CONFLICT',
+            'La clave ya se utilizó con otros datos.',
+            409,
+          ],
+          IDEMPOTENCY_EXPIRED: [
+            'IDEMPOTENCY_EXPIRED',
+            'La respuesta temporal venció. Ejecuta de nuevo con una solicitud nueva.',
+            409,
+          ],
+          REQUEST_IN_PROGRESS: [
+            'REQUEST_IN_PROGRESS',
+            'La ejecución sigue en curso. Reintenta con la misma solicitud.',
+            409,
+          ],
+          ACTIVITY_CLOSED: [
+            'ACTIVITY_CLOSED',
+            'La actividad está cerrada y no admite ejecuciones nuevas.',
+            409,
+          ],
+          ACTIVITY_NOT_AVAILABLE: [
+            'ACTIVITY_NOT_AVAILABLE',
+            'La actividad está fuera de su ventana de disponibilidad.',
+            409,
+          ],
+          DEPENDENCY_UNAVAILABLE: [
+            'DEPENDENCY_UNAVAILABLE',
+            'El servicio de ejecución no está disponible. Conserva tu código.',
+            503,
+          ],
+          RATE_LIMITED: [
+            'RATE_LIMITED',
+            'Se alcanzó el cupo de ejecución. Conserva tu código y espera antes de reintentar.',
+            429,
+          ],
           LAST_ADMIN: [
             'LAST_ADMIN',
             'La organización debe conservar un administrador activo.',
@@ -199,7 +249,15 @@ export class DatabaseService implements OnModuleDestroy {
           ],
         };
         const rule = rules[error.message];
-        if (rule) throw new ApiError(...rule);
+        if (rule)
+          throw new ApiError(
+            ...rule,
+            [
+              'REQUEST_IN_PROGRESS',
+              'DEPENDENCY_UNAVAILABLE',
+              'RATE_LIMITED',
+            ].includes(error.message),
+          );
       }
       if (code === '23505')
         throw new ApiError(

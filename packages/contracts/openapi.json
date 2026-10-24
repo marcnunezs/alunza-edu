@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "Alunza — identidad, estructura académica y contenido",
-    "version": "0.2.0",
-    "description": "IMP-02. Autorización vigente por organización y clase. Incluye publicación y editor; ejecución, intentos e IA siguen fuera de este incremento."
+    "title": "Alunza — identidad, contenido y práctica",
+    "version": "0.3.0",
+    "description": "IMP-03 local. Ejecución aislada, envíos durables, historial propio y avance determinista. IA y ejecución productiva conservan su validación posterior."
   },
   "servers": [
     { "url": "http://127.0.0.1:4000", "description": "Desarrollo local" }
@@ -16767,6 +16767,2019 @@
           }
         ]
       }
+    },
+    "/api/v1/activities/{id}/exercises/{assignmentId}/executions": {
+      "post": {
+        "operationId": "runExercise",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "201": {
+            "description": "Resultado confirmado.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/RunExecution" }
+              }
+            }
+          },
+          "400": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "404": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "409": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "412": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "415": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "422": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "428": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "429": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "503": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "504": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "assignmentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RunExecutionInput" }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/activities/{id}/exercises/{assignmentId}/attempts": {
+      "post": {
+        "operationId": "submitAttempt",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "201": {
+            "description": "Resultado confirmado.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Attempt" }
+              }
+            }
+          },
+          "400": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "404": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "409": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "412": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "415": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "422": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "428": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "429": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "503": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "504": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "assignmentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9_.:-]+$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SubmitAttemptInput" }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "listOwnAttempts",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Resultado confirmado.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Attempts" }
+              }
+            }
+          },
+          "400": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "404": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "409": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "412": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "415": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "422": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "428": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "429": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "503": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "504": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "assignmentId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20,
+              "default": 10
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": { "type": "string", "pattern": "^[1-9][0-9]{0,15}$" }
+          }
+        ]
+      }
+    },
+    "/api/v1/attempts/{id}": {
+      "get": {
+        "operationId": "getOwnAttempt",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Resultado confirmado.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Attempt" }
+              }
+            }
+          },
+          "400": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "404": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "409": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "412": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "415": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "422": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "428": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "429": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "503": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "504": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ]
+      }
+    },
+    "/api/v1/activities/{id}/progress": {
+      "get": {
+        "operationId": "getOwnActivityProgress",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Resultado confirmado.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ActivityProgress" }
+              }
+            }
+          },
+          "400": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "404": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "409": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "412": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "415": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "422": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "428": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "429": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "503": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "504": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ]
+      }
+    },
+    "/api/v1/classes/{id}/attempted-activities": {
+      "get": {
+        "operationId": "listOwnAttemptedActivities",
+        "security": [{ "bearerAuth": [] }],
+        "responses": {
+          "200": {
+            "description": "Resultado confirmado.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AttemptedActivities" }
+              }
+            }
+          },
+          "400": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "401": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "403": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "404": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "409": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "412": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "413": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "415": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "422": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "428": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "429": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "503": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "504": {
+            "description": "Error seguro; consultar error.code y requestId.",
+            "headers": {
+              "Cache-Control": {
+                "description": "Las respuestas de dominio son privadas y no se almacenan.",
+                "schema": { "type": "string", "example": "private, no-store" }
+              },
+              "X-Request-Id": {
+                "description": "Correlación generada por la API.",
+                "schema": { "type": "string", "format": "uuid" }
+              },
+              "X-Release-Id": {
+                "description": "Candidato de API; SHA Git en preproducción.",
+                "schema": { "type": "string" }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -17499,6 +19512,8 @@
                   "DEPENDENCIES_ACTIVE",
                   "REQUEST_IN_PROGRESS",
                   "IDEMPOTENCY_CONFLICT",
+                  "IDEMPOTENCY_EXPIRED",
+                  "VERSION_CONFLICT",
                   "PRECONDITION_FAILED",
                   "PRECONDITION_REQUIRED",
                   "INVITATION_INVALID",
@@ -17507,8 +19522,11 @@
                   "ORGANIZATION_ARCHIVED",
                   "RESOURCE_ARCHIVED",
                   "ACTIVITY_UNAVAILABLE",
+                  "ACTIVITY_CLOSED",
+                  "ACTIVITY_NOT_AVAILABLE",
                   "RATE_LIMITED",
                   "PAYLOAD_TOO_LARGE",
+                  "CODE_TOO_LARGE",
                   "UNSUPPORTED_MEDIA_TYPE",
                   "OPERATION_DEADLINE_EXCEEDED"
                 ]
@@ -20056,6 +22074,661 @@
             ]
           }
         }
+      },
+      "RunExecutionInput": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "minLength": 1, "maxLength": 65536 },
+          "exerciseVersionId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": ["code", "exerciseVersionId"],
+        "additionalProperties": false
+      },
+      "RunExecution": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "executionId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "exerciseVersionId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "mode": { "type": "string", "enum": ["RUN"] },
+              "admittedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "finishedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "technicalResult": {
+                "type": "object",
+                "properties": {
+                  "runnerVersion": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "diagnosisCode": {
+                    "type": "string",
+                    "enum": [
+                      "SUCCESS",
+                      "SYNTAX_ERROR",
+                      "RUNTIME_ERROR",
+                      "FAILED_TEST",
+                      "TIMEOUT",
+                      "UNKNOWN"
+                    ]
+                  },
+                  "terminationReason": {
+                    "type": "string",
+                    "enum": [
+                      "COMPLETED",
+                      "STUDENT_SYNTAX",
+                      "STUDENT_EXCEPTION",
+                      "ASSERTION_FAILED",
+                      "EXECUTION_DEADLINE",
+                      "MEMORY_LIMIT",
+                      "OUTPUT_LIMIT",
+                      "RETURN_LIMIT",
+                      "PROTOCOL_INVALID",
+                      "RUNNER_FAILURE",
+                      "PROVIDER_FAILURE",
+                      "CAPABILITY_GAP",
+                      "CANCELLED"
+                    ]
+                  },
+                  "infrastructureStatus": {
+                    "type": "string",
+                    "enum": ["OK", "FAILED"]
+                  },
+                  "visibleTestResults": {
+                    "maxItems": 8,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "passed": { "type": "boolean" },
+                        "stdout": { "type": "string", "maxLength": 65536 },
+                        "stderr": { "type": "string", "maxLength": 65536 }
+                      },
+                      "required": ["id", "passed", "stdout", "stderr"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "visiblePassed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 8
+                  },
+                  "visibleTotal": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 8
+                  },
+                  "outputTruncated": { "type": "boolean" },
+                  "outputBytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 65536
+                  },
+                  "runtimeMs": { "type": "number", "minimum": 0 },
+                  "lifecycleMs": { "type": "number", "minimum": 0 }
+                },
+                "required": [
+                  "runnerVersion",
+                  "diagnosisCode",
+                  "terminationReason",
+                  "infrastructureStatus",
+                  "visibleTestResults",
+                  "visiblePassed",
+                  "visibleTotal",
+                  "outputTruncated",
+                  "outputBytes",
+                  "runtimeMs",
+                  "lifecycleMs"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "executionId",
+              "exerciseVersionId",
+              "mode",
+              "admittedAt",
+              "finishedAt",
+              "technicalResult"
+            ],
+            "additionalProperties": false
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": ["data", "requestId"],
+        "additionalProperties": false
+      },
+      "SubmitAttemptInput": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string", "minLength": 1, "maxLength": 65536 },
+          "exerciseVersionId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "previousAttemptId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": ["code", "exerciseVersionId"],
+        "additionalProperties": false
+      },
+      "Attempt": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "attemptId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "executionId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "activityId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "assignmentId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "exerciseVersionId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "testsVersion": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "attemptNumber": {
+                "type": "integer",
+                "minimum": 0,
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991
+              },
+              "previousAttemptId": {
+                "nullable": true,
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "admittedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "submittedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              },
+              "technicalResult": {
+                "type": "object",
+                "properties": {
+                  "runnerVersion": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "diagnosisCode": {
+                    "type": "string",
+                    "enum": [
+                      "SUCCESS",
+                      "SYNTAX_ERROR",
+                      "RUNTIME_ERROR",
+                      "FAILED_TEST",
+                      "TIMEOUT",
+                      "UNKNOWN"
+                    ]
+                  },
+                  "terminationReason": {
+                    "type": "string",
+                    "enum": [
+                      "COMPLETED",
+                      "STUDENT_SYNTAX",
+                      "STUDENT_EXCEPTION",
+                      "ASSERTION_FAILED",
+                      "EXECUTION_DEADLINE",
+                      "MEMORY_LIMIT",
+                      "OUTPUT_LIMIT",
+                      "RETURN_LIMIT",
+                      "PROTOCOL_INVALID",
+                      "RUNNER_FAILURE",
+                      "PROVIDER_FAILURE",
+                      "CAPABILITY_GAP",
+                      "CANCELLED"
+                    ]
+                  },
+                  "infrastructureStatus": {
+                    "type": "string",
+                    "enum": ["OK", "FAILED"]
+                  },
+                  "visibleTestResults": {
+                    "maxItems": 8,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "passed": { "type": "boolean" },
+                        "stdout": { "type": "string", "maxLength": 65536 },
+                        "stderr": { "type": "string", "maxLength": 65536 }
+                      },
+                      "required": ["id", "passed", "stdout", "stderr"],
+                      "additionalProperties": false
+                    }
+                  },
+                  "visiblePassed": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 8
+                  },
+                  "visibleTotal": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 8
+                  },
+                  "outputTruncated": { "type": "boolean" },
+                  "outputBytes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 65536
+                  },
+                  "runtimeMs": { "type": "number", "minimum": 0 },
+                  "lifecycleMs": { "type": "number", "minimum": 0 },
+                  "hiddenChecksPassed": { "nullable": true, "type": "boolean" },
+                  "allRequiredPassed": { "type": "boolean" }
+                },
+                "required": [
+                  "runnerVersion",
+                  "diagnosisCode",
+                  "terminationReason",
+                  "infrastructureStatus",
+                  "visibleTestResults",
+                  "visiblePassed",
+                  "visibleTotal",
+                  "outputTruncated",
+                  "outputBytes",
+                  "runtimeMs",
+                  "lifecycleMs",
+                  "hiddenChecksPassed",
+                  "allRequiredPassed"
+                ],
+                "additionalProperties": false
+              },
+              "code": { "type": "string", "minLength": 1, "maxLength": 65536 }
+            },
+            "required": [
+              "attemptId",
+              "executionId",
+              "activityId",
+              "assignmentId",
+              "exerciseVersionId",
+              "testsVersion",
+              "attemptNumber",
+              "previousAttemptId",
+              "admittedAt",
+              "submittedAt",
+              "technicalResult",
+              "code"
+            ],
+            "additionalProperties": false
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": ["data", "requestId"],
+        "additionalProperties": false
+      },
+      "Attempts": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "attemptId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "executionId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "activityId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "assignmentId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "exerciseVersionId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "testsVersion": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                },
+                "attemptNumber": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991
+                },
+                "previousAttemptId": {
+                  "nullable": true,
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "admittedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "submittedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+                },
+                "technicalResult": {
+                  "type": "object",
+                  "properties": {
+                    "runnerVersion": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "diagnosisCode": {
+                      "type": "string",
+                      "enum": [
+                        "SUCCESS",
+                        "SYNTAX_ERROR",
+                        "RUNTIME_ERROR",
+                        "FAILED_TEST",
+                        "TIMEOUT",
+                        "UNKNOWN"
+                      ]
+                    },
+                    "terminationReason": {
+                      "type": "string",
+                      "enum": [
+                        "COMPLETED",
+                        "STUDENT_SYNTAX",
+                        "STUDENT_EXCEPTION",
+                        "ASSERTION_FAILED",
+                        "EXECUTION_DEADLINE",
+                        "MEMORY_LIMIT",
+                        "OUTPUT_LIMIT",
+                        "RETURN_LIMIT",
+                        "PROTOCOL_INVALID",
+                        "RUNNER_FAILURE",
+                        "PROVIDER_FAILURE",
+                        "CAPABILITY_GAP",
+                        "CANCELLED"
+                      ]
+                    },
+                    "infrastructureStatus": {
+                      "type": "string",
+                      "enum": ["OK", "FAILED"]
+                    },
+                    "visibleTestResults": {
+                      "maxItems": 8,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                          },
+                          "passed": { "type": "boolean" },
+                          "stdout": { "type": "string", "maxLength": 65536 },
+                          "stderr": { "type": "string", "maxLength": 65536 }
+                        },
+                        "required": ["id", "passed", "stdout", "stderr"],
+                        "additionalProperties": false
+                      }
+                    },
+                    "visiblePassed": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 8
+                    },
+                    "visibleTotal": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 8
+                    },
+                    "outputTruncated": { "type": "boolean" },
+                    "outputBytes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 65536
+                    },
+                    "runtimeMs": { "type": "number", "minimum": 0 },
+                    "lifecycleMs": { "type": "number", "minimum": 0 },
+                    "hiddenChecksPassed": {
+                      "nullable": true,
+                      "type": "boolean"
+                    },
+                    "allRequiredPassed": { "type": "boolean" }
+                  },
+                  "required": [
+                    "runnerVersion",
+                    "diagnosisCode",
+                    "terminationReason",
+                    "infrastructureStatus",
+                    "visibleTestResults",
+                    "visiblePassed",
+                    "visibleTotal",
+                    "outputTruncated",
+                    "outputBytes",
+                    "runtimeMs",
+                    "lifecycleMs",
+                    "hiddenChecksPassed",
+                    "allRequiredPassed"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "attemptId",
+                "executionId",
+                "activityId",
+                "assignmentId",
+                "exerciseVersionId",
+                "testsVersion",
+                "attemptNumber",
+                "previousAttemptId",
+                "admittedAt",
+                "submittedAt",
+                "technicalResult"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "nextCursor": { "nullable": true, "type": "string" },
+              "hasMore": { "type": "boolean" }
+            },
+            "required": ["nextCursor", "hasMore"],
+            "additionalProperties": false
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": ["data", "page", "requestId"],
+        "additionalProperties": false
+      },
+      "ActivityProgress": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "activityId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "completed": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "required": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "ratio": {
+                "nullable": true,
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "evidenceState": {
+                "type": "string",
+                "enum": ["NO_REQUIRED_EXERCISES", "NO_ATTEMPTS", "HAS_EVIDENCE"]
+              },
+              "asOf": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+              }
+            },
+            "required": [
+              "activityId",
+              "completed",
+              "required",
+              "ratio",
+              "evidenceState",
+              "asOf"
+            ],
+            "additionalProperties": false
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": ["data", "requestId"],
+        "additionalProperties": false
+      },
+      "AttemptedActivities": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "activityId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+                "activityState": {
+                  "type": "string",
+                  "enum": ["PUBLISHED", "CLOSED"]
+                },
+                "exercises": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "assignmentId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "title": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 160
+                      }
+                    },
+                    "required": ["assignmentId", "title"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["activityId", "title", "activityState", "exercises"],
+              "additionalProperties": false
+            }
+          },
+          "requestId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": ["data", "requestId"],
+        "additionalProperties": false
       }
     }
   }

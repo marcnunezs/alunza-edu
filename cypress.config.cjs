@@ -102,14 +102,15 @@ module.exports = defineConfig({
             id:
               (test.title || [])
                 .join(' ')
-                .match(/\b(?:FND-\d{2}|IMP01-\d{2}|IMP02-\d{2})\b/)?.[0] ||
-              'UNKNOWN',
+                .match(
+                  /\b(?:FND-\d{2}|IMP01-\d{2}|IMP02-\d{2}|IMP03-\d{2})\b/,
+                )?.[0] || 'UNKNOWN',
             state: states.has(test.state) ? test.state : 'unknown',
           })),
         );
         const report = {
           schemaVersion: 1,
-          increment: 'IMP-02',
+          increment: 'IMP-03',
           recordedAt: new Date().toISOString(),
           browser: /^[a-z]+$/i.test(result.browserName)
             ? result.browserName

@@ -14,11 +14,13 @@
 !packages/contracts/
 !packages/contracts/**
 !packages/runner/
-!packages/runner/package.json
+!packages/runner/**
 !packages/ai/
 !packages/ai/package.json
 !infra/
 !infra/Dockerfile
+!infra/runner/
+!infra/runner/**
 
 # Never send local environments, build output, dependencies or credentials.
 **/.env*

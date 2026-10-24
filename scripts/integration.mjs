@@ -21,6 +21,11 @@ async function main({ ctx, state }) {
   let dbStopped = false;
   let faultsInstalled = false;
   try {
+    // SQL worker-claim fixtures require an empty global recovery queue. Run
+    // them before HTTP crash/lease tests create durable recovery work, and
+    // before API reconcilers start. Each pgTAP file rolls back its own data.
+    const sqlTests = await cli(ctx, ['test', 'db']);
+    console.log(sqlTests.stdout);
     await installIdentityFaultFixture(state);
     faultsInstalled = true;
     await buildApi();
@@ -41,8 +46,6 @@ async function main({ ctx, state }) {
       },
     );
     console.log(redactDiagnostics(httpTests.stdout + httpTests.stderr));
-    const sqlTests = await cli(ctx, ['test', 'db']);
-    console.log(sqlTests.stdout);
     const httpSummary = (httpTests.stdout + httpTests.stderr).match(
       /Tests:\s+(\d+) passed,\s+(\d+) total/,
     );
@@ -60,7 +63,7 @@ async function main({ ctx, state }) {
           ? { files: Number(sqlSummary[1]), tests: Number(sqlSummary[2]) }
           : null,
       },
-      'imp-02',
+      'imp-03',
     );
     await report(
       'recovery',
@@ -158,11 +161,12 @@ try {
       infrastructure: 'real-local-supabase',
       cleanup: 'completed',
     },
-    'imp-02',
+    'imp-03',
   );
 } catch (error) {
   await report('integration', { status: 'failed' }, 'imp-01');
   await report('integration', { status: 'failed' }, 'imp-02');
+  await report('integration', { status: 'failed' }, 'imp-03');
   console.error('Integración fallida; consultar diagnóstico local saneado.');
   await mkdir(join(root, '.local'), { recursive: true });
   await writeFile(
