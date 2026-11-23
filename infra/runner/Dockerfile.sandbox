@@ -3,4 +3,19 @@
 FROM node:24.21.0-bookworm-slim@sha256:2fe369e969550cde8e867afc3fe370b260140cab4a23d467074295b42163d553
 RUN apt-get update && apt-get install -y --no-install-recommends docker.io && rm -rf /var/lib/apt/lists/*
 COPY capsule.tar /opt/alunza/capsule.tar
+RUN apt-get update && apt-get install -y --no-install-recommends sudo=1.9.13p3-1+deb12u4 && rm -rf /var/lib/apt/lists/* \
+    && install -d -o node -g node -m 0700 /vercel/sandbox \
+    && printf '%s\n' \
+        'Defaults:node always_set_home, !fqdn, env_reset' \
+        'Defaults:node env_keep += "ALUNZA_SANDBOX_BOOTSTRAP"' \
+        'Defaults:node secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"' \
+        'node ALL=(root) NOPASSWD: NOSETENV: /usr/local/bin/node /opt/alunza/supervisor/remote-init.mjs, /usr/local/bin/node /opt/alunza/supervisor/remote-driver.mjs execute *, /usr/local/bin/node /opt/alunza/supervisor/remote-driver.mjs cleanup *' \
+        > /etc/sudoers.d/alunza-supervisor \
+    && chmod 0440 /etc/sudoers.d/alunza-supervisor && visudo -cf /etc/sudoers
+# Privileged entry points and their imports live outside the upload directory.
+COPY --chown=root:root --chmod=0444 supervisor/*.mjs /opt/alunza/supervisor/
+RUN chmod 0755 /opt/alunza/supervisor
+ENV HOME=/home/node
+USER node
+WORKDIR /vercel/sandbox
 # The outer image must be pinned by digest; Sandbox does not execute ENTRYPOINT.

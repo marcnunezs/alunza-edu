@@ -79,10 +79,15 @@ export function useOperation() {
       if (!alive.current || request.controller.signal.aborted) return null;
       const failure = asApiError(cause);
       setError(failure);
+      // The upload service confirms this terminal reservation failure explicitly.
+      // Other 5xx responses may still hide a committed operation, even when the
+      // generic server exception carries retryable=false.
+      const terminalUpload =
+        failure.code === 'STORAGE_UNAVAILABLE' && !failure.retryable;
       const retry =
         failure.retryable ||
         failure.code === 'REQUEST_IN_PROGRESS' ||
-        failure.status >= 500;
+        (failure.status >= 500 && !terminalUpload);
       setUnresolved(retry);
       if (!retry) current.current = null;
       if (failure.status === 401 || failure.status === 403)
@@ -237,8 +242,8 @@ export function FormDialog({
   children,
   open,
   onOpenChange,
-  locked = false,
   onCloseAutoFocus,
+  locked = false,
 }: {
   title: string;
   description: string;
@@ -246,8 +251,8 @@ export function FormDialog({
   children: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCloseAutoFocus?: ComponentProps<typeof Dialog.Content>['onCloseAutoFocus'];
   locked?: boolean;
-  onCloseAutoFocus?: (event: Event) => void;
 }) {
   return (
     <Dialog.Root

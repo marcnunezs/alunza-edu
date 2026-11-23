@@ -1,0 +1,8 @@
+{
+  "recordedAt": "2026-10-23T04:41:18.650Z",
+  "status": "passed",
+  "environment": "alunza-edu-foundation",
+  "existingTables": 20,
+  "preservedRows": 114,
+  "comparison": "complete row values, canonical JSON SHA256 compared in memory; no record contents exported"
+}

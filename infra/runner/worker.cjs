@@ -1,9 +1,33 @@
 // Trusted host of a fresh WASM interpreter. Student JavaScript never runs in Node.
 const fs = require('node:fs');
 const { performance } = require('node:perf_hooks');
+const { createWorkerCostRecorder } = require('./watchdog-observation.cjs');
+// This opt-in comes only from the fixed image/bridge, never capsule input.
+// The entry mark observes this point in trusted JS, not physical process birth.
+const cost =
+  process.env.ALUNZA_RUNNER_PROFILE === 'case-cost-v1'
+    ? createWorkerCostRecorder({
+        now: () => performance.now(),
+        write: fs.writeSync.bind(fs),
+      })
+    : null;
+cost?.mark('entry');
+if (cost) process.once('exit', () => cost.flush());
 const { newQuickJSWASMModuleFromVariant } = require('quickjs-emscripten-core');
-const variant = require('@jitl/quickjs-wasmfile-release-sync').default;
+const baseVariant = require('@jitl/quickjs-wasmfile-release-sync').default;
+// Use the package's public CJS loader; the original dynamic loader is retained
+// only for the explicitly selected, instrumented baseline laboratory image.
+// This changes loading only: the same pinned WASM creates a fresh instance,
+// runtime, context and memory for every worker; nothing is cached across cases.
+const variant = !(cost && process.env.ALUNZA_RUNNER_OPTIMIZATION === 'baseline')
+  ? {
+      ...baseVariant,
+      importModuleLoader: async () =>
+        require('@jitl/quickjs-wasmfile-release-sync/emscripten-module'),
+    }
+  : baseVariant;
 const { assertIdentity } = require('./worker-identity.cjs');
+cost?.mark('importsReady');
 const write = fs.writeSync.bind(fs);
 let sent = false;
 function complete(packet, code = 0) {
@@ -78,6 +102,7 @@ const serializerSource = `((notifyLimit, isPromise) => {
 async function main() {
   try {
     assertIdentity();
+    cost?.mark('identityChecked');
   } catch {
     complete({ kind: 'invalid', reason: 'CAPABILITY_GAP' }, 71);
     return;
@@ -85,10 +110,13 @@ async function main() {
   const started = performance.now();
   const input = JSON.parse(fs.readFileSync('/tmp/args.json', 'utf8'));
   const source = fs.readFileSync('/tmp/solution.cjs', 'utf8');
+  cost?.mark('inputRead');
   const quickjs = await newQuickJSWASMModuleFromVariant(variant);
+  cost?.mark('wasmReady');
   const runtime = quickjs.newRuntime();
-  runtime.setMemoryLimit(input.memoryBytes);
+  runtime.setMemoryLimit(134217728);
   runtime.setMaxStackSize(1024 * 1024);
+  cost?.mark('runtimeReady');
   let interrupted = false,
     outputExceeded = false,
     returnExceeded = false,
@@ -98,6 +126,7 @@ async function main() {
     return interrupted || outputExceeded;
   });
   const vm = runtime.newContext();
+  cost?.mark('contextReady');
   const handles = [];
   const keep = (value) => {
     handles.push(value);
@@ -192,6 +221,7 @@ async function main() {
     const exportsObject = keep(vm.newObject());
     vm.setProp(moduleObject, 'exports', exportsObject);
     const functionConstructor = keep(vm.getProp(vm.global, 'Function'));
+    cost?.mark('trustedSetupReady');
     phase = 'compile';
     const compiled = get(
       vm.callFunction(
@@ -199,13 +229,10 @@ async function main() {
         vm.undefined,
         keep(vm.newString('module')),
         keep(vm.newString('exports')),
-        keep(
-          vm.newString(
-            `${source}\n;if (typeof solve === 'function') module.exports.solve = solve;`,
-          ),
-        ),
+        keep(vm.newString(source)),
       ),
     );
+    cost?.mark('studentCompiled');
     phase = 'invoke';
     // Parse before running the module, preserving ordinary JSON object prototypes
     // and own __proto__ keys without calling guest-modified setters or JSON.parse.
@@ -223,16 +250,19 @@ async function main() {
       keep(vm.getProp(argsValue, index)),
     );
     get(vm.callFunction(compiled, exportsObject, moduleObject, exportsObject));
+    cost?.mark('moduleEvaluated');
     const exported = keep(vm.getProp(moduleObject, 'exports'));
     const solve = keep(vm.getProp(exported, 'solve'));
     if (vm.typeof(solve) !== 'function') throw new Error('Missing solve');
     const value = get(vm.callFunction(solve, exported, argumentsList));
+    cost?.mark('solveReturned');
     const jsonText = get(vm.callFunction(serialize, vm.undefined, value));
     const packet = {
       kind: 'value',
       value: JSON.parse(vm.getString(jsonText)),
       invocation: 'QUICKJS_SYNC_CALL',
     };
+    cost?.mark('serialized');
     if (Buffer.byteLength(JSON.stringify(packet)) > 65536)
       complete({ kind: 'invalid', reason: 'RETURN_LIMIT' }, 65);
     else if (outputExceeded)
@@ -254,6 +284,7 @@ async function main() {
     for (const handle of handles.reverse()) handle.dispose();
     vm.dispose();
     runtime.dispose();
+    cost?.mark('disposed');
   }
 }
 main().catch(() => complete({ kind: 'invalid', reason: 'RUNNER_FAILURE' }, 71));

@@ -1,0 +1,14 @@
+{
+  "recordedAt": "2026-09-28T22:56:39.964Z",
+  "status": "passed",
+  "runs": 2,
+  "existingRows": "unchanged",
+  "canonical": {
+    "organizations": 2,
+    "administrators": 2,
+    "teachers": 2,
+    "students": 8,
+    "classes": 3,
+    "exercises": 10
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "recordedAt": "2026-10-23T05:47:19.483Z",
+  "functionalStatus": "local-verified",
+  "completedFunctionalRequirements": 14,
+  "totalFunctionalRequirements": 27,
+  "percentage": 51.85185185185185,
+  "retained": [
+    "RF-001",
+    "RF-002",
+    "RF-003",
+    "RF-004",
+    "RF-008",
+    "RF-020",
+    "RF-021",
+    "RF-022",
+    "RF-023"
+  ],
+  "newClosures": [
+    "RF-005",
+    "RF-007",
+    "RF-009",
+    "RF-011",
+    "RF-014"
+  ],
+  "partial": "RF-010: HU-010-E4 requires future integrated IA provider failure",
+  "source": {
+    "algorithm": "sha256",
+    "value": "5a5ec24f2a9535101f7cb7a303460d479a06bdf866c4b592ab1b1fcf61076194",
+    "files": 290,
+    "scope": "source-contracts-migrations-tests-fixtures-tooling-infra; excludes docs, generated next-env.d.ts and private/ignored files"
+  },
+  "ci": {
+    "status": "passed",
+    "passedSteps": 14,
+    "execution": "local"
+  },
+  "checks": {
+    "unitAndContract": 675,
+    "http": 111,
+    "sql": 313,
+    "docker": 78,
+    "e2e": 34,
+    "localPgvectorWithExplicitDouble": 27
+  },
+  "supplementalCommands": [
+    "npm run test:runner",
+    "npm run test:practice:performance -- --submit"
+  ],
+  "sourceBoundary": "The complete CI and both optimized performance runs share this fingerprint. No application, contract, migration, test or infrastructure source changed after CI. Historical failures are preserved separately.",
+  "environment": {
+    "node": "24.21.0",
+    "npm": "11.19.0",
+    "docker": "29.7.2",
+    "cgroup": "2",
+    "postgres": "17.6",
+    "pgvector": "0.8.0",
+    "cypress": "16.0.0",
+    "chrome": "155.0.8059.85"
+  },
+  "remoteCalls": 0,
+  "academicAcceptance": "pending",
+  "productionDeployment": "not-performed",
+  "dependencyAudit": "14 affected package entries unchanged from baseline",
+  "performance": {
+    "submitSequentialP95Ms": 1654.1178000000073,
+    "submitConcurrentP95Ms": 3502.7141999999876,
+    "runSequentialP95Ms": 1030.1419000000024,
+    "runConcurrentP95Ms": 2227.8690999999963,
+    "targetMs": 5000,
+    "samplesPerOperation": 100,
+    "allSamplesRetained": true,
+    "cleanupVerified": true
+  }
+}

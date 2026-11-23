@@ -1,13 +1,20 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
+import pg from 'pg';
 import { createClient } from '@supabase/supabase-js';
 import { verifyIdentityRecovery } from './identity-recovery.mjs';
-import { verifyAcademicSeed } from './academic-seed-verification.mjs';
+import { verifyMaterialsRecovery } from './materials-recovery.mjs';
+import {
+  verifyHelpRecovery,
+  verifyHelpAdmissionOutage,
+} from './help-recovery.mjs';
 import {
   installIdentityFaultFixture,
   removeIdentityFaultFixture,
 } from './identity-fault-fixture.mjs';
-import { root, run, cli, redactDiagnostics } from './local.mjs';
+import { root, run, cli, redactDiagnostics, applicationUrl } from './local.mjs';
+import { runDockerPreparedConcurrency } from '../tests/integration/docker-prepared-sql.mjs';
 import {
   withTestEnvironment,
   testApi,
@@ -15,17 +22,38 @@ import {
   report,
 } from './test-environment.mjs';
 
+const checks = {};
+
+async function waitForDatabase(state) {
+  const deadline = Date.now() + 60_000;
+  while (Date.now() < deadline) {
+    const client = new pg.Client({
+      connectionString: state.migrationUrl,
+      connectionTimeoutMillis: 2000,
+      query_timeout: 2000,
+    });
+    client.on('error', () => undefined);
+    try {
+      await client.connect();
+      await client.query('SELECT 1');
+      return;
+    } catch {
+      // Starting the container does not mean PostgreSQL accepts connections yet.
+    } finally {
+      await client.end();
+    }
+    await delay(500);
+  }
+  throw new Error('La BD de pruebas no se recuperó para retirar el fixture.');
+}
+
 async function main({ ctx, state }) {
   const databaseContainer = `supabase_db_${ctx.projectId}`;
   const api = testApi(ctx, state);
   let dbStopped = false;
   let faultsInstalled = false;
+  let failure;
   try {
-    // SQL worker-claim fixtures require an empty global recovery queue. Run
-    // them before HTTP crash/lease tests create durable recovery work, and
-    // before API reconcilers start. Each pgTAP file rolls back its own data.
-    const sqlTests = await cli(ctx, ['test', 'db']);
-    console.log(sqlTests.stdout);
     await installIdentityFaultFixture(state);
     faultsInstalled = true;
     await buildApi();
@@ -47,23 +75,63 @@ async function main({ ctx, state }) {
     );
     console.log(redactDiagnostics(httpTests.stdout + httpTests.stderr));
     const httpSummary = (httpTests.stdout + httpTests.stderr).match(
-      /Tests:\s+(\d+) passed,\s+(\d+) total/,
+      /^Tests:\s+(\d+) passed,\s+(\d+) total\s*$/m,
     );
-    const sqlSummary = (sqlTests.stdout + sqlTests.stderr).match(
-      /Files=(\d+), Tests=(\d+)/,
+    checks.http = httpSummary
+      ? { passed: Number(httpSummary[1]), total: Number(httpSummary[2]) }
+      : null;
+    await report(
+      'recovery',
+      await verifyMaterialsRecovery({ ctx, state, api }),
+      'imp-04',
     );
     await report(
-      'acceptance',
+      'help-recovery',
+      await verifyHelpRecovery({ ctx, state, api }),
+      'imp-04',
+    );
+    const sqlTests = await cli(ctx, ['test', 'db']);
+    console.log(sqlTests.stdout);
+    const sqlSummary = (sqlTests.stdout + sqlTests.stderr).match(
+      /Files=(\d+),\s*Tests=(\d+)/,
+    );
+    checks.sql = sqlSummary
+      ? { files: Number(sqlSummary[1]), assertions: Number(sqlSummary[2]) }
+      : null;
+    const replicaClients = [
+      new pg.Client({ connectionString: state.migrationUrl }),
+      new pg.Client({ connectionString: applicationUrl(ctx, state) }),
+      new pg.Client({ connectionString: applicationUrl(ctx, state) }),
+    ];
+    try {
+      await Promise.all(replicaClients.map((client) => client.connect()));
+      checks.dockerPreparedConcurrency = await runDockerPreparedConcurrency({
+        admin: replicaClients[0],
+        first: replicaClients[1],
+        second: replicaClients[2],
+      });
+    } finally {
+      await Promise.allSettled(replicaClients.map((client) => client.end()));
+    }
+    const advisors = await cli(ctx, [
+      'db',
+      'advisors',
+      '--local',
+      '--type',
+      'security',
+      '--level',
+      'warn',
+      '--fail-on',
+      'error',
+    ]);
+    await report(
+      'security-advisors',
       {
         status: 'passed',
-        http: httpSummary
-          ? { passed: Number(httpSummary[1]), total: Number(httpSummary[2]) }
-          : null,
-        sql: sqlSummary
-          ? { files: Number(sqlSummary[1]), tests: Number(sqlSummary[2]) }
-          : null,
+        environment: 'isolated-local',
+        output: redactDiagnostics(advisors.stdout + advisors.stderr),
       },
-      'imp-03',
+      'imp-02',
     );
     await report(
       'recovery',
@@ -109,9 +177,20 @@ async function main({ ctx, state }) {
     if (recovered.status !== 200)
       throw new Error('Consulta protegida no se recuperó tras restaurar BD.');
     await report(
-      'demo-seed',
-      await verifyAcademicSeed({ ctx, state }),
-      'imp-02',
+      'help-postgres-outage',
+      await verifyHelpAdmissionOutage({
+        state,
+        stopDatabase: async () => {
+          await run('docker', ['stop', databaseContainer]);
+          dbStopped = true;
+        },
+        startDatabase: async () => {
+          await run('docker', ['start', databaseContainer]);
+          dbStopped = false;
+          await waitForDatabase(state);
+        },
+      }),
+      'imp-04',
     );
     for (const secret of [
       state.applicationPassword,
@@ -119,10 +198,32 @@ async function main({ ctx, state }) {
       state.authAdminKey,
       state.migrationUrl,
       accessToken,
+      'IMP02_PRIVATE_EXPECTATION_DO_NOT_EXPOSE',
+      'IMP03_HIDDEN_SENTINEL',
+      'IMP04_HELP_HIDDEN_SENTINEL',
+      'hidden-value-7-8',
     ]) {
       if (api.output.includes(secret))
         throw new Error('Un secreto apareció en logs de la API.');
     }
+    const requestLogs = api.output.split(/\r?\n/).flatMap((line) => {
+      try {
+        return [JSON.parse(line)];
+      } catch {
+        return [];
+      }
+    });
+    if (
+      !requestLogs.some(
+        (entry) =>
+          entry.path === '/api/v1/me' &&
+          entry.status === 403 &&
+          typeof entry.requestId === 'string',
+      )
+    )
+      throw new Error(
+        'No se encontró el registro seguro del acceso rechazado a una cuenta inactiva.',
+      );
     await mkdir(join(root, '.local/evidence'), { recursive: true });
     await writeFile(
       join(root, '.local/evidence/integration-api.log'),
@@ -131,17 +232,42 @@ async function main({ ctx, state }) {
     console.log(
       'Integración real, RLS, fallos de BD y recuperación comprobados.',
     );
+  } catch (error) {
+    let output = `${error.output ?? error.message}\n${api.output}`;
+    for (const value of [
+      state.applicationPassword,
+      state.fixturePassword,
+      state.authAdminKey,
+      state.migrationUrl,
+    ])
+      if (value) output = output.split(value).join('[redacted]');
+    error.output = redactDiagnostics(output);
+    failure = error;
   } finally {
-    try {
-      if (dbStopped) await run('docker', ['start', databaseContainer]);
-    } finally {
+    const cleanup = [
+      async () => {
+        if (dbStopped) await run('docker', ['start', databaseContainer]);
+      },
+      () => api.stop(),
+      async () => {
+        if (faultsInstalled) {
+          await waitForDatabase(state);
+          await removeIdentityFaultFixture(state);
+        }
+      },
+    ];
+    for (const action of cleanup) {
       try {
-        await api.stop();
-      } finally {
-        if (faultsInstalled) await removeIdentityFaultFixture(state);
+        await action();
+      } catch (error) {
+        const diagnostic = redactDiagnostics(error.message);
+        if (failure)
+          failure.output = `${failure.output ?? failure.message}\nFallo adicional durante limpieza: ${diagnostic}`;
+        else failure = new Error(`Falló la limpieza: ${diagnostic}`);
       }
     }
   }
+  if (failure) throw failure;
 }
 try {
   await withTestEnvironment(main, [], { upgradeFromFoundation: true });
@@ -159,14 +285,47 @@ try {
     {
       status: 'passed',
       infrastructure: 'real-local-supabase',
+      coverage: 'foundation, identity, academic, adversarial, pgTAP, recovery',
       cleanup: 'completed',
     },
-    'imp-03',
+    'imp-02',
+  );
+  await report(
+    'integration',
+    {
+      status: 'passed',
+      infrastructure: 'real-local-supabase-and-docker',
+      coverage:
+        'foundation, identity, academic, RUN, SUBMIT, history, progress, adversarial, pgTAP, recovery',
+      checks,
+      cleanup: 'completed',
+    },
+    'imp-03-submissions',
+  );
+  await report(
+    'integration',
+    {
+      status: 'passed',
+      infrastructure: 'real-local-supabase-and-docker',
+      scope:
+        'teacher-dashboard-personal-progress-persistent-signals-with-existing-domain-regressions',
+      checks,
+      cleanup: 'completed',
+      publicSignalsEndpoints: true,
+      teacherReviewImplemented: true,
+    },
+    'imp-05',
   );
 } catch (error) {
+  await report('integration', { status: 'failed' }, 'imp-05');
+  await report(
+    'integration',
+    { status: 'failed', azureRemote: 'not-tested' },
+    'imp-04',
+  );
+  await report('integration', { status: 'failed' }, 'imp-03-submissions');
   await report('integration', { status: 'failed' }, 'imp-01');
   await report('integration', { status: 'failed' }, 'imp-02');
-  await report('integration', { status: 'failed' }, 'imp-03');
   console.error('Integración fallida; consultar diagnóstico local saneado.');
   await mkdir(join(root, '.local'), { recursive: true });
   await writeFile(
@@ -176,3 +335,26 @@ try {
   );
   process.exitCode = 1;
 }
+if (process.exitCode !== 1)
+  await report(
+    'integration',
+    {
+      status: 'passed',
+      infrastructure: 'real-local-auth-api-storage-pgvector',
+      embeddings: 'explicit-test-double',
+      azureRemote: 'not-tested',
+      checks,
+      cleanup: 'completed',
+    },
+    'imp-04',
+  );
+await report(
+  'integration',
+  {
+    status: process.exitCode === 1 ? 'failed' : 'passed',
+    checks,
+    azureRemote: 'not-tested',
+    sandboxRemote: 'not-tested',
+  },
+  'imp-05',
+);

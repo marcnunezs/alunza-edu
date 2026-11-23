@@ -375,6 +375,27 @@ function OrganizationList() {
                     <p className="text-sm text-muted-foreground">
                       {organization.timezone}
                     </p>
+                    <Button asChild variant="outline">
+                      <Link
+                        href={`/administracion/organizaciones/${organization.id}/reglas`}
+                      >
+                        Reglas de señales
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline">
+                      <Link
+                        href={`/administracion/organizaciones/${organization.id}/banco`}
+                      >
+                        Banco de ejercicios
+                      </Link>
+                    </Button>
+                    <Button asChild variant="outline">
+                      <Link
+                        href={`/administracion/organizaciones/${organization.id}/auditoria`}
+                      >
+                        Auditoría
+                      </Link>
+                    </Button>
                     {organization.state === 'ACTIVE' ? (
                       <div className="flex flex-wrap gap-2">
                         <Button asChild>

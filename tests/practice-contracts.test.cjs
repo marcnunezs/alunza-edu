@@ -109,8 +109,7 @@ test('OpenAPI publica RUN con idempotencia, resultado 201 y rechazo de campos ex
     readFileSync(join(__dirname, '../packages/contracts/openapi.json'), 'utf8'),
   );
   const endpoint =
-    doc.paths['/api/v1/activities/{id}/exercises/{assignmentId}/executions']
-      .post;
+    doc.paths['/api/v1/activities/{id}/exercises/{aeId}/executions'].post;
   expect(
     endpoint.parameters.find((p) => p.name === 'Idempotency-Key').required,
   ).toBe(true);
@@ -122,3 +121,43 @@ test('OpenAPI publica RUN con idempotencia, resultado 201 y rechazo de campos ex
     Object.keys(doc.components.schemas.RunExecutionInput.properties).sort(),
   ).toEqual(['code', 'exerciseVersionId']);
 });
+test.each(['executions', 'attempts'])(
+  'OpenAPI distingue ocupación, dependencia y cuota en %s',
+  (route) => {
+    const doc = JSON.parse(
+      readFileSync(
+        join(__dirname, '../packages/contracts/openapi.json'),
+        'utf8',
+      ),
+    );
+    const { responses } =
+      doc.paths[`/api/v1/activities/{id}/exercises/{aeId}/${route}`].post;
+    expect(
+      doc.components.schemas.Error.properties.error.properties.code.enum,
+    ).toContain('RUNNER_BUSY');
+    for (const [status, seconds] of [
+      [409, 1],
+      [429, 60],
+      [503, 1],
+    ]) {
+      expect(responses[status].headers['Retry-After'].schema).toEqual({
+        type: 'integer',
+        enum: [seconds],
+      });
+      expect(responses[status].content['application/json'].schema).toEqual({
+        $ref: '#/components/schemas/Error',
+      });
+    }
+    expect(responses[503].headers['Retry-After'].required).toBe(false);
+    expect(responses[503].headers['Retry-After'].description).toContain(
+      'Solo RUNNER_BUSY',
+    );
+    for (const code of [
+      'RUNNER_BUSY',
+      'DEPENDENCY_UNAVAILABLE',
+      'PERSISTENCE_UNAVAILABLE',
+    ])
+      expect(responses[503].description).toContain(code);
+    expect(responses[429].description).toContain('RATE_LIMITED');
+  },
+);

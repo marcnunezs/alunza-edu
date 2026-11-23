@@ -1,0 +1,219 @@
+# Alunza — Propuesta DEC-005: ventanas, comparabilidad y episodios
+
+**PENDIENTE DE APROBACIÓN. Documento nuevo de trabajo, separado del expediente académico.**
+
+Fecha: 05/10/2026. Preparado para revisión de Marcelo. Esta propuesta no registra una aprobación, una validación pedagógica ni una implementación. Su alcance es decidir la semántica necesaria para IMP-05.03–05.05. No modifica el repositorio ni sus fuentes de autoridad.
+
+En este documento, **HECHO** significa contenido comprobado en archivos locales; **PROPUESTA** significa una elección que requiere aprobación; **SUPUESTO** significa una condición de trabajo que deberá verificarse al implementar. Las rutas citadas son relativas a la raíz local `C:\Users\Lenovo\Desktop\alunza-edu\alunza-edu-laboratorio`, con líneas del estado leído el 05/10/2026. Se escriben como referencias de repositorio, sin enlaces relativos que dependan de la ubicación de este entregable.
+
+## 1. Cinco decisiones concretas para Marcelo
+
+**PROPUESTA.** Aprobar los cinco bloques siguientes permitiría concretar el próximo corte sin pedir que Marcelo redacte sus reglas. Puede aprobarlos conjuntamente o indicar el bloque y la alternativa que prefiere. Ninguno está aprobado por este documento.
+
+| Bloque | Recomendación para aprobar | Consecuencia principal |
+| --- | --- | --- |
+| D1. Tiempo y cobertura | UTC con precisión de microsegundos; inactividad a `>=7×24 h`; error repetido con los últimos tres envíos dentro de la ventana actual `[T−14×24 h,T]`; estancamiento sin plazo temporal adicional. Exigir cobertura continua conocida para afirmar ausencia de eventos. | La igualdad activa la regla; una tripleta vieja no crea una alerta actual. El inicio de captura no fabrica siete días anteriores. |
+| D2. Comparabilidad y error | Seleccionar los últimos tres SUBMIT confirmados del mismo alumno y asignación antes de comprobar comparabilidad. Comparar la misma versión, suite y perfil técnico. «Mismo error» será igualdad de diagnóstico técnico grueso para el MVP. Proponer generación actual de los tres tipos solo mientras la actividad admite trabajo. | No se saltan UNKNOWN, intentos incompletos ni cambios de suite para reconstruir una secuencia favorable. FAILED_TEST puede agrupar fallos de pruebas distintos. Cerrar impide episodios nuevos también de repetición/estancamiento: extensión propuesta que requiere esta aprobación. |
+| D3. Estancamiento | Usar conteos visibles completos y `p2<=p1` y `p3<=p2`; no generar si el último envío completó la asignación. Mantener separadas las causas de estancamiento y error repetido. | `1,1,1` y `2,1,1` cumplen; `1,2,2` y `2,1,2` no. No se infiere dificultad conceptual. |
+| D4. Episodios | Un episodio por tramo continuo que cumple la regla, reconstruido por cada prefijo de hechos confirmados; anexar evaluaciones/evidencia nueva sin sobrescribir la inicial. Recálculo idéntico idempotente con revisión/snapshot de evidencia explícitos. Un cambio de condición corta la acumulación; no cambia automáticamente ACTIVE/REVIEWED. Tras REVIEWED, evidencia nueva que cumpla puede abrir otro episodio vinculado. | Cuarto y quinto fallo no generan automáticamente cinco tarjetas; una caída del worker no oculta una mejora intermedia. Una revisión nunca equivale a resolución; la evidencia posterior queda atendible. |
+| D5. Versiones y límite del corte | Reglas inmutables por organización/tipo; vigencias `[desde,hasta)` sin solapamientos, activación inmediata serializada y nuevas evaluaciones con la versión vigente. Línea base 7 días / 3 intentos en 14 días / 3 intentos sin aumento. Implementar solo versiones, evaluadores y persistencia durable de IMP-05.03–05.05. | Una versión nueva puede crear un episodio nuevo con evidencia todavía vigente, incluso si el anterior fue revisado: quedará identificado como cambio de regla. Tablero, UI de gobierno y revisión docente siguen en sus incrementos posteriores. |
+
+**HECHO.** Los tipos son únicamente INACTIVITY, REPEATED_ERROR y STAGNATION; los estados de señal son ACTIVE y REVIEWED. Las señales orientan la consulta docente de hechos. No son notas, diagnósticos de capacidad, sanciones ni decisiones académicas automáticas. La IA no calcula ni modifica estas reglas. Referencias: `specs/14-progreso-y-senales.md`, líneas 20, 35 y 63; `specs/01-producto-y-alcance.md`, principios del producto; `specs/10-calidad-y-pruebas.md`, línea 103.
+
+## 2. Autoridad conservada y discrepancias que deben quedar visibles
+
+**HECHO.** DEC-005 ya quedó resuelta parcialmente el 02/10/2026 para IMP-05.01–05.02. Esta propuesta conserva:
+
+- La asignación `activity_exercise_id` con versión fija como unidad; una reutilización en otra actividad es una obligación distinta.
+- Progreso acumulado por concepto al corte; `published_at<=asOf` y `submitted_at<=asOf`; autorización actual y logros anteriores conservados.
+- Orden de cálculo por `submitted_at` y `ATTEMPT_SUBMITTED.event_sequence`; `attemptNumber` conserva el orden de admisión del historial.
+- Eventos semánticos deduplicados: CLASS_JOINED, ACTIVITY_OPENED, EXECUTION_COMPLETED, ATTEMPT_SUBMITTED, HINT_DELIVERED y FEEDBACK_VIEWED.
+- RUN con infraestructura OK puede acreditar actividad, pero no crea intento ni completa la asignación. SUBMIT confirmado sí aporta evidencia de intento.
+- Lectura explícita autenticada de feedback, también fallback NO_EVIDENCE, PROVIDER_UNAVAILABLE y UNKNOWN, cuenta como actividad. Solicitud/pista fallida sin entrega o lectura, polling y refresh técnico no cuentan.
+- CLASS_JOINED es referencia de clase, no un evento atribuible a todas sus actividades.
+
+Referencias: `specs/14-progreso-y-senales.md`, líneas 7–18, 37, 51 y 55–59; `docs/work/IMP-05-progress-dictionary.md`, líneas 46–58 y 67–82; `docs/agent/12-decisiones-pendientes.md`, registro «DEC-005, IMP-05.01-05.02». Estas decisiones no se vuelven a someter a aprobación.
+
+**HECHO.** Las siguientes diferencias siguen abiertas. La recomendación de este documento las resuelve como propuesta explícita, sin presentar esa elección como el contrato vigente:
+
+| Diferencia o vacío | Evidencia local | Tratamiento propuesto |
+| --- | --- | --- |
+| El spec verifica `t3−t1<=14 días`, pero no exige que la tripleta sea reciente respecto del corte T. Una tripleta de meses atrás podría cumplir en una primera evaluación tardía. | `specs/14-progreso-y-senales.md`, línea 77. SIG-05/06 evalúan con el tercer envío en el corte. | D1 recomienda ventana actual anclada a T. Es un cambio explícito frente a la fórmula propuesta del spec; conservar los casos originales y añadir el negativo de tripleta envejecida. |
+| «Últimos tres confirmados» en repetición frente a «últimos tres comparables» en estancamiento podría llevar a eliminar UNKNOWN/incompletos antes de escoger la tripleta. | Mismo spec, líneas 77 y 85. | D2 escoge primero los últimos tres confirmados y después verifica; no rescata una subserie anterior. |
+| Clave por los tres IDs crea otro episodio por cada tripleta móvil; incluir ruleVersion también crea otra identidad al activar una versión. | Mismo spec, líneas 114–116. | D4 recomienda episodio continuo y testigos deduplicados. D5 mantiene separación de versiones y explicita sus consecuencias. Esta política sustituiría la propuesta de «una tripleta = un episodio». |
+| La ausencia de captura histórica no acredita ausencia de actividad. SIG-01–04 no incluyen cobertura. | `docs/work/IMP-05-progress-dictionary.md`, líneas 21–39 y 125–126; `fixtures/progress/signals-proposed.json`. | D1 exige un perfil de cobertura conocido en fixtures y evaluaciones. No inventar eventos ni backfill desde GET. |
+| SIG-07 incluye SUCCESS con `visiblePassed=1`, `visibleRequired=3` y `complete=false`. | Fixture, líneas 283–287; `packages/contracts/src/practice.ts`, líneas 72–88; `packages/contracts/src/submissions.ts`, línea 16. | Mantener el esperado «SUCCESS interrumpe», pero preparar un caso canónico coherente antes de implementación. No corregido en esta tarea. |
+| SIG-12 simula suites distintas bajo una misma versión publicada inmutable y usa nombres `tests-v1/v2/v3`. | Fixture, caso SIG-12; `specs/06-modelo-de-datos.md`, líneas 94 y 98; `docs/work/IMP-03-submissions-dictionary.md`, líneas 14 y 34–35. | Mantenerlo como negativo sintético de comparabilidad, sin afirmar que esa secuencia puede producirse normalmente. Adaptar el oráculo a hashes/versiones canónicos sin cambiar el resultado esperado. |
+| Un timestamp de confirmación puede asignarse antes de un bloqueo y volverse visible después de la lectura del evaluador. Ni T ni MAX(event_sequence) garantizan que no aparecerán más hechos con fecha <=T. | `supabase/migrations/20260926215711_practice_submissions.sql`, líneas 423, 428 y 437–445. | Conservar snapshot/revisión de evidencia, verificar las entradas al persistir y tratar un commit posterior como evidencia nueva; no cambiar el corte ni el orden ratificados. |
+| La guía del agente aún llama «propuesta» a eventos y formula progreso/orden con referencias genéricas anteriores al corte ratificado. | `docs/agent/08-progreso-y-senales.md`, apartados 3 y 4, frente al registro parcial DEC-005 de `docs/agent/12-decisiones-pendientes.md` y spec14. | Priorizar la resolución parcial y el diccionario incremental; sincronizar la guía posteriormente para retirar etiquetas obsoletas. No someter eventos/progreso resueltos a una nueva aprobación. |
+
+**HECHO.** El plan registra IMP-05.01–05.02 cerrados técnicamente en local y .03–.08 pendientes; eso no acredita aceptación académica. `docs/plan/05-progreso-y-senales.md`, corte autorizado y tabla de incrementos. El árbol contiene cambios y archivos sin commit previos; esta lectura no los modifica ni atribuye su autoría.
+
+## 3. Definiciones comunes de evaluación
+
+**PROPUESTA.** Toda evaluación recibe un corte `T`, hechos durables confirmados visibles en un snapshot consistente y con fechas <=T, una versión explícita de regla y una revisión identificable de las entradas del ámbito. El reloj de servidor se inyecta para pruebas. Fechas con zona se normalizan a UTC; no se usan días civiles ni timestamps del navegador. Conservar seis decimales y comparar microsegundos, sin redondear mediante Date.parse antes de medir la frontera. Referencia de precisión ya existente: `packages/contracts/src/progress.ts`, líneas 3–23.
+
+Conservar `evidenceRevision`/snapshotBasis con IDs de fuentes, digest de las entradas relevantes y contexto de cobertura/disponibilidad. La base incluye también los hechos durables de activación, revisión docente y cortes internos de acumulación; conservar su orden transaccional dentro del ámbito, sin fingir que el REVIEWED actual existía al evaluar prefijos antiguos. Al persistir, revalidar esa revisión en una transacción con un protocolo de concurrencia compatible con los productores; si cambió, rechazar el candidato y recalcular. Un máximo de secuencia por sí solo no es ese protocolo: la asignación de timestamps/secuencias y el commit pueden llegar en otro orden. Antes de aceptar .05 debe concretarse y probarse esa unidad de consistencia; no se da por implementada por nombrar un watermark.
+
+Un hecho que confirma después con fecha <=T produce una revisión nueva de evidencia para ese mismo T. Conservar la evaluación anterior como cálculo sobre su snapshot, anexar la reconciliación y su motivo, y reevaluar los ámbitos afectados. No sobrescribir silenciosamente el hecho ni la causa histórica; tampoco tratar la revisión anterior como verdad sobre evidencia que aún no era visible. La reproducibilidad exige iguales hechos/snapshot, no solo el mismo reloj.
+
+La identidad de ámbito incluirá organización, clase y alumno; para inactividad, actividad; para reglas de intentos, actividad, asignación y versión de ejercicio. Nunca agregar intentos de dos alumnos, actividades o reutilizaciones del banco. Los conceptos son etiquetas históricas de la versión asignada para filtrar/explicar; no son un carril independiente de señales y no suman intentos de ejercicios diferentes. Una asignación con varios conceptos genera una sola señal por tipo y episodio, con todas sus referencias conceptuales autorizadas.
+
+Evaluar la disponibilidad real de la actividad: inicio inclusivo y cierre exclusivo, tanto programado como cierre efectivo cuando exista. Una actividad futura, DRAFT o cerrada no abre ni amplía episodios actuales; sus señales previas siguen consultables según permisos actuales. **La exclusión por cierre está documentada para inactividad; aplicarla además a repetición/estancamiento es una elección adicional propuesta en D2.** Un alumno deshabilitado o sin inscripción vigente no recibe episodios nuevos. No alterar admisión SUBMIT/cierre: un envío admitido antes del cierre puede confirmarse después y conservar progreso e historial; si la actividad ya cerró, este corte no genera una nueva señal con ese envío tardíamente confirmado. Alternativa: permitir nuevas señales técnicas históricas poscierre con esos envíos, manteniendo inactividad bloqueada; se descarta en la recomendación para acotar seguimiento operativo de este MVP. Referencias: `docs/work/IMP-03-submissions-dictionary.md`, líneas 45–48; `specs/00-fuentes-y-decisiones.md`, resolución SUBMIT del 26/09 y resolución IMP-02.
+
+La salida del evaluador separa «cumple», «no cumple», «no evaluable» y «no verificable». Son resultados de cálculo con motivos, no estados nuevos de señal. No evaluable describe un ámbito sin trabajo habilitado; no verificable describe evidencia/cobertura insuficiente o incoherente. La ausencia de señal por estas causas no significa ausencia de dificultad. Las evaluaciones históricas de solo lectura y reconstrucciones reproducen el snapshot/elegibilidad original con autorización actual para consultar; no crean alertas presentes ni mueven el puntero operativo. Una actividad CLOSED ahora no recibe señales nuevas por consultar un T anterior al cierre.
+
+**SUPUESTO.** El futuro contrato del módulo podrá obtener hashes de suite, versión del runner, esquema de resultado, conteos visibles y estado operativo desde evidencia canónica conservada. Ya existen evidencias públicas/privadas de SUBMIT; falta definir su proyección interna mínima y comprobarla. No hace falta almacenar código, consola ni detalles ocultos dentro de una señal. Referencia: `docs/work/IMP-03-submissions-dictionary.md`, líneas 22–41 y 55–58.
+
+## 4. D1 — Ventanas y cobertura
+
+### INACTIVITY
+
+**PROPUESTA.** `baselineAt=max(enrolledAt,publishedAt,opensAt cuando exista)`. Sea `coverageSince` el comienzo del tramo continuo comprobado en que todos los capturadores elegibles de esa actividad estaban operativos. Usar `observableSince=max(baselineAt,coverageSince)`. No equiparar el nombre de una migración con su fecha real de instalación.
+
+`lastAt=max(observableSince, último occurredAt elegible de la actividad hasta T)`. La regla cumple si el ámbito admite trabajo en T y `T−lastAt>=604800 segundos`. Una cobertura desconocida o un hueco no reconstruible impide afirmar siete días sin actividad: reiniciar el tramo observable después del hueco y conservar el motivo. La cobertura pertenece al ambiente y contrato del capturador, no a un seed ficticio.
+
+Guardar la referencia de baseline/cobertura y el último evento. La identidad del tramo de silencio es `(ámbito,ruleVersion,lastAt,época de cobertura)`, con referencia técnica identificada cuando lastAt procede de cobertura/baseline. Si varios eventos comparten instante máximo, conservar fuente+IDs ordenados como evidencia; añadir un ID con la misma fecha no inicia otro tramo ni otra pausa ni reabre una señal revisada. No inventar un orden global entre ledgers que solo aportan secuencias locales. Los eventos con `occurredAt<=T` son incluidos; uno exactamente en T reinicia lastAt y evita la señal en ese corte.
+
+**Alternativa:** siete días de calendario local. Introduce cambios de duración por zona y horario estacional; se descarta para este MVP porque los contratos y fixtures ya usan instantes UTC. **Alternativa:** no exigir cobertura. Generaría señales sobre períodos que Alunza no pudo observar; no se recomienda.
+
+### REPEATED_ERROR
+
+**PROPUESTA.** Seleccionar la tripleta según D2 y exigir `T−1209600 segundos<=t1<=t2<=t3<=T`. Ambos extremos temporales son inclusivos. Con la línea base N=3, exactamente catorce días cumple; un microsegundo de exceso no. No buscar una tripleta distinta entre intentos más antiguos.
+
+La ventana avanza con T. Una tripleta que ayer cumplía puede dejar de cumplir al salir t1 de la ventana. El episodio deja de acumular evaluaciones y conserva su señal histórica y su estado de revisión.
+
+**Alternativa del spec actual:** medir solo `t3−t1<=14 días`. Preserva una tripleta como vigente indefinidamente mientras no exista otro SUBMIT. Es más simple para detectar episodios históricos, pero puede producir señales actuales con evidencia muy antigua. Se recomienda la ventana actual; una reconstrucción histórica explícita puede reproducir la evaluación en el T antiguo sin publicar una alerta actual retroactiva.
+
+### STAGNATION
+
+**PROPUESTA.** Sin ventana temporal adicional: el requisito documenta tres intentos, pero no catorce días para esta regla. No transferirle la ventana de error repetido. Una separación larga puede reducir su utilidad docente; la causa mostrará las fechas y no afirmará persistencia reciente.
+
+**Alternativa:** añadir un plazo máximo entre intentos. Reduciría alertas antiguas, pero requiere una decisión adicional y fixtures nuevos; no se incorpora como umbral oculto. Referencias de los tres umbrales: `specs/14-progreso-y-senales.md`, líneas 67, 75 y 83.
+
+## 5. D2 y D3 — Secuencia, comparabilidad y significado técnico
+
+**PROPUESTA.** En cada asignación, ordenar SUBMIT confirmados con `submitted_at<=T` por `(submitted_at,event_sequence)`; escoger los tres últimos y presentarlos del más antiguo al más reciente. Empates de timestamp usan la secuencia durable ya acordada. No usar attemptNumber, orden HTTP, UUID ni previousAttemptId para decidir consecutividad. Un intento en otro ejercicio no interrumpe esta secuencia local; RUN tampoco la interrumpe ni la aumenta.
+
+Comparabilidad exige la misma asignación y versión de ejercicio, `test_suite_hash`, conjunto/total de pruebas visibles y perfil de ejecución determinista: versión del runner, límites y esquema de resultado compatible con la misma normalización. Un cambio de cualquiera de estos datos es frontera; no agrupar por atrás hasta encontrar tres coincidentes. Las versiones publicadas siguen fijas: editar el banco no cambia las referencias de los envíos anteriores.
+
+Para REPEATED_ERROR, cada resultado debe ser canónico, con infraestructura OK y diagnóstico en `{SYNTAX_ERROR,RUNTIME_ERROR,FAILED_TEST,TIMEOUT}`. La firma MVP será `(versión de firma, diagnosisCode)` dentro del ámbito comparable. SUCCESS y UNKNOWN son cortes explícitos: una tripleta que los incluye es verificable para esa interrupción y no cumple (`verifiable=true,createSignal=false`, como SIG-07/08). Un diagnóstico técnico confiable puede acreditar repetición aunque no haya terminado todos los tests; eso no autoriza un conteo de estancamiento. Una falla operativa sin intento confirmado no ocupa posición; un UNKNOWN confirmado sí la ocupa y no se omite.
+
+La causa dirá, por ejemplo: «Tres envíos consecutivos de esta asignación clasificados FAILED_TEST dentro de la ventana; esta regla agrupa por diagnóstico y no identifica una misma prueba ni un mismo concepto». No usar texto libre de excepciones, código, consola, mensaje generado por IA ni prueba oculta como firma visible.
+
+**Alternativa:** firma más específica con códigos estructurados de excepción o IDs de pruebas visibles fallidas. Reduce agrupaciones gruesas, pero requiere diseñar y verificar un contrato del runner para todos los diagnósticos, y decidir qué hacer con fallos ocultos. No se recomienda añadirla al primer corte. Los hechos privados no se revelarían por convertirlos en firma.
+
+Para STAGNATION, los tres resultados deben tener infraestructura OK, diagnóstico distinto de UNKNOWN y cobertura completa de la misma suite visible. Obtener `p1,p2,p3` de tests realmente ejecutados, con `0<=pi<=visibleTotal`; no completar resultados parciales con ceros. Falta de cobertura, total cero o contadores incoherentes produce «no verificable» sin señal. Si el último `allRequiredPassed=true`, no generar estancamiento. En los demás casos, cumple exactamente `p2<=p1 && p3<=p2`.
+
+**Alternativas:** conteos estrictamente iguales excluirían el descenso `2,1,1`; comparar con máximo histórico produciría señal para `2,1,2`, aunque el tercer envío mejoró frente al segundo. Se recomienda la comparación no creciente por pares porque corresponde a los SIG-09–11 propuestos y expresa lo observado en los tres envíos, sin cambiar el significado por SQL. Todas las pruebas visibles pueden estar aprobadas y faltar una oculta: `3,3,3` con último allRequiredPassed=false cumple estancamiento de conteos visibles; la explicación no revela la prueba oculta ni promete que esas tres mediciones capturan todo avance real.
+
+Un mismo testigo puede cumplir REPEATED_ERROR y STAGNATION; se conservan dos tipos y causas, con evidencia propia. Eso no suma una gravedad, una nota o una etiqueta personal.
+
+## 6. D4 — Apertura, actualización y cierre de acumulación
+
+**PROPUESTA.** Separar identidad de episodio, testigo y evaluación. La clave de testigo incluye ámbito completo, tipo, ruleVersion y tramo de silencio de D1 o IDs ordenados de la tripleta. Un testigo cualificado ya procesado conserva su episodio; no crea otro por cambiar la hora del worker. **Su resultado no se reutiliza para todo T futuro:** evaluar otra vez el predicado cuando vence la ventana o cambia una entrada.
+
+La evaluación tiene identidad propia por snapshot/revisión de entradas, versión de algoritmo, T y frontera procesada. Persistir solo cambios semánticos: testigo nuevo, primera maduración, expiración, revisión/activación o reconciliación. Un tick de cron sin cambio no anexa otra observación; alcanzar la expiración sí registra «no cumple» y corta acumulación, aunque los tres IDs sigan iguales. La deduplicación de testigo no bloquea ese cambio temporal.
+
+El episodio se identifica por el ámbito/tipo/ruleVersion y su primer testigo cualificado. Cada evaluación anexada conserva T, parámetros, hechos, resultado y versión del evaluador como un registro inmutable. Un puntero al último testigo y un contador pueden actualizarse transaccionalmente; la causa/evidencia inicial y cada evaluación anterior permanecen intactas.
+
+| Situación | Resultado propuesto |
+| --- | --- |
+| Primera evaluación que cumple | Abrir episodio y señal ACTIVE. Conservar instante en que se cumple y calculatedAt del procesamiento. |
+| Mismo testigo/regla y misma evaluación otra vez, incluso dos workers | Devolver el mismo episodio/evaluación; no anexar duplicado ni incrementar contador. |
+| Nuevo testigo cumple y el episodio sigue acumulando en ACTIVE | Anexar evaluación; mantener la misma señal y su primer testigo. |
+| La condición pasa a no cumplir, no verificable o no evaluable | Cortar la acumulación con instante/motivo técnico; no borrar señal ni cambiar ACTIVE a REVIEWED. |
+| Después vuelve a cumplir | Abrir episodio nuevo vinculado al anterior del mismo ámbito/tipo; no ciclos. |
+| Señal REVIEWED; recálculo del mismo testigo | Conservar REVIEWED, primer revisor/fecha y episodio. |
+| Señal REVIEWED; un testigo realmente nuevo, fuera de su base revisada, vuelve a cumplir | Abrir un episodio ACTIVE vinculado; la revisión no cubre evidencia que no estaba en su base. |
+| Nuevo evento elegible en inactividad con occurredAt>lastAt | Cortar acumulación del silencio anterior. Si transcurren otros siete días observables, abrir episodio nuevo con otra referencia. Una fecha empatada conserva la pausa temporal de E23. |
+
+«Cortar acumulación» es una propiedad interna del episodio, no una transición automática de estado de señal. No introduce RESOLVED, DISMISSED ni un tercer estado. Una señal ACTIVE histórica puede dejar de describir la condición actual; sus fechas y último cálculo deben permitir distinguirlo. La visualización se diseña en IMP-05.07, conservando esta diferencia.
+
+La revisión futura deberá guardar, bajo la misma exclusión del episodio, la base/último testigo incluidos al revisar. «Nueva evidencia» significa fuera de esa base y no un testigo globalmente ya procesado; no se decide solo con `submittedAt>reviewedAt` o con la llegada del worker. Un commit tardío puede tener fecha anterior a la revisión y no haber estado en su base. .05 debe soportar ese contrato sin construir el endpoint docente de IMP-06.
+
+El procesamiento debe recorrer cada prefijo de la secuencia confirmada según el orden aprobado y evaluar las fronteras necesarias; mirar solo la última tripleta tras una caída podría ocultar una mejora intermedia que separó dos episodios. Usar checkpoint durable por ámbito/revisión de evidencia y exclusión transaccional, y registrar los deadlines de inactividad y expiración de ventana necesarios. Reconciliar commits que llegan fuera del snapshot conforme a §3. Los cálculos atrasados/históricos y testigos globalmente ya procesados no pueden retroceder el puntero operativo ni crear una nueva señal por una evidencia ya revisada. Las evaluaciones periódicas sin hechos nuevos no anexan una copia cada minuto.
+
+**Alternativa del spec:** una señal por cada tripleta móvil, inmutable y deduplicada por sus tres IDs. Es simple y preserva todo, pero crea nuevas señales con el cuarto, quinto y sexto fallo. Agrupar tarjetas visualmente no elimina ese volumen de registros ACTIVE. Se recomienda el episodio continuo, con testigos inmutables para conservar la misma trazabilidad.
+
+## 7. D5 — Reglas, activación y alcance autorizado
+
+**PROPUESTA.** Cada organización dispone de sus versiones por tipo, con autor, createdAt, parámetros, versión del schema/algoritmo y vigencia. Crear una versión no la activa. Los parámetros/algoritmo quedan inmutables al activar; cualquier cambio exige otra versión. Baseline inicial: inactivityDays=7; repeatedErrorAttempts=3 y repeatedErrorWindowDays=14; stagnationAttempts=3. La semántica aprobada se fija en el schema, sin scripts arbitrarios ni fórmulas aportadas por cliente.
+
+RF-026 permite configurar umbrales: proponer días como enteros positivos y conteos consecutivos como enteros >=2; valores ausentes, negativos, cero, fraccionarios, campos extra, tipos erróneos, algoritmos desconocidos y valores no representables se rechazan. Las variantes con N distinto de 3 usan los últimos N confirmados y comparaciones adyacentes para estancamiento; deben tener oráculos propios antes de habilitarse. La línea base y los fixtures SIG conservan N=3. Estos límites son validación de significado/representación, no afirmación de idoneidad pedagógica de otros umbrales.
+
+Activación MVP inmediata, con hora del servidor A. Vigencia `[A,B)`; a igualdad A rige la nueva versión y a igualdad B deja de regir la anterior. No permitir activación retroactiva ni programación futura en este corte. Esta limitación se propone expresamente frente al «fecha efectiva» genérico de `specs/07-api-y-contratos.md`, línea 355; la capacidad de calendarizar puede concretarse en gobierno posterior.
+
+Serializar por `(organizationId,type)` y exigir una versión vigente esperada para evitar que dos admins sobrescriban por carreras: una activación gana; la otra observa conflicto/recarga, sin dos vigencias superpuestas. Repetir la misma activación conserva A y auditoría efectiva única. Los otros tipos y organizaciones no quedan bloqueados por ese conflicto. Una organización sin regla vigente de un tipo no produce señales de ese tipo; la falta de configuración no se muestra como ausencia de dificultad.
+
+La nueva versión se aplica a evaluaciones desde A. Los episodios de la versión anterior dejan de acumular desde A y preservan sus parámetros, evidencias y estados. Reevaluar evidencia actual con la nueva versión puede abrir un episodio nuevo vinculado, incluso usando los mismos intentos. Debe conservar la causa «nueva versión de regla», sin reactivar la señal anterior ni ocultar el antecedente revisado. **Consecuencia a aprobar:** una activación puede producir otro ACTIVE. **Alternativa:** esperar exclusivamente nueva evidencia después de A; reduce duplicados por cambio de regla, pero demora la aplicación de la configuración y puede omitir una condición actual. Se recomienda aplicación inmediata visible y auditable.
+
+La reconstrucción histórica usa la versión aplicable al T histórico y permisos actuales para consultar. No vuelve a notificar ni modifica episodios históricos; reconstruye proyecciones desde evaluaciones/hechos conservados. Distinguir reconstructedAt de calculatedAt original.
+
+### Entregables de IMP-05.03–05.05 después de una aprobación real
+
+| Incremento | Resultado exigible | Fuera de este corte |
+| --- | --- | --- |
+| .03 | Schemas de reglas, diccionario incremental, versiones inmutables, servicio/API autorizado y activación auditada sin solapamiento. | Formularios completos de gobierno (.06). |
+| .04 | Tres evaluadores puros, reloj inyectado, motivos de no verificable/no evaluable y oráculos de frontera. | Diagnóstico conceptual, reglas IA, notas o validación pedagógica. |
+| .05 | Episodios/testigos durables, deduplicación, checkpoint, recuperación y reconstrucción coherentes. Soporte para conservar REVIEWED. | Tablero completo (.07–.08), detalle y acción docente de revisar (IMP-06). |
+
+La evidencia mínima de causa, IDs, regla y fecha deberá ser recuperable por el ámbito autorizado del módulo; no diferirla por completo hasta RF-017. ADMIN puede configurar reglas, sin adquirir lectura pedagógica individual; STUDENT no recibe una nueva vista de señales por este documento. Referencias: `docs/plan/05-progreso-y-senales.md`, tabla de incrementos y persistencia; `specs/09-seguridad-y-privacidad.md`, línea 73.
+
+## 8. Ejemplos cronológicos y resultados esperados
+
+**PROPUESTA.** Ejemplos ficticios, no pruebas ejecutadas. Todas las horas son UTC; salvo indicación, alumno ACTIVE, actividad habilitada, regla vigente y captura completa. Para envíos, misma asignación/versiones/perfil y conteos canónicos. Cada caso es independiente.
+
+| Caso | Cronología y corte T | Resultado esperado |
+| --- | --- | --- |
+| E01. Inactividad en frontera | Último evento 25/09 12:00:00. T=02/10 11:59:59.999999 y luego 02/10 12:00:00. | Primer corte no cumple; segundo cumple exactamente siete días. SIG-01/02, ampliados a 1 µs. |
+| E02. Inicio tardío | Inscripción 20/09; publicación 30/09 12:00; T=02/10 12:00, sin eventos. | Base 30/09; dos días, sin inactividad. SIG-03. Publicación anterior y opensAt=04/10 tampoco habilitan trabajo en T. |
+| E03. Cobertura | Base 20/09; captura completa desde 02/10 12:00; T=05/10 12:00, sin eventos. | No inferir quince días; solo tres observables. Primer umbral posible 09/10 12:00 si se conserva cobertura. |
+| E04. RUN y ayuda | Evento anterior 25/09; RUN completo 01/10 12:00 sin SUBMIT; T=02/10 12:00. | RUN reinicia inactividad. No aumenta progreso ni tripletas. Fallback leído explícitamente ese día también reinicia; pedir ayuda y fallar sin lectura no. |
+| E05. Cierre exacto | Último evento 25/09 12:00; closesAt=02/10 12:00; T=02/10 12:00. | Actividad cerrada al límite exclusivo: sin nueva señal, aunque el delta sea siete días. Conserva la anterior. SIG-04. |
+| E06. Catorce días | FAILED_TEST en 18/09 12:00, 25/09 12:00, 02/10 12:00; T=02/10 12:00. | REPEATED_ERROR, extremo inferior incluido. Mover primero a 18/09 11:59:59.999999 impide cumplir. SIG-05/06, ampliados a 1 µs. |
+| E07. Tripleta envejecida | Misma tripleta E06; primer cálculo T=03/10 12:00. | No cumple D1: t1 queda fuera de `[T−14d,T]`. Con fórmula t3−t1 del spec sí cumpliría; ésta es la diferencia solicitada para aprobación. |
+| E08. Consecutividad | 18/09 FAILED_TEST; 25/09 SUCCESS canónico; 02/10 FAILED_TEST. Variante central UNKNOWN. | Sin repetición en ambas y `verifiable=true`; no se elimina el elemento central para unir fallos anteriores. SIG-07/08. Para estancamiento, UNKNOWN produce no verificable. |
+| E09. Estancamiento | Tres SUBMIT 30/09, 01/10, 02/10 con p=1,1,1 de 3; variantes 2,1,1; 1,2,2; 2,1,2. | Cumplen primeras dos; no últimas dos. SIG-09–11 y caso del máximo histórico. Igualdad de conteos cumple. |
+| E10. Cobertura visible | p=1,1,1, pero el segundo solo ejecutó 1 de 3 tests o cambió hash de suite. | No verificable; no usar cero ni saltar el segundo. SIG-12 y negativo de incompletitud. Tras tres resultados nuevos comparables puede evaluarse otra tripleta. |
+| E11. Logro | Último SUBMIT allRequiredPassed=true. Variante: visibles 3,3,3 de 3, último allRequiredPassed=false por verificaciones requeridas no superadas. | Primera sin estancamiento. Variante puede cumplir estancamiento de conteos visibles; explicación limitada y sin detalle oculto. |
+| E12. Duplicado/reintento | Replay de una clave devuelve attempt-3 con misma fecha/secuencia. Una nueva clave confirma attempt-4 aun con el mismo código. | Replay no añade posición, testigo ni episodio. Nuevo envío sí es intento; si mantiene condición, anexa testigo en ACTIVE conforme D4. |
+| E13. Empate y HTTP | Tres submittedAt=02/10 12:00:00, secuencias 101/102/103; respuesta HTTP de 103 llega primero. | Orden 101 -> 102 -> 103. Evaluar con esa tripleta; el transporte no cambia consecutividad. |
+| E14. Confirmación tardía | A1 admitido 02/10 11:59:58; A2 admitido 11:59:59, submittedAt=12:00:01; A1 submittedAt=12:00:03. Ambos commits ya visibles al consultar T=12:00:04. | Orden de cálculo A2 -> A1; historial de admisión conserva A1 -> A2. En snapshot que ve ambos y T=12:00:02 solo A2 entra por fecha. No retrofechar A1 a su admisión. |
+| E15. Trabajo atrasado | attempt-3 confirmado 02/10 12:00; worker cae y procesa a las 13:00. | Conservar hechos y tiempos originales; calculatedAt=13:00. Evaluar fronteras desde checkpoint; recálculo del mismo testigo no duplica. SIG-13. |
+| E16. Episodio continuo | 30/09 A1, 01/10 A2, 02/10 A3 y A4 cumplen; docente revisa episodio; 03/10 A5 mantiene condición. | A3 abre; A4 anexa en el mismo ACTIVE. Recalcular A3/A4 tras revisión conserva REVIEWED. A5 abre otro ACTIVE vinculado, porque es nueva evidencia. |
+| E17. Mejora intermedia | A3 abre estancamiento con 1,1,1; A4 sube a 2 y A5/A6 quedan en 2,2. Worker procesa todos tras una caída. | A4 corta acumulación por mejora; A6 puede abrir episodio nuevo con 2,2,2. No unir ambos por mirar solo la última tripleta. |
+| E18. Ámbito/versiones | Dos fallos en actividad A y uno en B reutilizan mismo ejercicio. Luego banco publica v2, pero A conserva v1. | No sumar A+B; ninguna tripleta de tres. Editar banco no cambia A. Una nueva asignación v2 comienza su propia evidencia; conceptos coincidentes no unen carriles. |
+| E19. Cambio de regla | R1 vigente hasta 03/10 12:00; activar R2 a esa hora; evidencia reciente todavía cumple R2. | En igualdad rige R2. Episodio R1 conserva REVIEWED/ACTIVE y hechos; puede abrir otro bajo R2, vinculado y con motivo de cambio. Sin reactivar R1. |
+| E20. Captura antigua que llega tarde | Tras evaluar ausencia se propone importar un evento histórico cuyo occurredAt precede T. | No reescribir evento/episodio aceptando fecha del navegador. Backfill genuino requeriría fuente verificable y corrección auditada aparte; conservar snapshot previo y marcar que no permite reconstruir la misma entrada. No inventar esa capacidad en MVP. |
+| E21. Commit tardío ordinario | El servidor asigna submitted_at=02/10 11:59:59.999999; la transacción espera un lock. Snapshot evaluador en T=02/10 12:00:00 todavía no la ve; el commit ocurre 12:00:01. | Un siguiente cálculo del mismo T incluye ese nuevo hecho y otra evidenceRevision. Revalidar/reintentar si aparece antes de persistir; si aparece después, reconciliar y conservar el cálculo previo con su snapshot. No clasificarlo como timestamp cliente ni ignorarlo por estar debajo de MAX(event_sequence). |
+| E22. Éxito acumulado previo | 28/09 SUCCESS; 30/09, 01/10 y 02/10 nuevos FAILED_TEST con p=1,1,1, misma versión y T=02/10. | La asignación sigue completada por el éxito anterior. La tripleta posterior puede abrir ambos tipos técnicos; la causa no afirma pendiente, pérdida de logro ni incapacidad. Supresión por cualquier éxito previo sería una alternativa adicional que D3 no recomienda. |
+| E23. Timestamp de silencio empatado | Señal de silencio revisada con lastAt=25/09 12:00. Se confirma luego otro evento genuino a esa misma fecha, en nueva revisión de entradas. | Anexar referencia/reconciliar evidencia; misma ancla temporal y época no abren otra pausa ni reactivan REVIEWED. Si su fecha fuera posterior, reevaluar y usar el nuevo lastAt. |
+| E24. Revisión y commit tardío | Docente revisa la base {A1,A2,A3}; luego se vuelve visible A4 con submittedAt anterior a reviewedAt. La nueva tripleta con A4 cumple. | A4 no estaba en la base revisada: puede abrir episodio vinculado con motivo de evidencia nueva. Reproducir el ledger de revisión y sus bases; no aplicar REVIEWED actual a todos los prefijos antiguos. |
+
+Los hechos ordinarios se confirman con tiempo del servidor y append-only: una observación con occurredAt/submittedAt>T no entra en ese corte. Un commit posterior con fecha <=T sí puede entrar en una revisión posterior del snapshot, como E21. No hay backdating por admisión, hora del navegador o llegada tardía del worker. Un timeout operativo confirmado como UNKNOWN conserva su posición histórica sin transformarse en error del alumno.
+
+## 9. Falsos positivos y límites de interpretación
+
+**HECHO/PROPUESTA.** La firma gruesa puede agrupar tres fallos técnicamente distintos; un conteo visible constante puede ocultar mejoras reales de código; alguien puede trabajar fuera de Alunza; abrir o ejecutar prueba no demuestra aprendizaje. La recomendación conserva causas descriptivas y fechas, sin convertir esas limitaciones en perfiles personales.
+
+La inactividad documentada no excluye a quien ya completó los requeridos mientras la actividad continúa abierta. **PROPUESTA:** no introducir ese filtro silenciosamente en este corte; el caso debe aparecer en aceptación y explicación. Excluir a alumnos con progreso completo sería una modificación adicional de población/semántica que Marcelo podría elegir, pero no está incluida en D1. Un éxito anterior tampoco suprime automáticamente una tripleta posterior que cumpla repetición o estancamiento: solo el último allRequiredPassed evita STAGNATION, según D3. El progreso logrado permanece; la causa describirá los envíos posteriores sin llamarlo ejercicio pendiente o pérdida de aprendizaje. Del mismo modo, no excluir ejercicios opcionales de las reglas de intento: «requerido» afecta al progreso; una asignación opcional con tres envíos sigue teniendo evidencia técnica. Registrar el tipo de actividad y required como contexto, sin ponderación oculta.
+
+No hay validación empírica de sensibilidad, precisión, utilidad docente ni efecto sobre aprendizaje. Aprobar DEC-005 resolvería una semántica de producto para construir y comprobar; no acreditaría esas propiedades ni aceptación del docente guía/CAPSTONE.
+
+## 10. Aceptación futura, trazabilidad y cierre de esta propuesta
+
+**PROPUESTA.** Antes de dar por aceptada la implementación del corte:
+
+- Reglas: rechazos completos y versionado inmutable; dos activaciones concurrentes del mismo ámbito dejan una sola vigencia y un conflicto verificable; igualdad A/B, replays, falta de regla y organización ajena conservan invariantes. Cubrir ALZ-RF/HU/CU/PT-026 E1–E4.
+- Evaluadores: conservar SIG-01–SIG-12 y sus expected; reparar explícitamente la coherencia canónica de SIG-07 al preparar fixtures, sin cambiar su esperado. Añadir E01–E24, variantes de alumno deshabilitado/cobertura desconocida, últimos tests incompletos, éxito acumulado previo y actividad completa. Comprobar un microsegundo antes/en/después de cada frontera. Contrastar con un oráculo independiente de la implementación. Cubrir RF/PT-018 y regresión RF/PT-015.
+- Episodios: SIG-13, dos workers con igual y distinta evidencia, fallos antes/después de commit y checkpoint, reintento durable y caída que atraviesa mejora intermedia. Mismo testigo no duplica ni reactiva REVIEWED; testigo nuevo sigue D4. Conservar la invariancia de SIG-14 como soporte de almacenamiento; el recorrido docente de revisión se acepta en IMP-06/RF/PT-019.
+- Reproducibilidad: mismos hechos de intentos/eventos, cobertura/elegibilidad, ledger ordenado de activación/revisión y bases revisadas, barreras temporales, snapshot, T, regla y versión de evaluador producen igual resultado, testigos y agrupación de episodios. Reconstruir vistas después de eliminar solo una proyección derivada debe conservar identidades y hechos. Cambiar salida del LLM o tener IA caída no altera resultados con las mismas entradas; una nueva lectura/entrega legítima es un hecho distinto y sí puede cambiar inactividad.
+- Permisos: no cruces de organizaciones/clases/alumnos/asignaciones; filtros de concepto no multiplican señales. ADMIN de reglas no accede por ese permiso a evidencia individual; ningún payload o causa revela tests ocultos. La capa futura usa autorización NestJS y defensa de persistencia, sin una API paralela.
+- Documentación: después de una decisión real, actualizar conjuntamente spec14, registro DEC-005, contrato/diccionario incremental, fixtures, datos/API y plan pertinente. Registrar qué aprobó Marcelo y cuándo, sin atribuirle aprobación docente ni cerrar IMP-05.06–.08.
+
+Trazabilidad principal: ALZ-RF/HU/CU/PT-018 y 026; regresión 015; soporte futuro 019 y tablero 016. RNF-IA-05, RNF-CON-02/04, RNF-SEG-01/05 y RNF-MAN-02/04. Referencias: `docs/agent/08-progreso-y-senales.md`, apartados de reglas, episodios y fixtures; `specs/03-flujos-y-criterios-de-aceptacion.md`, líneas 448–460; `specs/10-calidad-y-pruebas.md`, líneas 58–59, 66, 89–91, 103 y 128.
+
+**HECHO.** Esta tarea realizó lectura local de instrucciones, fuentes, contratos y fixtures y preparación documental fuera del repositorio. No ejecutó pruebas, CI, servicios, proveedores, migraciones, cambios de DB ni commits. No modificó código, specs, registro de aprobación ni expediente académico. `.agents/skills` no existe en la raíz inspeccionada; se aplicaron AGENTS.md y guías pertinentes de docs/agent.
+
+**Pendiente preciso:** aprobación de D1–D5 o corrección explícita de sus alternativas. La siguiente tarea posterior sería preparar el plan de implementación/diccionario coherente para IMP-05.03–05.05 dentro de una autorización nueva o ya vigente comprobada. La aprobación de este documento, por sí sola, no registra implementación ni autoriza efectos externos.

@@ -162,3 +162,73 @@ test('in-progress responses preserve Retry-After and use safe local messages', a
       'La operación sigue en curso. Puedes consultar su estado o reintentar la misma solicitud.',
   });
 });
+
+test('only the validated retryable 503 RUNNER_BUSY response confirms non-admission', async () => {
+  const envelope = {
+    error: {
+      code: 'RUNNER_BUSY',
+      message: 'private internal description',
+      fields: [],
+      retryable: true,
+    },
+    requestId: '10000000-0000-4000-8000-000000000001',
+  };
+  const api = client(
+    async () =>
+      new Response(JSON.stringify(envelope), {
+        status: 503,
+        headers: { 'Retry-After': '1' },
+      }),
+  );
+  const error = await api
+    .apiRequest('/api/v1/activities/a/exercises/b/executions', z.any())
+    .catch((error) => error);
+  expect(api.isRunnerBusy(error)).toBe(true);
+  expect(error).toMatchObject({
+    code: 'RUNNER_BUSY',
+    status: 503,
+    retryAfter: 1,
+    retryable: true,
+  });
+  expect(error.message).toContain('no fue admitida ni quedó en cola');
+  expect(error.message).not.toContain(envelope.error.message);
+});
+
+test('generic unavailable, malformed and contradictory busy responses remain distinct from confirmed non-admission', async () => {
+  for (const [status, error] of [
+    [
+      503,
+      {
+        code: 'DEPENDENCY_UNAVAILABLE',
+        message: 'private',
+        fields: [],
+        retryable: true,
+      },
+    ],
+    [503, { code: 'RUNNER_BUSY', retryable: true }],
+    [
+      503,
+      { code: 'RUNNER_BUSY', message: 'private', fields: [], retryable: false },
+    ],
+    [
+      409,
+      { code: 'RUNNER_BUSY', message: 'private', fields: [], retryable: true },
+    ],
+  ]) {
+    const api = client(
+      async () =>
+        new Response(
+          JSON.stringify({
+            error,
+            requestId: '10000000-0000-4000-8000-000000000001',
+          }),
+          { status },
+        ),
+    );
+    const failure = await api
+      .apiRequest('/api/v1/activities/a/exercises/b/executions', z.any())
+      .catch((cause) => cause);
+    expect(api.isRunnerBusy(failure)).toBe(false);
+    expect(failure.message).not.toContain('no fue admitida');
+  }
+});

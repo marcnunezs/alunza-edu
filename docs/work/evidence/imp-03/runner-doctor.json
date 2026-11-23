@@ -1,0 +1,30 @@
+{
+  "recordedAt": "2026-10-23T05:29:19.719Z",
+  "stage": "runner:doctor",
+  "status": "PASS",
+  "docker": "29.7.2",
+  "os": "linux",
+  "cgroup": "2",
+  "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+  "effective": {
+    "memory.max": "134217728",
+    "memory.swap.max": "0",
+    "pids.max": "32",
+    "cpu.max": "100000 100000"
+  },
+  "student": {
+    "node": "v24.21.0",
+    "uid": 10001,
+    "capabilities": {
+      "CapInh": "0000000000000000",
+      "CapPrm": "0000000000000000",
+      "CapEff": "0000000000000000",
+      "CapBnd": "0000000000000000",
+      "CapAmb": "0000000000000000"
+    }
+  },
+  "cleanupVerified": true,
+  "programWallMs": 395.5919000000001,
+  "remoteCalls": 0,
+  "remote": "NOT_RUN"
+}

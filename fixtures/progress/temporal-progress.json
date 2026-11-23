@@ -1,0 +1,738 @@
+[
+  {
+    "id": "PRG-01",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "assignments": [],
+      "attempts": []
+    },
+    "expected": {
+      "completed": 0,
+      "required": 0,
+      "ratio": null,
+      "evidenceState": "NO_REQUIRED_EXERCISES",
+      "eligibleAttemptIds": [],
+      "observedAttemptIds": [],
+      "concepts": []
+    }
+  },
+  {
+    "id": "PRG-02",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "assignments": [
+        {
+          "id": "a1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        },
+        {
+          "id": "a2",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        },
+        {
+          "id": "a3",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        }
+      ],
+      "attempts": []
+    },
+    "expected": {
+      "completed": 0,
+      "required": 3,
+      "ratio": 0,
+      "evidenceState": "NO_ATTEMPTS",
+      "eligibleAttemptIds": [],
+      "observedAttemptIds": [],
+      "concepts": [
+        {
+          "id": "concept-functions",
+          "completed": 0,
+          "required": 3,
+          "ratio": 0,
+          "evidenceState": "NO_ATTEMPTS"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRG-03",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "assignments": [
+        {
+          "id": "a1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        },
+        {
+          "id": "a2",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        },
+        {
+          "id": "a3",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        }
+      ],
+      "attempts": [
+        {
+          "id": "success-1",
+          "assignmentId": "a1",
+          "exerciseVersionId": "exercise-v1",
+          "mode": "SUBMIT",
+          "confirmed": true,
+          "submittedAt": "2026-10-01T12:00:00Z",
+          "admittedAt": "2026-10-01T11:59:59Z",
+          "eventSequence": 1,
+          "diagnosisCode": "SUCCESS",
+          "requiredTestsComplete": true,
+          "requiredTestsPassed": true
+        }
+      ]
+    },
+    "expected": {
+      "completed": 1,
+      "required": 3,
+      "ratio": 0.3333333333333333,
+      "evidenceState": "HAS_EVIDENCE",
+      "eligibleAttemptIds": ["success-1"],
+      "observedAttemptIds": ["success-1"],
+      "concepts": [
+        {
+          "id": "concept-functions",
+          "completed": 1,
+          "required": 3,
+          "ratio": 0.3333333333333333,
+          "evidenceState": "HAS_EVIDENCE"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRG-04",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "assignments": [
+        {
+          "id": "a1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        }
+      ],
+      "attempts": [
+        {
+          "id": "practice-only",
+          "assignmentId": "a1",
+          "exerciseVersionId": "exercise-v1",
+          "mode": "RUN",
+          "confirmed": true,
+          "submittedAt": "2026-10-01T12:00:00Z",
+          "admittedAt": "2026-10-01T11:59:59Z",
+          "eventSequence": 1,
+          "diagnosisCode": "SUCCESS",
+          "requiredTestsComplete": true,
+          "requiredTestsPassed": true
+        }
+      ]
+    },
+    "expected": {
+      "completed": 0,
+      "required": 1,
+      "ratio": 0,
+      "evidenceState": "NO_ATTEMPTS",
+      "eligibleAttemptIds": [],
+      "observedAttemptIds": [],
+      "concepts": [
+        {
+          "id": "concept-functions",
+          "completed": 0,
+          "required": 1,
+          "ratio": 0,
+          "evidenceState": "NO_ATTEMPTS"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRG-05",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "assignments": [
+        {
+          "id": "a1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        }
+      ],
+      "attempts": [
+        {
+          "id": "hidden-failed",
+          "assignmentId": "a1",
+          "exerciseVersionId": "exercise-v1",
+          "mode": "SUBMIT",
+          "confirmed": true,
+          "submittedAt": "2026-10-01T12:00:00Z",
+          "admittedAt": "2026-10-01T11:59:59Z",
+          "eventSequence": 1,
+          "diagnosisCode": "FAILED_TEST",
+          "requiredTestsComplete": true,
+          "requiredTestsPassed": false
+        }
+      ]
+    },
+    "expected": {
+      "completed": 0,
+      "required": 1,
+      "ratio": 0,
+      "evidenceState": "HAS_EVIDENCE",
+      "eligibleAttemptIds": ["hidden-failed"],
+      "observedAttemptIds": ["hidden-failed"],
+      "concepts": [
+        {
+          "id": "concept-functions",
+          "completed": 0,
+          "required": 1,
+          "ratio": 0,
+          "evidenceState": "HAS_EVIDENCE"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRG-06",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "assignments": [
+        {
+          "id": "a1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        }
+      ],
+      "attempts": [
+        {
+          "id": "prior-success",
+          "assignmentId": "a1",
+          "exerciseVersionId": "exercise-v1",
+          "mode": "SUBMIT",
+          "confirmed": true,
+          "submittedAt": "2026-09-25T12:00:00Z",
+          "admittedAt": "2026-09-25T11:59:59Z",
+          "eventSequence": 1,
+          "diagnosisCode": "SUCCESS",
+          "requiredTestsComplete": true,
+          "requiredTestsPassed": true
+        },
+        {
+          "id": "later-failure",
+          "assignmentId": "a1",
+          "exerciseVersionId": "exercise-v1",
+          "mode": "SUBMIT",
+          "confirmed": true,
+          "submittedAt": "2026-10-01T12:00:00Z",
+          "admittedAt": "2026-10-01T11:59:59Z",
+          "eventSequence": 2,
+          "diagnosisCode": "FAILED_TEST",
+          "requiredTestsComplete": true,
+          "requiredTestsPassed": false
+        }
+      ]
+    },
+    "expected": {
+      "completed": 1,
+      "required": 1,
+      "ratio": 1,
+      "evidenceState": "HAS_EVIDENCE",
+      "eligibleAttemptIds": ["prior-success", "later-failure"],
+      "observedAttemptIds": ["prior-success", "later-failure"],
+      "concepts": [
+        {
+          "id": "concept-functions",
+          "completed": 1,
+          "required": 1,
+          "ratio": 1,
+          "evidenceState": "HAS_EVIDENCE"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRG-07",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "assignments": [
+        {
+          "id": "a1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": [
+            "concept-functions",
+            "concept-functions",
+            "concept-conditions"
+          ]
+        },
+        {
+          "id": "a2",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-b",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        }
+      ],
+      "attempts": [
+        {
+          "id": "success-one-obligation",
+          "assignmentId": "a1",
+          "exerciseVersionId": "exercise-v1",
+          "mode": "SUBMIT",
+          "confirmed": true,
+          "submittedAt": "2026-10-01T12:00:00Z",
+          "admittedAt": "2026-10-01T11:59:59Z",
+          "eventSequence": 1,
+          "diagnosisCode": "SUCCESS",
+          "requiredTestsComplete": true,
+          "requiredTestsPassed": true
+        }
+      ]
+    },
+    "expected": {
+      "completed": 1,
+      "required": 2,
+      "ratio": 0.5,
+      "evidenceState": "HAS_EVIDENCE",
+      "eligibleAttemptIds": ["success-one-obligation"],
+      "observedAttemptIds": ["success-one-obligation"],
+      "concepts": [
+        {
+          "id": "concept-conditions",
+          "completed": 1,
+          "required": 1,
+          "ratio": 1,
+          "evidenceState": "HAS_EVIDENCE"
+        },
+        {
+          "id": "concept-functions",
+          "completed": 1,
+          "required": 2,
+          "ratio": 0.5,
+          "evidenceState": "HAS_EVIDENCE"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRG-08",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "assignments": [
+        {
+          "id": "a1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        },
+        {
+          "id": "a2",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        }
+      ],
+      "attempts": [
+        {
+          "id": "at-cutoff",
+          "assignmentId": "a1",
+          "exerciseVersionId": "exercise-v1",
+          "mode": "SUBMIT",
+          "confirmed": true,
+          "submittedAt": "2026-10-02T12:00:00Z",
+          "admittedAt": "2026-10-01T11:59:59Z",
+          "eventSequence": 1,
+          "diagnosisCode": "SUCCESS",
+          "requiredTestsComplete": true,
+          "requiredTestsPassed": true
+        },
+        {
+          "id": "after-cutoff",
+          "assignmentId": "a2",
+          "exerciseVersionId": "exercise-v1",
+          "mode": "SUBMIT",
+          "confirmed": true,
+          "submittedAt": "2026-10-02T12:00:01Z",
+          "admittedAt": "2026-10-02T11:59:59Z",
+          "eventSequence": 2,
+          "diagnosisCode": "SUCCESS",
+          "requiredTestsComplete": true,
+          "requiredTestsPassed": true
+        }
+      ]
+    },
+    "expected": {
+      "completed": 1,
+      "required": 2,
+      "ratio": 0.5,
+      "evidenceState": "HAS_EVIDENCE",
+      "eligibleAttemptIds": ["at-cutoff"],
+      "observedAttemptIds": ["at-cutoff"],
+      "concepts": [
+        {
+          "id": "concept-functions",
+          "completed": 1,
+          "required": 2,
+          "ratio": 0.5,
+          "evidenceState": "HAS_EVIDENCE"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRG-09",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "assignments": [
+        {
+          "id": "published-at-cutoff",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-10-02T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        },
+        {
+          "id": "future-publication",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-10-02T12:00:01Z",
+          "conceptIds": ["concept-functions"]
+        }
+      ],
+      "attempts": []
+    },
+    "expected": {
+      "completed": 0,
+      "required": 1,
+      "ratio": 0,
+      "evidenceState": "NO_ATTEMPTS",
+      "eligibleAttemptIds": [],
+      "observedAttemptIds": [],
+      "concepts": [
+        {
+          "id": "concept-functions",
+          "completed": 0,
+          "required": 1,
+          "ratio": 0,
+          "evidenceState": "NO_ATTEMPTS"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRG-10",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "assignments": [
+        {
+          "id": "old-version",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        },
+        {
+          "id": "new-version",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-b",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v2",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        }
+      ],
+      "attempts": [
+        {
+          "id": "old-version-success",
+          "assignmentId": "old-version",
+          "exerciseVersionId": "exercise-v1",
+          "mode": "SUBMIT",
+          "confirmed": true,
+          "submittedAt": "2026-10-01T12:00:00Z",
+          "admittedAt": "2026-10-01T11:59:59Z",
+          "eventSequence": 1,
+          "diagnosisCode": "SUCCESS",
+          "requiredTestsComplete": true,
+          "requiredTestsPassed": true
+        }
+      ]
+    },
+    "expected": {
+      "completed": 1,
+      "required": 2,
+      "ratio": 0.5,
+      "evidenceState": "HAS_EVIDENCE",
+      "eligibleAttemptIds": ["old-version-success"],
+      "observedAttemptIds": ["old-version-success"],
+      "concepts": [
+        {
+          "id": "concept-functions",
+          "completed": 1,
+          "required": 2,
+          "ratio": 0.5,
+          "evidenceState": "HAS_EVIDENCE"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRG-11",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "from": "2026-10-01T00:00:00Z",
+      "assignments": [
+        {
+          "id": "a1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        }
+      ],
+      "attempts": [
+        {
+          "id": "success-before-period",
+          "assignmentId": "a1",
+          "exerciseVersionId": "exercise-v1",
+          "mode": "SUBMIT",
+          "confirmed": true,
+          "submittedAt": "2026-09-25T12:00:00Z",
+          "admittedAt": "2026-09-25T11:59:59Z",
+          "eventSequence": 1,
+          "diagnosisCode": "SUCCESS",
+          "requiredTestsComplete": true,
+          "requiredTestsPassed": true
+        }
+      ]
+    },
+    "expected": {
+      "completed": 1,
+      "required": 1,
+      "ratio": 1,
+      "evidenceState": "HAS_EVIDENCE",
+      "eligibleAttemptIds": ["success-before-period"],
+      "observedAttemptIds": [],
+      "concepts": [
+        {
+          "id": "concept-functions",
+          "completed": 1,
+          "required": 1,
+          "ratio": 1,
+          "evidenceState": "HAS_EVIDENCE"
+        }
+      ]
+    }
+  },
+  {
+    "id": "PRG-12",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "assignments": [
+        {
+          "id": "a1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "activityId": "activity-a",
+          "exerciseId": "bank-exercise",
+          "exerciseVersionId": "exercise-v1",
+          "required": true,
+          "publishedAt": "2026-09-20T12:00:00Z",
+          "conceptIds": ["concept-functions"]
+        }
+      ],
+      "attempts": [
+        {
+          "id": "incomplete-result",
+          "assignmentId": "a1",
+          "exerciseVersionId": "exercise-v1",
+          "mode": "SUBMIT",
+          "confirmed": true,
+          "submittedAt": "2026-10-01T12:00:00Z",
+          "admittedAt": "2026-10-01T11:59:59Z",
+          "eventSequence": 1,
+          "diagnosisCode": "UNKNOWN",
+          "requiredTestsComplete": false,
+          "requiredTestsPassed": false
+        }
+      ]
+    },
+    "expected": {
+      "completed": 0,
+      "required": 1,
+      "ratio": 0,
+      "evidenceState": "HAS_EVIDENCE",
+      "eligibleAttemptIds": ["incomplete-result"],
+      "observedAttemptIds": ["incomplete-result"],
+      "concepts": [
+        {
+          "id": "concept-functions",
+          "completed": 0,
+          "required": 1,
+          "ratio": 0,
+          "evidenceState": "HAS_EVIDENCE"
+        }
+      ]
+    }
+  }
+]

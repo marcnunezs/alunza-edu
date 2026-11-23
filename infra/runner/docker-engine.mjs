@@ -1,5 +1,5 @@
 import { Agent, request } from 'node:http';
-import { measureTiming } from './timing.mjs';
+import { measureTiming, recordDriverFailure } from './timing.mjs';
 
 const RESPONSE_LIMIT = 524288;
 let endpointPromise;
@@ -112,6 +112,19 @@ export function pinnedDockerEnvironment(
   return copy;
 }
 
+// Keep transport diagnostics independent of the contents of the Docker reply.
+class DockerExchangeError extends Error {
+  constructor(outcome, httpStatus) {
+    super('Local Docker request failed');
+    this.outcome = outcome;
+    this.httpStatus = httpStatus;
+  }
+}
+
+function abortOutcome(signal) {
+  return signal?.reason?.name === 'TimeoutError' ? 'DEADLINE' : 'CANCELLED';
+}
+
 export function engineRequest(
   socketPath,
   method,
@@ -122,26 +135,24 @@ export function engineRequest(
   const encoded = body === undefined ? undefined : JSON.stringify(body);
   return new Promise((resolve, reject) => {
     let settled = false;
-    let exchangeSocket;
-    const finish = (error, value) => {
+    let exchangeSocket,
+      httpStatus = null;
+    const finish = (failure, value) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       signal?.removeEventListener('abort', abort);
-      if (error) {
+      if (failure) {
         // A failed, cancelled or incomplete exchange never returns its socket
         // to the shared pool. There are no transport retries of mutations.
         // ClientRequest can release its own socket reference before JSON
         // validation at response end, so retain and discard the actual socket.
         exchangeSocket?.destroy();
         req.destroy();
-        reject(new Error('Local Docker request failed'));
+        reject(new DockerExchangeError(failure, httpStatus));
       } else resolve(value);
     };
-    const abort = () => {
-      req.destroy();
-      finish(new Error('Local Docker request cancelled'));
-    };
+    const abort = () => finish(abortOutcome(signal));
     const req = request(
       {
         socketPath,
@@ -158,19 +169,25 @@ export function engineRequest(
         },
       },
       (response) => {
+        if (response.statusCode < 100 || response.statusCode > 599) {
+          finish('INVALID_RESPONSE');
+          response.destroy();
+          return;
+        }
+        httpStatus = response.statusCode;
         let length = 0;
         const chunks = [];
         response.on('data', (chunk) => {
           length += chunk.length;
           if (length > maxBytes) {
+            finish('RESPONSE_LIMIT');
             response.destroy();
-            abort();
           } else chunks.push(chunk);
         });
-        response.on('error', (error) => finish(error));
+        response.on('error', () => finish('INCOMPLETE_RESPONSE'));
         response.on('end', () => {
           if (!response.complete) {
-            finish(new Error('Incomplete Docker response'));
+            finish('INCOMPLETE_RESPONSE');
             return;
           }
           try {
@@ -179,17 +196,21 @@ export function engineRequest(
               status: response.statusCode,
               data: text ? JSON.parse(text) : null,
             });
-          } catch (error) {
-            finish(error);
+          } catch {
+            finish('INVALID_RESPONSE');
           }
         });
       },
     );
-    const timer = setTimeout(abort, Math.max(1, timeoutMs));
+    const timer = setTimeout(() => finish('DEADLINE'), Math.max(1, timeoutMs));
     req.on('socket', (socket) => {
       exchangeSocket = socket;
     });
-    req.on('error', (error) => finish(error));
+    req.on('error', (error) => {
+      if (httpStatus !== null) finish('INCOMPLETE_RESPONSE');
+      else if (error.code?.startsWith('HPE_')) finish('INVALID_RESPONSE');
+      else finish('SOCKET_ERROR');
+    });
     signal?.addEventListener('abort', abort, { once: true });
     if (signal?.aborted) abort();
     else req.end(encoded);
@@ -357,6 +378,98 @@ function attachDockerStream(socketPath, path, { signal, output, maxBytes }) {
   });
 }
 
+function startRuntimeCause(status, message) {
+  // Docker 20.10 can report an OCI runtime denial as HTTP 400.
+  if (status < 400 || status > 599 || typeof message !== 'string') return null;
+  // The provider's free text is inspected in memory only. Return a known
+  // symptom, never the message, path or mount/cgroup name.
+  if (
+    /\b(?:unable to apply cgroup configuration|error setting cgroup config|cgroup mountpoint does not exist)\b/i.test(
+      message,
+    )
+  )
+    return 'CGROUP';
+  if (
+    /\b(?:error mounting|failed to mount rootfs|mount through procfd)\b/i.test(
+      message,
+    )
+  )
+    return 'MOUNT';
+  if (/\b(?:permission denied|operation not permitted)\b/i.test(message))
+    return 'PERMISSION';
+  return null;
+}
+
+const dockerStates = new Set([
+  'created',
+  'running',
+  'paused',
+  'restarting',
+  'removing',
+  'exited',
+  'dead',
+]);
+
+async function observeFailedStart({
+  exchange,
+  observer,
+  socketPath,
+  apiVersion,
+  containerId,
+  signal,
+  deadlineMs,
+}) {
+  const detail = {
+    ...exchange,
+    containerState: 'unknown',
+    hasStarted: null,
+    oomKilled: null,
+  };
+  // Only an immutable ID matched across create and preinspection is eligible.
+  // Diagnostics never enter the cleanup budget or wait for an entire request timeout.
+  const timeoutMs = Math.min(500, deadlineMs - Date.now() - 500);
+  if (
+    !signal.aborted &&
+    timeoutMs >= 1 &&
+    /^[a-f0-9]{64}$/.test(containerId ?? '')
+  ) {
+    try {
+      const response = await engineRequest(
+        socketPath,
+        'GET',
+        `/v${apiVersion}/containers/${containerId}/json`,
+        { signal, timeoutMs },
+      );
+      if (response.status === 404) detail.containerState = 'absent';
+      const state = response.data?.State;
+      if (
+        response.status === 200 &&
+        response.data?.Id === containerId &&
+        dockerStates.has(state?.Status)
+      ) {
+        detail.containerState = state.Status;
+        if (typeof state.OOMKilled === 'boolean')
+          detail.oomKilled = state.OOMKilled;
+        if (typeof state.StartedAt === 'string') {
+          const started = Date.parse(state.StartedAt);
+          if (started > 0) detail.hasStarted = true;
+          else if (/^0001-01-01T00:00:00(?:\.0+)?Z$/.test(state.StartedAt))
+            detail.hasStarted = false;
+        }
+      }
+    } catch {
+      // A failed observation leaves the state unknown and cannot mask START.
+    }
+  }
+  try {
+    const result = observer(Object.freeze(detail));
+    if (result && typeof result.then === 'function')
+      void Promise.resolve(result).catch(() => undefined);
+  } catch {
+    // Observation must never hold up removal of the owned container.
+  }
+}
+
 export async function engineStartAttach(
   socketPath,
   apiVersion,
@@ -367,6 +480,11 @@ export async function engineStartAttach(
     timeoutMs = 30000,
     maxBytes = RESPONSE_LIMIT,
     observeTiming,
+    observeFailure,
+    observeStartFailure,
+    ownedContainerId,
+    deadlineMs,
+    beforeSend,
   },
 ) {
   signal?.throwIfAborted();
@@ -384,48 +502,79 @@ export async function engineStartAttach(
   )
     throw new Error('Invalid Docker attachment input');
   const scope = new AbortController();
-  const deadline = setTimeout(() => scope.abort(), Math.max(1, timeoutMs));
+  const operationEnd = Date.now() + timeoutMs;
+  const deadline = setTimeout(
+    () =>
+      scope.abort(
+        new globalThis.DOMException('Docker deadline', 'TimeoutError'),
+      ),
+    Math.max(1, timeoutMs),
+  );
   const operationSignal = signal
     ? AbortSignal.any([signal, scope.signal])
     : scope.signal;
   const path = `/v${apiVersion}/containers/${encodeURIComponent(name)}`;
   let output, stdin;
-  const handshakes = [];
+  let startResponse;
+  let phase = 'ATTACH_OUTPUT';
   try {
-    // Establish both attachments before start, so no output packet can be lost.
-    // Their independent HTTP upgrades need not wait for each other.
+    // Register output before input and start, so no packet can be lost.
     // Separate attachments preserve output through Windows named-pipe EOF.
-    handshakes.push(
-      measureTiming(observeTiming, 'attachOutput', async () => {
-        output = await attachDockerStream(
-          socketPath,
-          `${path}/attach?stream=1&logs=0&stdin=0&stdout=1&stderr=1`,
-          { signal: operationSignal, output: true, maxBytes },
-        );
-        void output.finished.catch(() => scope.abort());
-      }),
+    output = await measureTiming(observeTiming, 'attachOutput', () =>
+      attachDockerStream(
+        socketPath,
+        `${path}/attach?stream=1&logs=0&stdin=0&stdout=1&stderr=1`,
+        { signal: operationSignal, output: true, maxBytes },
+      ),
     );
-    handshakes.push(
-      measureTiming(observeTiming, 'attachInput', async () => {
-        stdin = await attachDockerStream(
-          socketPath,
-          `${path}/attach?stream=1&logs=0&stdin=1&stdout=0&stderr=0`,
-          { signal: operationSignal, output: false, maxBytes },
-        );
-        void stdin.finished.catch(() => scope.abort());
-      }),
+    void output.finished.catch(() => {
+      if (!operationSignal.aborted)
+        recordDriverFailure(observeFailure, 'STREAMS');
+      scope.abort();
+    });
+    phase = 'ATTACH_INPUT';
+    stdin = await measureTiming(observeTiming, 'attachInput', () =>
+      attachDockerStream(
+        socketPath,
+        `${path}/attach?stream=1&logs=0&stdin=1&stdout=0&stderr=0`,
+        { signal: operationSignal, output: false, maxBytes },
+      ),
     );
-    await Promise.all(handshakes);
-    if (!output.isOpen() || !stdin.isOpen())
+    void stdin.finished.catch(() => {
+      if (!operationSignal.aborted)
+        recordDriverFailure(
+          observeFailure,
+          phase === 'SEND' ? 'SEND' : 'STREAMS',
+        );
+      scope.abort();
+    });
+    if (!output.isOpen() || !stdin.isOpen()) {
+      phase = !output.isOpen() ? 'ATTACH_OUTPUT' : 'ATTACH_INPUT';
       throw new Error('Docker attachment closed before start');
+    }
+    phase = 'START';
     await measureTiming(observeTiming, 'start', async () => {
       const started = await engineRequest(socketPath, 'POST', `${path}/start`, {
         signal: operationSignal,
         timeoutMs,
       });
-      if (started.status !== 204) throw new Error('Docker start failed');
+      if (started.status !== 204) {
+        startResponse = {
+          httpStatus: started.status,
+          outcome: 'HTTP_RESPONSE',
+          runtimeCause: startRuntimeCause(
+            started.status,
+            started.data?.message,
+          ),
+        };
+        throw new Error('Docker start failed');
+      }
     });
+    phase = 'SEND';
+    if (beforeSend) await waitForAuthority(beforeSend, operationSignal);
+    operationSignal.throwIfAborted();
     await measureTiming(observeTiming, 'send', () => stdin.send(input));
+    phase = 'STREAMS';
     const streams = measureTiming(observeTiming, 'streams', () =>
       Promise.all([output.finished, stdin.finished]),
     );
@@ -447,16 +596,61 @@ export async function engineStartAttach(
         throw new Error('Docker exit unconfirmed');
       return exited;
     });
-    const [[result], exited] = await Promise.all([streams, wait]);
+    const observedWait = observeFailure
+      ? wait.catch((error) => {
+          recordDriverFailure(observeFailure, 'WAIT');
+          throw error;
+        })
+      : wait;
+    const [[result], exited] = await Promise.all([streams, observedWait]);
     return { ...result, exitCode: exited.data.StatusCode };
+  } catch (error) {
+    recordDriverFailure(observeFailure, phase);
+    if (phase === 'START' && typeof observeStartFailure === 'function') {
+      const exchange = startResponse ?? {
+        httpStatus:
+          error instanceof DockerExchangeError ? error.httpStatus : null,
+        outcome:
+          error instanceof DockerExchangeError
+            ? error.outcome
+            : operationSignal.aborted
+              ? abortOutcome(operationSignal)
+              : 'SOCKET_ERROR',
+        runtimeCause: null,
+      };
+      await observeFailedStart({
+        exchange,
+        observer: observeStartFailure,
+        socketPath,
+        apiVersion,
+        containerId: ownedContainerId,
+        signal: operationSignal,
+        deadlineMs: Math.min(operationEnd, deadlineMs ?? operationEnd),
+      });
+    }
+    throw error;
   } finally {
     clearTimeout(deadline);
     scope.abort();
-    // A failed upgrade can race a sibling that has not delivered its handle.
-    // Abort first, then observe both settlements before closing every handle.
-    await Promise.allSettled(handshakes);
     output?.close();
     stdin?.close();
+  }
+}
+
+async function waitForAuthority(check, signal) {
+  signal.throwIfAborted();
+  let remove;
+  const cancelled = new Promise((_, reject) => {
+    const abort = () =>
+      reject(new Error('Docker execution authority cancelled'));
+    signal.addEventListener('abort', abort, { once: true });
+    remove = () => signal.removeEventListener('abort', abort);
+    if (signal.aborted) abort();
+  });
+  try {
+    return await Promise.race([Promise.resolve().then(check), cancelled]);
+  } finally {
+    remove();
   }
 }
 
@@ -512,24 +706,180 @@ export async function localDockerEngine(command, signal) {
         name,
         options,
       ),
+    prepareAttach: (name, options) =>
+      enginePrepareAttach(
+        resolved.socketPath,
+        resolved.apiVersion,
+        name,
+        options,
+      ),
   };
 }
 
-export function capsuleConfiguration(
-  image,
-  labels,
-  probe,
-  memoryBytes = 134217728,
+/** A running, input-free capsule. The returned channel is single-use. */
+export async function enginePrepareAttach(
+  socketPath,
+  apiVersion,
+  name,
+  options,
 ) {
+  const { signal, containerId, expiresAtMs, observeTiming } = options;
+  if (
+    !/^1\.4[1-5]$/.test(apiVersion) ||
+    !/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/.test(name) ||
+    !/^[a-f0-9]{64}$/.test(containerId) ||
+    !Number.isSafeInteger(expiresAtMs) ||
+    expiresAtMs <= Date.now() ||
+    expiresAtMs > Date.now() + 61000
+  )
+    throw new Error('Invalid prepared capsule channel');
+  signal?.throwIfAborted();
+  const scope = new AbortController();
+  const path = `/v${apiVersion}/containers/${containerId}`;
+  let output,
+    stdin,
+    used = false,
+    closed = false;
+  const abort = () => scope.abort();
+  const expiry = setTimeout(abort, Math.max(1, expiresAtMs - Date.now()));
+  const preparation = setTimeout(
+    abort,
+    Math.min(30000, expiresAtMs - Date.now()),
+  );
+  signal?.addEventListener('abort', abort, { once: true });
+  const close = () => {
+    closed = true;
+    clearTimeout(expiry);
+    clearTimeout(preparation);
+    signal?.removeEventListener('abort', abort);
+    scope.abort();
+    output?.close();
+    stdin?.close();
+  };
+  try {
+    output = await measureTiming(observeTiming, 'attachOutput', () =>
+      attachDockerStream(
+        socketPath,
+        `${path}/attach?stream=1&logs=0&stdin=0&stdout=1&stderr=1`,
+        { signal: scope.signal, output: true, maxBytes: RESPONSE_LIMIT },
+      ),
+    );
+    void output.finished.then(() => {
+      if (!used) abort();
+    }, abort);
+    stdin = await measureTiming(observeTiming, 'attachInput', () =>
+      attachDockerStream(
+        socketPath,
+        `${path}/attach?stream=1&logs=0&stdin=1&stdout=0&stderr=0`,
+        { signal: scope.signal, output: false, maxBytes: RESPONSE_LIMIT },
+      ),
+    );
+    void stdin.finished.then(() => {
+      if (!used) abort();
+    }, abort);
+    if (!output.isOpen() || !stdin.isOpen())
+      throw new Error('Prepared capsule channel closed');
+    const started = await measureTiming(observeTiming, 'start', () =>
+      engineRequest(socketPath, 'POST', `${path}/start`, {
+        signal: scope.signal,
+        timeoutMs: 30000,
+      }),
+    );
+    if (started.status !== 204)
+      throw new Error('Prepared capsule start failed');
+    const running = await engineRequest(socketPath, 'GET', `${path}/json`, {
+      signal: scope.signal,
+    });
+    if (
+      running.status !== 200 ||
+      running.data?.Id !== containerId ||
+      running.data.State?.Running !== true ||
+      !Number.isInteger(running.data.State.Pid) ||
+      running.data.State.Pid <= 0
+    )
+      throw new Error('Prepared capsule running state unconfirmed');
+    scope.signal.throwIfAborted();
+    clearTimeout(preparation);
+    signal?.removeEventListener('abort', abort);
+    return {
+      containerId,
+      inspection: running.data,
+      usable: () =>
+        !used &&
+        !closed &&
+        !scope.signal.aborted &&
+        output.isOpen() &&
+        stdin.isOpen(),
+      close,
+      async consume(
+        input,
+        { signal: executionSignal, deadlineMs, beforeSend },
+      ) {
+        if (
+          used ||
+          closed ||
+          scope.signal.aborted ||
+          typeof input !== 'string' ||
+          Buffer.byteLength(input) > 262144 ||
+          !Number.isSafeInteger(deadlineMs) ||
+          deadlineMs <= Date.now() ||
+          typeof beforeSend !== 'function'
+        )
+          throw new Error('Prepared capsule consumption denied');
+        used = true;
+        const end = Math.min(deadlineMs, expiresAtMs, Date.now() + 30000);
+        const deadline = setTimeout(abort, Math.max(1, end - Date.now()));
+        executionSignal?.addEventListener('abort', abort, { once: true });
+        try {
+          executionSignal?.throwIfAborted();
+          if (!output.isOpen() || !stdin.isOpen())
+            throw new Error('Prepared capsule channel lost');
+          // The durable assignment and execution lease are checked last, before
+          // any student bytes can enter the already-running trusted bridge.
+          await waitForAuthority(beforeSend, scope.signal);
+          executionSignal?.throwIfAborted();
+          scope.signal.throwIfAborted();
+          if (Date.now() >= end) throw new Error('Prepared capsule deadline');
+          await measureTiming(observeTiming, 'send', () => stdin.send(input));
+          const streams = Promise.all([output.finished, stdin.finished]);
+          const wait = engineRequest(
+            socketPath,
+            'POST',
+            `${path}/wait?condition=not-running`,
+            {
+              signal: scope.signal,
+              timeoutMs: Math.max(1, end - Date.now()),
+            },
+          );
+          const [[result], exited] = await Promise.all([streams, wait]);
+          if (
+            exited.status !== 200 ||
+            !Number.isInteger(exited.data?.StatusCode) ||
+            (exited.data.Error != null && exited.data.Error.Message !== '')
+          )
+            throw new Error('Prepared capsule exit unconfirmed');
+          return { ...result, exitCode: exited.data.StatusCode };
+        } finally {
+          clearTimeout(deadline);
+          executionSignal?.removeEventListener('abort', abort);
+          close();
+        }
+      },
+    };
+  } catch (error) {
+    close();
+    throw error;
+  }
+}
+
+export function capsuleConfiguration(image, labels, probe, runtimeName) {
   if (!/^sha256:[a-f0-9]{64}$/.test(image))
     throw new Error('Runner requires immutable local image ID');
   if (
-    !Number.isInteger(memoryBytes) ||
-    memoryBytes < 6 * 1024 * 1024 ||
-    memoryBytes > 134217728
+    runtimeName !== undefined &&
+    !/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$/.test(runtimeName)
   )
-    throw new Error('Unsupported capsule memory limit');
-  memoryBytes = Math.floor(memoryBytes / 4096) * 4096;
+    throw new Error('Invalid explicit Docker runtime');
   return {
     Image: image,
     AttachStdin: true,
@@ -541,14 +891,18 @@ export function capsuleConfiguration(
     Labels: labels,
     ...(probe ? { Env: [`ALUNZA_RUNNER_PROBE=${probe}`] } : {}),
     HostConfig: {
+      ...(runtimeName === undefined ? {} : { Runtime: runtimeName }),
       NetworkMode: 'none',
+      PidMode: '',
       ReadonlyRootfs: true,
       Privileged: false,
       CapDrop: ['ALL'],
-      CapAdd: ['SETUID', 'SETGID', 'SETPCAP'],
+      // Only the trusted root bridge retains KILL. It must terminate the
+      // different-UID worker; setpriv drops every capability before student code.
+      CapAdd: ['SETUID', 'SETGID', 'SETPCAP', 'KILL'],
       SecurityOpt: ['no-new-privileges:true'],
-      Memory: memoryBytes,
-      MemorySwap: memoryBytes,
+      Memory: 134217728,
+      MemorySwap: 134217728,
       NanoCpus: 1000000000,
       PidsLimit: 32,
       Ulimits: [{ Name: 'nofile', Soft: 64, Hard: 64 }],

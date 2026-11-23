@@ -1,3 +1,4 @@
+const { assertLaboratoryTestState } = require('../laboratory-test-state.cjs');
 /* eslint @typescript-eslint/no-require-imports: "off" */
 const { randomUUID } = require('node:crypto');
 const { URLSearchParams } = require('node:url');
@@ -111,7 +112,7 @@ async function invitation(org) {
 async function mailProof(inv) {
   for (let attempt = 0; attempt < 60; attempt++) {
     const list = await (
-      await fetch('http://127.0.0.1:16424/api/v1/messages', {
+      await fetch('http://127.0.0.1:18424/api/v1/messages', {
         signal: AbortSignal.timeout(5000),
       })
     ).json();
@@ -122,7 +123,7 @@ async function mailProof(inv) {
         continue;
       const detail = await (
         await fetch(
-          `http://127.0.0.1:16424/api/v1/message/${encodeURIComponent(message.ID)}`,
+          `http://127.0.0.1:18424/api/v1/message/${encodeURIComponent(message.ID)}`,
           { signal: AbortSignal.timeout(5000) },
         )
       ).json();
@@ -163,14 +164,15 @@ async function acceptanceCounts(orgId, invitationId, userId) {
 
 beforeAll(async () => {
   state = JSON.parse(readFileSync(process.env.ALUNZA_TEST_STATE, 'utf8'));
+  assertLaboratoryTestState(state);
   base = process.env.ALUNZA_TEST_API_URL;
   const migration = new URL(state.migrationUrl);
   if (
-    state.projectId !== 'alunza-edu-foundation-test' ||
-    state.authUrl !== 'http://127.0.0.1:16421' ||
-    base !== 'http://127.0.0.1:4100' ||
+    state.projectId !== 'alunza-edu-laboratorio-test' ||
+    state.authUrl !== 'http://127.0.0.1:18421' ||
+    base !== 'http://127.0.0.1:4300' ||
     migration.hostname !== '127.0.0.1' ||
-    migration.port !== '16422'
+    migration.port !== '18422'
   )
     throw new Error(
       'Estas pruebas solo admiten la infraestructura local aislada.',

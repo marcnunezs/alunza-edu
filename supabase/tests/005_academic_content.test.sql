@@ -2,197 +2,187 @@ begin;
 grant alunza_app to postgres;
 create extension if not exists pgtap with schema extensions;
 grant usage on schema extensions to alunza_app;
-do $$ declare routine regprocedure; begin
-  for routine in select p.oid::regprocedure from pg_proc p
-    join pg_depend d on d.classid='pg_proc'::regclass and d.objid=p.oid
-    join pg_extension e on d.refclassid='pg_extension'::regclass and e.oid=d.refobjid
-    where e.extname='pgtap'
-  loop execute format('grant execute on function %s to alunza_app',routine); end loop;
+do $$ declare r regprocedure; begin
+ for r in select p.oid::regprocedure from pg_proc p join pg_depend d on d.classid='pg_proc'::regclass and d.objid=p.oid join pg_extension e on d.refclassid='pg_extension'::regclass and e.oid=d.refobjid where e.extname='pgtap'
+ loop execute format('grant execute on function %s to alunza_app',r); end loop;
 end $$;
 set local search_path=public,extensions;
-select no_plan();
-set local app.actor_id=''; set local app.session_id=''; set local app.organization_id='';
-
--- All data is fictional and scoped to this rolled-back transaction.
+select plan(57);
 insert into auth.users(id,email,email_confirmed_at)
-select ('61000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'academic-'||n||'@alunza.test',now()
-from generate_series(1,6) n;
+select ('91000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'academic-'||n||'@alunza.test',now() from generate_series(1,5) n;
 insert into auth.sessions(id,user_id)
-select ('62000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,('61000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid
-from generate_series(1,6) n;
+select ('91100000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,('91000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid from generate_series(1,5) n;
 insert into app.profiles(id,display_name,email_normalized,account_state)
-select ('61000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'Academic '||n,'academic-'||n||'@alunza.test','ACTIVE'
-from generate_series(1,6) n;
-insert into app.organizations(id,code,name) values
-('63000000-0000-4000-8000-000000000001','ACADEMIC-ONE','Academic one'),
-('63000000-0000-4000-8000-000000000002','ACADEMIC-TWO','Academic two');
-insert into app.organization_memberships(organization_id,user_id,role,state,joined_at)
-select '63000000-0000-4000-8000-000000000001',('61000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,
-  case when n=1 then 'ADMIN' when n in (2,3) then 'TEACHER' else 'STUDENT' end,'ACTIVE',now()
-from generate_series(1,5) n;
+select ('91000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'Academic '||n,'academic-'||n||'@alunza.test','ACTIVE' from generate_series(1,5) n;
+insert into app.organizations(id,code,name) values ('92000000-0000-4000-8000-000000000001','ACA-A','Academic A'),('92000000-0000-4000-8000-000000000002','ACA-B','Academic B');
 insert into app.organization_memberships(organization_id,user_id,role,state,joined_at) values
-('63000000-0000-4000-8000-000000000002','61000000-0000-4000-8000-000000000006','STUDENT','ACTIVE',now());
+('92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000001','ADMIN','ACTIVE',now()),
+('92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','TEACHER','ACTIVE',now()),
+('92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000003','STUDENT','ACTIVE',now()),
+('92000000-0000-4000-8000-000000000002','91000000-0000-4000-8000-000000000004','TEACHER','ACTIVE',now()),
+('92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000005','TEACHER','ACTIVE',now());
 insert into app.courses(id,organization_id,code,name,academic_period) values
-('64000000-0000-4000-8000-000000000001','63000000-0000-4000-8000-000000000001','JS','JavaScript','2026-2'),
-('64000000-0000-4000-8000-000000000002','63000000-0000-4000-8000-000000000002','JS','JavaScript other','2026-2');
+('93000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','P1','Programming','2026-2'),
+('93000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000002','P1','Foreign','2026-2');
+insert into app.course_teacher_grants(organization_id,course_id,teacher_id,granted_by) values
+('92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','91000000-0000-4000-8000-000000000001');
 insert into app.classes(id,organization_id,course_id,teacher_id,code,name) values
-('65000000-0000-4000-8000-000000000001','63000000-0000-4000-8000-000000000001','64000000-0000-4000-8000-000000000001','61000000-0000-4000-8000-000000000002','A','Class A'),
-('65000000-0000-4000-8000-000000000002','63000000-0000-4000-8000-000000000001','64000000-0000-4000-8000-000000000001','61000000-0000-4000-8000-000000000003','B','Class B');
-insert into app.class_memberships(organization_id,class_id,user_id) values
-('63000000-0000-4000-8000-000000000001','65000000-0000-4000-8000-000000000001','61000000-0000-4000-8000-000000000004');
-insert into app.class_join_codes(id,organization_id,class_id,token_digest,expires_at,created_by) values
-('66000000-0000-4000-8000-000000000001','63000000-0000-4000-8000-000000000001','65000000-0000-4000-8000-000000000001',repeat('a',64),now()+interval '7 days','61000000-0000-4000-8000-000000000002');
-insert into app.class_join_codes(id,organization_id,class_id,token_digest,created_at,expires_at,created_by) values
-('66000000-0000-4000-8000-000000000002','63000000-0000-4000-8000-000000000001','65000000-0000-4000-8000-000000000001',repeat('b',64),now()-interval '8 days',now()-interval '1 day','61000000-0000-4000-8000-000000000002');
-insert into app.concepts(id,organization_id,normalized_name) values
-('67000000-0000-4000-8000-000000000001','63000000-0000-4000-8000-000000000001','variables'),
-('67000000-0000-4000-8000-000000000002','63000000-0000-4000-8000-000000000001','functions');
-insert into app.concept_versions(id,organization_id,concept_id,version,name,created_by,parent_concept_id) values
-('68000000-0000-4000-8000-000000000001','63000000-0000-4000-8000-000000000001','67000000-0000-4000-8000-000000000001',1,'Variables','61000000-0000-4000-8000-000000000001',null),
-('68000000-0000-4000-8000-000000000002','63000000-0000-4000-8000-000000000001','67000000-0000-4000-8000-000000000002',1,'Functions','61000000-0000-4000-8000-000000000001','67000000-0000-4000-8000-000000000001');
-update app.concepts set current_version_id='68000000-0000-4000-8000-000000000001' where id='67000000-0000-4000-8000-000000000001';
-update app.concepts set current_version_id='68000000-0000-4000-8000-000000000002' where id='67000000-0000-4000-8000-000000000002';
-insert into app.exercises(id,organization_id,owner_id,visibility) values
-('69000000-0000-4000-8000-000000000001','63000000-0000-4000-8000-000000000001','61000000-0000-4000-8000-000000000002','ORGANIZATION');
+('94000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','A1','Own class'),
+('94000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000005','A2','Other class'),
+('94000000-0000-4000-8000-000000000003','92000000-0000-4000-8000-000000000002','93000000-0000-4000-8000-000000000002','91000000-0000-4000-8000-000000000004','B1','Foreign class');
+insert into app.class_memberships(organization_id,class_id,user_id) values('92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000003');
+insert into app.class_join_codes(organization_id,class_id,token_digest,expires_at,created_by) values
+('92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000002',repeat('a',64),now()+interval '1 day','91000000-0000-4000-8000-000000000005'),
+('92000000-0000-4000-8000-000000000002','94000000-0000-4000-8000-000000000003',repeat('b',64),now()+interval '1 day','91000000-0000-4000-8000-000000000004');
+insert into app.concept_tags(id,organization_id,normalized_name) values('95000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','addition');
+insert into app.concept_versions(id,organization_id,concept_id,version,name,description,created_by) values
+('95100000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','95000000-0000-4000-8000-000000000001',1,'Addition','Addition','91000000-0000-4000-8000-000000000001');
+update app.concept_tags set current_version_id='95100000-0000-4000-8000-000000000001' where id='95000000-0000-4000-8000-000000000001';
+insert into app.exercises(id,organization_id,owner_id) values('96000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002');
 insert into app.exercise_versions(id,organization_id,exercise_id,version,title,statement,starter_code,difficulty,created_by) values
-('70000000-0000-4000-8000-000000000001','63000000-0000-4000-8000-000000000001','69000000-0000-4000-8000-000000000001',1,'Sum','Return a sum','function solve(a,b) { return a+b; }','BASIC','61000000-0000-4000-8000-000000000002');
-insert into app.exercise_version_concepts(organization_id,exercise_version_id,concept_id,concept_version_id) values
-('63000000-0000-4000-8000-000000000001','70000000-0000-4000-8000-000000000001','67000000-0000-4000-8000-000000000001','68000000-0000-4000-8000-000000000001');
-insert into app_private.exercise_tests(organization_id,exercise_version_id,position,visibility,args,expected) values
-('63000000-0000-4000-8000-000000000001','70000000-0000-4000-8000-000000000001',0,'VISIBLE','[1,2]','3'),
-('63000000-0000-4000-8000-000000000001','70000000-0000-4000-8000-000000000001',1,'HIDDEN','[123,456]','579');
-update app.exercises set current_version_id='70000000-0000-4000-8000-000000000001' where id='69000000-0000-4000-8000-000000000001';
-insert into app.activities(id,organization_id,class_id,title,type,created_by) values
-('71000000-0000-4000-8000-000000000001','63000000-0000-4000-8000-000000000001','65000000-0000-4000-8000-000000000001','Published activity','FORMATIVE','61000000-0000-4000-8000-000000000002'),
-('71000000-0000-4000-8000-000000000002','63000000-0000-4000-8000-000000000001','65000000-0000-4000-8000-000000000001','Empty draft','FORMATIVE','61000000-0000-4000-8000-000000000002');
-insert into app.activity_exercises(organization_id,activity_id,exercise_version_id,position,required) values
-('63000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000001','70000000-0000-4000-8000-000000000001',0,true);
-update app.activities set state='PUBLISHED' where id='71000000-0000-4000-8000-000000000001';
-set constraints all immediate;
-set constraints all deferred;
+('96100000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000001',1,'Sum','Return sum','module.exports.solve=(a,b)=>a+b;','BEGINNER','91000000-0000-4000-8000-000000000002');
+insert into app.exercise_version_concepts values('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','95100000-0000-4000-8000-000000000001');
+insert into app_private.exercise_tests(organization_id,exercise_version_id,test_id,position,visibility,args,expected) values
+('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','visible',0,'visible','[1,2]','3'),
+('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','hidden-sentinel',1,'hidden','[2,2]','4');
+update app.exercises set current_version_id='96100000-0000-4000-8000-000000000001' where id='96000000-0000-4000-8000-000000000001';
+insert into app.activities(id,organization_id,class_id,created_by,title,type) values
+('97000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','Published','FORMATIVE'),
+('97000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','Draft','FORMATIVE');
+insert into app.activity_exercises(organization_id,activity_id,exercise_version_id,position) values('92000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001',0);
+update app.activities set state='PUBLISHED' where id='97000000-0000-4000-8000-000000000001';
+-- Validate the original domain constraints without flushing signal capture mid-transaction.
+-- SET CONSTRAINTS ALL IMMEDIATE and subsequent DML rejection have their own signals integration test.
+set constraints app.provisioning_complete, app.exercise_definition_complete,
+ app.concept_current_version, app.exercise_current_version immediate;
 
-select ok(not has_schema_privilege('anon','app_private','USAGE'),'Anonymous role cannot enter private schema');
-select ok(not has_table_privilege('authenticated','app_private.exercise_tests','SELECT'),'Browser authenticated role cannot directly read tests');
-select ok(not has_function_privilege('authenticated','app_private.preview_class_join_code(text)','EXECUTE'),'Join preview is not a public RPC');
-select ok(not has_table_privilege('alunza_app','app.exercise_versions','UPDATE'),'Runtime cannot update version rows');
-select ok(not has_table_privilege('alunza_app','app_private.exercise_tests','UPDATE'),'Runtime cannot modify tests');
-select ok(not has_table_privilege('alunza_app','app.classes','DELETE'),'Runtime cannot delete class history');
-select ok((select bool_and(relrowsecurity and relforcerowsecurity) from pg_class where oid in ('app.courses'::regclass,'app.classes'::regclass,'app.class_memberships'::regclass,'app.concepts'::regclass,'app.exercise_versions'::regclass,'app_private.exercise_tests'::regclass,'app.activities'::regclass)),'Academic tables enforce RLS including the owner');
-
+select ok(not has_schema_privilege('authenticated','app','usage'),'No browser domain schema access');
+select ok(not has_table_privilege('authenticated','app_private.exercise_tests','select'),'No browser hidden tests access');
+select ok((select not rolbypassrls and not rolcanlogin from pg_roles where rolname='alunza_identity'),'Helper has no login or RLS bypass');
+select is((select count(*)::integer from pg_class c join pg_namespace n on n.oid=c.relnamespace where c.relrowsecurity and c.relforcerowsecurity and ((n.nspname='app' and c.relname in ('courses','course_teacher_grants','classes','class_memberships','class_join_codes','concept_tags','concept_versions','exercises','exercise_versions','exercise_version_concepts','activities','activity_exercises')) or (n.nspname='app_private' and c.relname='exercise_tests'))),13,'All academic tables including private tests force RLS');
+select ok((select bool_and(not has_table_privilege('alunza_app',format('%I.%I',schemaname,tablename),'TRUNCATE,REFERENCES,TRIGGER') and (tablename='activity_exercises' or not has_table_privilege('alunza_app',format('%I.%I',schemaname,tablename),'DELETE'))) from pg_tables where schemaname in ('app','app_private')),'Only draft-item deletion is granted; no truncation, FK or trigger authority');
 set local role alunza_app;
-set local app.actor_id='61000000-0000-4000-8000-000000000004';
-set local app.session_id='62000000-0000-4000-8000-000000000004';
-set local app.organization_id='63000000-0000-4000-8000-000000000001';
-select is(app_private.academic_role('63000000-0000-4000-8000-000000000001'),'STUDENT','Student role uses current institutional membership and session');
-select is((select count(*)::integer from app.classes),1,'Student sees only enrolled class');
-select is((select count(*)::integer from app.activities),1,'Student sees publication but not draft');
-select is((select count(*)::integer from app_private.exercise_tests where visibility='VISIBLE'),1,'Student SQL sees the visible test of assigned version');
-select is((select count(*)::integer from app_private.exercise_tests where visibility='HIDDEN'),0,'Student SQL cannot read hidden tests even bypassing API projection');
-select is((select count(*)::integer from app.class_join_codes),0,'Student cannot list code digests');
-select is((select count(*)::integer from app_private.preview_class_join_code(repeat('a',64))),1,'Digest proof allows scoped join preview');
-select ok((select already_enrolled from app_private.preview_class_join_code(repeat('a',64))),'Join preview identifies existing membership');
-select is((select count(*)::integer from app_private.preview_class_join_code(repeat('b',64))),0,'Expired digest does not reveal a class');
-select throws_ok($$insert into app.courses(organization_id,code,name,academic_period) values ('63000000-0000-4000-8000-000000000001','ILLEGAL','Illegal','2026')$$,'42501',null,'Student cannot create academic structure');
-set local app.session_id='62000000-0000-4000-8000-000000000002';
-select is((select count(*)::integer from app.classes),0,'Another real session cannot be substituted for actor session');
-set local app.session_id='62000000-0000-4000-8000-000000000004';
-set local app.organization_id='63000000-0000-4000-8000-000000000002';
-select is((select count(*)::integer from app.exercise_versions),0,'Changing context cannot read another organization');
+set local app.actor_id='91000000-0000-4000-8000-000000000003';
+set local app.session_id='91100000-0000-4000-8000-000000000003';
+set local app.organization_id='';
+select is((select count(*)::integer from app.classes),1,'Student only sees enrolled class when bootstrapping context');
+select is((select count(*)::integer from app.activities),1,'Student cannot see draft');
+select is((select count(*)::integer from app.exercise_versions),1,'Assigned public version available');
+select is((select count(*)::integer from app_private.exercise_tests),1,'Only visible test returned');
+select is((select count(*)::integer from app_private.exercise_tests where visibility='hidden'),0,'Hidden tests inaccessible by direct runtime SQL');
+select is((select count(*)::integer from app.exercises),0,'Student does not obtain bank');
+select is((select count(*)::integer from app.class_join_codes),0,'Student cannot list digests');
+select is((select count(*)::integer from app_private.resolve_join_code(repeat('a',64))),1,'Valid own-organization code can be previewed');
+select is((select count(*)::integer from app_private.resolve_join_code(repeat('b',64))),0,'Foreign code cannot reveal class');
+set local app.organization_id='92000000-0000-4000-8000-000000000001';
+select throws_ok($$insert into app.class_memberships(organization_id,class_id,user_id) values('92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000002','91000000-0000-4000-8000-000000000003')$$,'42501',null,'Membership needs actual code proof');
+select set_config('app.join_code_digest',repeat('a',64),true);
+select lives_ok($$insert into app.class_memberships(organization_id,class_id,user_id) values('92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000002','91000000-0000-4000-8000-000000000003') returning *$$,'Code creates membership and returns the authorized new row');
+select throws_ok($$insert into app.class_memberships(organization_id,class_id,user_id) values('92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000002','91000000-0000-4000-8000-000000000003')$$,'23505',null,'Database prevents duplicate enrollment');
+with changed as(update app.organizations set name='Forbidden' where id='92000000-0000-4000-8000-000000000001' returning id) select is((select count(*)::integer from changed),0,'Enrollment never grants organization UPDATE');
+select ok(not has_table_privilege(current_user,'app_private.exercise_tests','update'),'Runtime cannot mutate canonical tests');
 
-set local app.actor_id='61000000-0000-4000-8000-000000000006';
-set local app.session_id='62000000-0000-4000-8000-000000000006';
-select is((select count(*)::integer from app_private.preview_class_join_code(repeat('a',64))),0,'Code from another institution reveals nothing');
-select is(app_private.academic_resource_org('exercise','69000000-0000-4000-8000-000000000001'),null::uuid,'Resource resolver does not disclose foreign organization');
-
-set local app.organization_id='63000000-0000-4000-8000-000000000001';
-set local app.actor_id='61000000-0000-4000-8000-000000000005';
-set local app.session_id='62000000-0000-4000-8000-000000000005';
-select is((select count(*)::integer from app.activities),0,'Unenrolled peer cannot read class publications');
-select throws_ok($$insert into app.class_memberships(organization_id,class_id,user_id) values ('63000000-0000-4000-8000-000000000001','65000000-0000-4000-8000-000000000001','61000000-0000-4000-8000-000000000005')$$,'P0001','JOIN_CODE_INVALID','Enrollment without digest proof fails');
-select set_config('app.class_join_digest',repeat('a',64),true);
-select lives_ok($$insert into app.class_memberships(organization_id,class_id,user_id) values ('63000000-0000-4000-8000-000000000001','65000000-0000-4000-8000-000000000001','61000000-0000-4000-8000-000000000005') returning id$$,'Valid collective code creates and returns a membership under runtime RLS');
-select lives_ok($$insert into app.class_memberships(organization_id,class_id,user_id) values ('63000000-0000-4000-8000-000000000001','65000000-0000-4000-8000-000000000001','61000000-0000-4000-8000-000000000005') on conflict (organization_id,class_id,user_id) do nothing$$,'Duplicate enrollment is harmless');
-select is((select count(*)::integer from app.class_memberships where user_id=app_private.actor_id()),1,'Enrollment remains unique');
-select is((select count(*)::integer from app_private.exercise_tests),1,'Newly enrolled student receives visible tests only');
-
-set local app.actor_id='61000000-0000-4000-8000-000000000002';
-set local app.session_id='62000000-0000-4000-8000-000000000002';
-select is((select uses_count from app.class_join_codes where id='66000000-0000-4000-8000-000000000001'),1,'Only an effective enrollment increments the collective code counter');
-select is((select count(*)::integer from app.classes),1,'Teacher sees own class, not peer class');
-select lives_ok($$insert into app.classes(organization_id,course_id,teacher_id,code,name) values ('63000000-0000-4000-8000-000000000001','64000000-0000-4000-8000-000000000001','61000000-0000-4000-8000-000000000002','C','Class created through runtime') returning id$$,'Teacher creates own class with INSERT RETURNING and immediate SELECT authorization');
-select is((select count(*)::integer from app_private.exercise_tests),2,'Owner teacher reads full test definition');
-select lives_ok($$select app_private.lock_academic_organization('63000000-0000-4000-8000-000000000001')$$,'Teacher can serialize academic write without UPDATE privilege on organization');
-select throws_ok($$update app.classes set teacher_id='61000000-0000-4000-8000-000000000003' where id='65000000-0000-4000-8000-000000000001'$$,'42501','FORBIDDEN','Teacher cannot reassign class');
-select throws_ok($$update app.classes set archived_at=now() where id='65000000-0000-4000-8000-000000000001'$$,'42501','FORBIDDEN','Teacher cannot perform administrator class archival');
-select throws_ok($$update app.activities set state='PUBLISHED' where id='71000000-0000-4000-8000-000000000002'$$,'23514','ACTIVITY_EMPTY','Empty activity cannot publish');
-select lives_ok($$insert into app.activities(organization_id,class_id,title,type,created_by) values ('63000000-0000-4000-8000-000000000001','65000000-0000-4000-8000-000000000001','Draft with immediate projection','FORMATIVE','61000000-0000-4000-8000-000000000002') returning id$$,'Teacher receives new DRAFT activity through INSERT RETURNING');
-select throws_ok($$update app.activities set instructions='Changed after publication' where id='71000000-0000-4000-8000-000000000001'$$,'23514','IMMUTABLE_PUBLICATION','Published definition cannot be overwritten');
-with removed as (delete from app.activity_exercises where activity_id='71000000-0000-4000-8000-000000000001' returning id)
-select is((select count(*)::integer from removed),0,'DELETE permission cannot remove assignments from a published activity');
-select throws_ok($$insert into app_private.exercise_tests(organization_id,exercise_version_id,position,visibility,args,expected) values ('63000000-0000-4000-8000-000000000001','70000000-0000-4000-8000-000000000001',2,'VISIBLE','[9,9]','18')$$,'23514','IMMUTABLE_VERSION','Finalized version cannot acquire new tests');
-select throws_ok($$update app.exercise_versions set title='Overwritten' where id='70000000-0000-4000-8000-000000000001'$$,'42501',null,'Runtime cannot overwrite even its own version');
-
-set local app.actor_id='61000000-0000-4000-8000-000000000003';
-set local app.session_id='62000000-0000-4000-8000-000000000003';
-select is((select count(*)::integer from app.activities),0,'Another teacher cannot read class activities');
-select is((select count(*)::integer from app_private.exercise_tests),0,'Shared bank metadata does not expose private authoring tests to another teacher');
-with changed as (update app.exercises set visibility='PRIVATE' where id='69000000-0000-4000-8000-000000000001' returning id)
-select is((select count(*)::integer from changed),0,'Another teacher cannot edit ownership/visibility');
-
-set local app.actor_id='61000000-0000-4000-8000-000000000001';
-set local app.session_id='62000000-0000-4000-8000-000000000001';
-select is((select count(*)::integer from app_private.exercise_tests),0,'Administrator cannot read pedagogical tests by governance role');
-select is((select count(*)::integer from app.classes),3,'Administrator can govern own institutional class metadata including teacher-created class');
-select lives_ok($$update app.courses set description=repeat('x',10000) where id='64000000-0000-4000-8000-000000000001'$$,'Description limit matches the 10000-character API contract');
-select lives_ok($$insert into app.class_join_codes(id,organization_id,class_id,token_digest,expires_at,created_by) values ('66000000-0000-4000-8000-000000000003','63000000-0000-4000-8000-000000000001','65000000-0000-4000-8000-000000000002',repeat('c',64),now()+interval '7 days','61000000-0000-4000-8000-000000000001')$$,'Administrator may issue a code without obtaining teacher publication permissions');
-select lives_ok($$update app.class_join_codes set revoked_at=now() where id='66000000-0000-4000-8000-000000000003'$$,'Administrator can revoke incorporation code');
-with changed as (update app.activities set state='CLOSED' where id='71000000-0000-4000-8000-000000000001' returning id)
-select is((select count(*)::integer from changed),0,'Administrator role does not grant teacher publication mutations');
-select throws_ok($$update app.classes set archived_at=now() where id='65000000-0000-4000-8000-000000000001'$$,'P0001','DEPENDENCIES_ACTIVE','PUBLISHED activity blocks class archival');
-select throws_ok($$update app.courses set archived_at=now() where id='64000000-0000-4000-8000-000000000001'$$,'P0001','DEPENDENCIES_ACTIVE','Active class blocks course archival');
-select throws_ok($$update app.organizations set archived_at=now(),archived_by='61000000-0000-4000-8000-000000000001',archive_reason='Test' where id='63000000-0000-4000-8000-000000000001'$$,'P0001','DEPENDENCIES_ACTIVE','Academic dependencies block organization archival');
-select throws_ok($$insert into app.concepts(organization_id,normalized_name) values ('63000000-0000-4000-8000-000000000001','variables')$$,'23505',null,'Concept name is unique after normalization');
-insert into app.concept_versions(id,organization_id,concept_id,version,name,parent_concept_id,created_by) values
-('68000000-0000-4000-8000-000000000003','63000000-0000-4000-8000-000000000001','67000000-0000-4000-8000-000000000001',2,'Variables','67000000-0000-4000-8000-000000000002','61000000-0000-4000-8000-000000000001');
-select throws_ok($$update app.concepts set current_version_id='68000000-0000-4000-8000-000000000003' where id='67000000-0000-4000-8000-000000000001'$$,'23514','CONCEPT_CYCLE','Indirect concept cycle is rejected at activation');
-select lives_ok($$update app.concepts set archived_at=now() where id='67000000-0000-4000-8000-000000000001'$$,'Concept with historical use is archived without deleting its version');
-select is((select count(*)::integer from app.concept_versions where concept_id='67000000-0000-4000-8000-000000000001'),2,'Archival preserves historical concept versions');
-
-set local app.actor_id='61000000-0000-4000-8000-000000000004';
-set local app.session_id='62000000-0000-4000-8000-000000000004';
-select is((select count(*)::integer from app.exercise_versions),1,'Archiving concept preserves already published student content');
-select is((select name from app.concept_versions where id='68000000-0000-4000-8000-000000000001'),'Variables','Student still reads pinned historical concept label');
-
-set local app.actor_id='61000000-0000-4000-8000-000000000002';
-set local app.session_id='62000000-0000-4000-8000-000000000002';
-insert into app.activity_exercises(organization_id,activity_id,exercise_version_id,position) values
-('63000000-0000-4000-8000-000000000001','71000000-0000-4000-8000-000000000002','70000000-0000-4000-8000-000000000001',0);
-select throws_ok($$update app.activities set state='PUBLISHED' where id='71000000-0000-4000-8000-000000000002'$$,'23514','PUBLICATION_CONTENT_UNAVAILABLE','Archived concept blocks publishing even an existing draft');
-with removed as (delete from app.activity_exercises where activity_id='71000000-0000-4000-8000-000000000002' returning id)
-select is((select count(*)::integer from removed),1,'The owning teacher may replace assignments while an activity is still DRAFT');
-select lives_ok($$update app.activities set state='CLOSED' where id='71000000-0000-4000-8000-000000000001'$$,'Current teacher closes activity');
-select throws_ok($$update app.activities set state='PUBLISHED' where id='71000000-0000-4000-8000-000000000001'$$,'23514','IMMUTABLE_PUBLICATION','Closed activity cannot reopen');
-update app.exercises set visibility='PRIVATE' where id='69000000-0000-4000-8000-000000000001';
-
-set local app.actor_id='61000000-0000-4000-8000-000000000001';
-set local app.session_id='62000000-0000-4000-8000-000000000001';
-select lives_ok($$update app.classes set teacher_id='61000000-0000-4000-8000-000000000003' where id='65000000-0000-4000-8000-000000000001'$$,'Administrator can reassign an active teacher');
-set local app.actor_id='61000000-0000-4000-8000-000000000003';
-set local app.session_id='62000000-0000-4000-8000-000000000003';
-select is((select count(*)::integer from app.exercise_versions where id='70000000-0000-4000-8000-000000000001'),1,'Newly assigned teacher retains reading of pinned PRIVATE version in class history');
-select is((select count(*)::integer from app_private.exercise_tests where visibility='HIDDEN'),0,'Class reassignment does not grant authorship of private hidden tests');
-set local app.actor_id='61000000-0000-4000-8000-000000000001';
-set local app.session_id='62000000-0000-4000-8000-000000000001';
-update app.organization_memberships set state='DISABLED' where organization_id='63000000-0000-4000-8000-000000000001' and user_id='61000000-0000-4000-8000-000000000003';
-select lives_ok($$update app.classes set archived_at=now() where id='65000000-0000-4000-8000-000000000001'$$,'Administrator archives class without PUBLISHED activities even when its assigned teacher is disabled');
-select ok((select revoked_at is not null from app.class_join_codes where id='66000000-0000-4000-8000-000000000001'),'Class archival revokes collective code atomically');
-select throws_ok($$update app.classes set name='Changed archived class' where id='65000000-0000-4000-8000-000000000001'$$,'P0001','RESOURCE_ARCHIVED','Archived class is immutable');
-set local app.actor_id='61000000-0000-4000-8000-000000000004';
-set local app.session_id='62000000-0000-4000-8000-000000000004';
-select is((select count(*)::integer from app.activities),0,'CLOSED is excluded from student catalog; future own attempt history is a separate authorization');
-select is((select count(*)::integer from app_private.exercise_tests),0,'CLOSED content cannot be obtained through SQL to start a new resolution');
-select is((select count(*)::integer from app_private.preview_class_join_code(repeat('a',64))),0,'Archived class cannot be previewed for incorporation');
+set local app.actor_id='91000000-0000-4000-8000-000000000002';
+set local app.session_id='91100000-0000-4000-8000-000000000002';
+select is((select count(*)::integer from app.classes),1,'Teacher cannot read other teacher class');
+select is((select count(*)::integer from app_private.exercise_tests),2,'Author reads full definition');
+select throws_ok($$insert into app_private.exercise_tests(organization_id,exercise_version_id,test_id,position,visibility,args,expected) values('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','later',2,'visible','[3,3]','6')$$,'23514','IMMUTABLE_VERSION','Published version cannot acquire additional tests');
+insert into app.activity_exercises(organization_id,activity_id,exercise_version_id,position) values('92000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000002','96100000-0000-4000-8000-000000000001',0);
+with removed as(delete from app.activity_exercises where activity_id='97000000-0000-4000-8000-000000000002' returning id) select is((select count(*)::integer from removed),1,'Authorized teacher can replace draft exercise list');
+with removed as(delete from app.activity_exercises where activity_id='97000000-0000-4000-8000-000000000001' returning id) select is((select count(*)::integer from removed),0,'RLS prevents removal of published exercise list');
+select lives_ok($$select app_private.lock_academic_organization('92000000-0000-4000-8000-000000000001')$$,'Teacher can serialize without institutional UPDATE');
+select lives_ok($$insert into app.classes(organization_id,course_id,teacher_id,code,name) values('92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','A3','Created by authorized teacher') returning *$$,'Granted teacher creates own class and returns the authorized new row');
+select lives_ok($sql$do $body$ declare created_id uuid; begin
+set constraints all deferred;
+insert into app.exercises(id,organization_id,owner_id) values('96000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002') returning id into created_id;
+insert into app.exercise_versions(id,organization_id,exercise_id,version,title,statement,starter_code,difficulty,created_by) values('96100000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000001',created_id,1,'New definition','Return sum','module.exports.solve=(a,b)=>a+b;','BEGINNER','91000000-0000-4000-8000-000000000002') returning id into created_id;
+insert into app.exercise_version_concepts values('92000000-0000-4000-8000-000000000001',created_id,'95100000-0000-4000-8000-000000000001');
+insert into app_private.exercise_tests(organization_id,exercise_version_id,test_id,position,visibility,args,expected) values('92000000-0000-4000-8000-000000000001',created_id,'visible',0,'visible','[3,3]','6');
+update app.exercises set current_version_id=created_id where id='96000000-0000-4000-8000-000000000002';
+set constraints app.provisioning_complete, app.exercise_definition_complete,
+ app.concept_current_version, app.exercise_current_version immediate;
+end $body$ $sql$,'Author creates exercise and immutable version with INSERT RETURNING');
+set constraints all deferred;
+insert into app.exercise_versions(id,organization_id,exercise_id,version,title,statement,starter_code,difficulty,created_by) values('96100000-0000-4000-8000-000000000003','92000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000002',2,'JSON boundaries','Accept compact JSON','module.exports.solve=()=>null;','BEGINNER','91000000-0000-4000-8000-000000000002');
+insert into app.exercise_version_concepts values('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000003','95100000-0000-4000-8000-000000000001');
+select lives_ok($$insert into app_private.exercise_tests(organization_id,exercise_version_id,test_id,position,visibility,args,expected) values('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000003','json-boundary',0,'visible',('['||repeat('0,',32766)||'0]')::json,to_json(repeat('x',65534)))$$,'JSON preserves compact 65535-byte args and 65536-byte expected value');
+select throws_ok($$insert into app_private.exercise_tests(organization_id,exercise_version_id,test_id,position,visibility,args,expected) values('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000003','args-too-large',1,'hidden',('['||repeat('0,',32767)||'0]')::json,'null')$$,'23514',null,'JSON arguments above 65536 bytes are rejected');
+select throws_ok($$insert into app_private.exercise_tests(organization_id,exercise_version_id,test_id,position,visibility,args,expected) values('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000003','expected-too-large',1,'hidden','[]',to_json(repeat('x',65535)))$$,'23514',null,'JSON expected value above 65536 bytes is rejected');
+select lives_ok($$insert into app_private.exercise_tests(organization_id,exercise_version_id,test_id,position,visibility,args,expected) values('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000003','exponent-boundary',1,'hidden',('['||repeat('1e+308,',8999)||'1e+308]')::json,'1e-308')$$,'JSON exponent notation does not consume expanded numeric-text byte limits');
+update app.exercises set current_version_id='96100000-0000-4000-8000-000000000003' where id='96000000-0000-4000-8000-000000000002';
+set constraints app.provisioning_complete, app.exercise_definition_complete,
+ app.concept_current_version, app.exercise_current_version immediate;
+select throws_ok($sql$do $body$ begin
+set constraints all deferred;
+insert into app.exercise_versions(id,organization_id,exercise_id,version,title,statement,starter_code,difficulty,created_by) values('96100000-0000-4000-8000-000000000004','92000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000002',3,'Contradiction','Same input differs','module.exports.solve=()=>1;','BEGINNER','91000000-0000-4000-8000-000000000002');
+insert into app.exercise_version_concepts values('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000004','95100000-0000-4000-8000-000000000001');
+insert into app_private.exercise_tests(organization_id,exercise_version_id,test_id,position,visibility,args,expected) values
+('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000004','a',0,'visible','[{"a":1e0,"b":2}]','1'),
+('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000004','b',1,'hidden','[{"b":2,"a":1.0}]','2');
+set constraints app.provisioning_complete, app.exercise_definition_complete,
+ app.concept_current_version, app.exercise_current_version immediate;
+end $body$ $sql$,'23514','INCONSISTENT_TESTS','Contradiction comparison ignores object key order and numeric spelling');
+select lives_ok($$insert into app.activities(id,organization_id,class_id,created_by,title,type) values('97000000-0000-4000-8000-000000000003','92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','New draft','FORMATIVE') returning *$$,'Assigned teacher creates draft and returns the authorized new row');
+select throws_ok($$update app.classes set teacher_id='91000000-0000-4000-8000-000000000005' where id='94000000-0000-4000-8000-000000000001'$$,'42501',null,'Teacher cannot reassign class');
+select throws_ok($$update app.activities set title='Changed published' where id='97000000-0000-4000-8000-000000000001'$$,'P0001','INVALID_TRANSITION','Published content is frozen');
+select throws_ok($$update app.activities set state='PUBLISHED' where id='97000000-0000-4000-8000-000000000002'$$,'23514','EMPTY_ACTIVITY','Empty draft cannot publish');
+set local app.actor_id='91000000-0000-4000-8000-000000000005';
+set local app.session_id='91100000-0000-4000-8000-000000000005';
+select throws_ok($$insert into app.classes(organization_id,course_id,teacher_id,code,name) values('92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000005','A4','Without course grant')$$,'42501',null,'Teacher without course grant cannot create');
+select is((select count(*)::integer from app.exercises),0,'Private bank of another teacher inaccessible');
+set local app.actor_id='91000000-0000-4000-8000-000000000001';
+set local app.session_id='91100000-0000-4000-8000-000000000001';
+select is((select count(*)::integer from app.activities),0,'Governance admin gains no teaching visibility');
+select is(app_private.academic_teacher_name('92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000004'),null::text,'Governance projection cannot reveal foreign teacher profile');
+select is((select uses_count from app.class_join_codes where token_digest=repeat('a',64)),1,'Code count increments only on new membership');
+select throws_ok($sql$do $body$ begin
+set constraints all deferred;
+insert into app.concept_tags(id,organization_id,normalized_name) values('95000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000001','child');
+insert into app.concept_versions(id,organization_id,concept_id,version,name,parent_concept_id,created_by) values('95100000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000001','95000000-0000-4000-8000-000000000002',1,'Child','95000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000001');
+update app.concept_tags set current_version_id='95100000-0000-4000-8000-000000000002' where id='95000000-0000-4000-8000-000000000002';
+insert into app.concept_versions(id,organization_id,concept_id,version,name,parent_concept_id,created_by) values('95100000-0000-4000-8000-000000000003','92000000-0000-4000-8000-000000000001','95000000-0000-4000-8000-000000000001',2,'Addition','95000000-0000-4000-8000-000000000002','91000000-0000-4000-8000-000000000001');
+update app.concept_tags set current_version_id='95100000-0000-4000-8000-000000000003' where id='95000000-0000-4000-8000-000000000001';
+end $body$ $sql$,'23514','CONCEPT_CYCLE','Indirect concept cycle is rejected in persistence');
+update app.concept_tags set archived_at=now() where id='95000000-0000-4000-8000-000000000001';
+set local app.actor_id='91000000-0000-4000-8000-000000000002';
+set local app.session_id='91100000-0000-4000-8000-000000000002';
+select throws_ok($$insert into app.activity_exercises(organization_id,activity_id,exercise_version_id,position) values('92000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000002','96100000-0000-4000-8000-000000000001',0)$$,'P0001','RESOURCE_ARCHIVED','Archived concept prevents new exercise references even in draft');
+select lives_ok($$update app.activities set state='CLOSED' where id='97000000-0000-4000-8000-000000000001'$$,'Teacher can close publication using an archived concept');
+select throws_ok($$update app.activities set state='PUBLISHED' where id='97000000-0000-4000-8000-000000000001'$$,'P0001','INVALID_TRANSITION','Closed activity cannot reopen');
+set local app.actor_id='91000000-0000-4000-8000-000000000003';
+set local app.session_id='91100000-0000-4000-8000-000000000003';
+select is((select count(*)::integer from app.exercise_versions where id='96100000-0000-4000-8000-000000000001'),1,'Student retains historical content after concept archive and publication closure');
+set local app.actor_id='91000000-0000-4000-8000-000000000001';
+set local app.session_id='91100000-0000-4000-8000-000000000001';
+select throws_ok($$update app.courses set archived_at=now() where id='93000000-0000-4000-8000-000000000001'$$,'P0001','DEPENDENCIES_ACTIVE','Active class blocks course archive');
+select lives_ok($$update app.classes set archived_at=now() where id='94000000-0000-4000-8000-000000000001'$$,'Closed publications allow class archive');
+select lives_ok($$update app.course_teacher_grants set revoked_at=now() where teacher_id='91000000-0000-4000-8000-000000000002'$$,'Course grant can be revoked');
+set local app.actor_id='91000000-0000-4000-8000-000000000002';
+set local app.session_id='91100000-0000-4000-8000-000000000002';
+select throws_ok($$insert into app.classes(organization_id,course_id,teacher_id,code,name) values('92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','A5','Revoked course')$$,'42501',null,'Revoked grant blocks new classes');
+select is((select count(*)::integer from app.classes where code='A3'),1,'Revocation preserves existing class assignment');
 reset role;
-select throws_ok($$update app.concept_versions set description='Rewritten' where id='68000000-0000-4000-8000-000000000001'$$,'23514','IMMUTABLE_VERSION','Version immutability also survives privileged SQL');
+insert into app.operation_keys(organization_id,actor_id,operation,key,payload_hash,state,resource_type,resource_id,response_status,response_body,expires_at) values
+('92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000003','class.enroll','replay-test-key',repeat('f',64),'COMPLETED','class','94000000-0000-4000-8000-000000000002',200,'{"alreadyEnrolled":false}',now()+interval '1 day');
+update app.class_join_codes set revoked_at=now() where token_digest=repeat('a',64);
+set local role alunza_app;
+set local app.actor_id='91000000-0000-4000-8000-000000000003';
+set local app.session_id='91100000-0000-4000-8000-000000000003';
+select is((select count(*)::integer from app_private.enrollment_replay(repeat('a',64),'replay-test-key')),1,'Lost enrollment response remains recoverable after code rotation');
+select is((select count(*)::integer from app_private.enrollment_replay(repeat('a',64),'unknown-key')),0,'Old code without original key cannot create replay authority');
+select is((select count(*)::integer from app_private.resolve_join_code(repeat('a',64))),0,'Revoked code does not admit another enrollment');
+set local app.actor_id='91000000-0000-4000-8000-000000000002';
+set local app.session_id='91100000-0000-4000-8000-000000000002';
+select is((select count(*)::integer from app_private.enrollment_replay(repeat('a',64),'replay-test-key')),0,'Replay cannot expose another actor operation');
+reset role;
+insert into app.class_join_codes(organization_id,class_id,token_digest,expires_at,created_by) values('92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000002',repeat('c',64),now()+interval '1 day','91000000-0000-4000-8000-000000000005');
+update app.class_memberships set ended_at=now() where class_id='94000000-0000-4000-8000-000000000002' and user_id='91000000-0000-4000-8000-000000000003';
+set local role alunza_app;
+set local app.actor_id='91000000-0000-4000-8000-000000000003';
+set local app.session_id='91100000-0000-4000-8000-000000000003';
+select is((select count(*)::integer from app_private.resolve_join_code(repeat('c',64))),0,'Ended membership cannot preview even a newly issued valid code');
+select set_config('app.join_code_digest',repeat('c',64),true);
+select throws_ok($$insert into app.class_memberships(organization_id,class_id,user_id) values('92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000002','91000000-0000-4000-8000-000000000003') ON CONFLICT DO NOTHING$$,'42501',null,'Ended membership cannot report successful incorporation through conflict suppression');
+reset role;
 select * from finish();
 rollback;

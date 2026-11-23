@@ -41,10 +41,15 @@ export class PracticeReconciler implements OnModuleInit, OnModuleDestroy {
       const local =
         this.config.environment !== 'production' &&
         this.config.environment !== 'preproduction';
+      const recoverable =
+        local ||
+        (this.config.environment === 'preproduction' &&
+          this.config.practiceRunnerProvider === 'vercel' &&
+          !!this.config.sandboxConfiguration);
       // A create response can be lost before Docker exposes the new container.
       // Sweep owned expired capsules even if its reservation already completed,
       // admissions are disabled, or database retention is temporarily unavailable.
-      const sweep = local
+      const sweep = recoverable
         ? await measureSubmitBackgroundPhase(
             observer,
             'sweep',
@@ -55,10 +60,10 @@ export class PracticeReconciler implements OnModuleInit, OnModuleDestroy {
       await measureSubmitBackgroundPhase(observer, 'purge', () =>
         this.repository.purgeExpired(),
       );
-      // Disabling new admissions must not strand existing local Docker leases.
-      if (!local || !sweep?.cleanupVerified) return;
+      // Disabling admissions or expiring a campaign must not strand resources.
+      if (!recoverable || !sweep?.cleanupVerified) return;
       // Bounded batch. SKIP LOCKED + rotated tokens fences every replica.
-      for (let index = 0; index < 4; index++) {
+      for (let index = 0; index < 4 && !this.stopped; index++) {
         const reservation = await measureSubmitBackgroundPhase(
           observer,
           'claim',
@@ -67,7 +72,13 @@ export class PracticeReconciler implements OnModuleInit, OnModuleDestroy {
         );
         if (!reservation) return;
         await measureSubmitBackgroundPhase(observer, 'recover', async () => {
-          const cleaned = await this.execution.cleanup(reservation.executionId);
+          const cleaned = reservation.executionContext
+            ? await this.execution.cleanup(
+                reservation.executionId,
+                undefined,
+                reservation.executionContext,
+              )
+            : await this.execution.cleanup(reservation.executionId);
           await this.repository.finish(
             reservation,
             failedRun(reservation.runnerVersion, reservation.visibleTotal),

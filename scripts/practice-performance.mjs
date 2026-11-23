@@ -1,599 +1,556 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
 import { readFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { hostSnapshot, startupPhaseTimings } from './lab-observability.mjs';
+import {
+  submitTimingEvents,
+  submitBackgroundEvents,
+  backgroundForSample,
+  timingsForSample,
+  hasCompleteSubmitTimings,
+  dockerVmSnapshot,
+  submitClockEvents,
+  alignSubmitTimings,
+} from './submit-measurements.mjs';
+import {
+  startContinuousDiagnostics,
+  correlateContinuousDiagnostics,
+} from './submit-continuous-diagnostics.mjs';
+import { submitEnvironmentManifest } from './submit-environment.mjs';
+import { candidateFingerprint } from './evaluation-manifest.mjs';
+import { createClient } from '@supabase/supabase-js';
+import { root, run } from './local.mjs';
+import {
+  withTestEnvironment,
+  testApi,
+  buildApi,
+  report,
+} from './test-environment.mjs';
+import { seedAcademic } from './academic-fixture.mjs';
+import {
+  additionalStudents,
+  classes,
+  activities,
+  exercises,
+} from '../fixtures/demo/academic.mjs';
 
-const SAMPLE_COUNT = 50;
-const TARGET_MS = 5000;
-const REQUEST_TIMEOUT_MS = 45000;
-const SOURCE = 'function solve(a, b) { return a + b; }';
-const TIMING_PHASES = {
-  submission: new Set(
-    'authorizeInitial inspect admit suite execute cleanupFallback stage finish authorizeFinal total'.split(
-      ' ',
-    ),
-  ),
-  docker: new Set(
-    'engineResolve imageResolve create preInspect attachOutput attachInput start send streams wait postInspect delete verifyAbsent hostStartAttach containerWall supervisor'.split(
-      ' ',
-    ),
-  ),
-  background: new Set('total sweep purge claim recover'.split(' ')),
+const mode = process.argv.includes('--submit') ? 'SUBMIT' : 'RUN';
+const continuousEnabled = process.argv.includes('--continuous-diagnostics');
+if (continuousEnabled && mode !== 'SUBMIT')
+  throw new Error(
+    'Continuous diagnostics requires the isolated SUBMIT profile.',
+  );
+const measurements = [];
+const correlations = new Map();
+const timingCoverage = [];
+const backgroundProfiles = [];
+const continuousProfiles = [];
+const clockCoverage = [];
+const summary = {
+  runId: randomUUID(),
+  environment: 'isolated-local-supabase-and-docker',
+  mode,
+  host: hostSnapshot(),
+  profile: {
+    sequential: 50,
+    concurrent: 50,
+    concurrency: 4,
+    actorConcurrency: mode === 'SUBMIT' ? 2 : 1,
+    organizationConcurrency: 4,
+    actorRequestsPerMinute: 100,
+    timeoutMs: 45000,
+    rateOverride:
+      'Only this isolated measurement process raises the rate ceiling to avoid measuring intentional HTTP 429 responses.',
+    temperature:
+      'API restarted before each profile; first batch cold service, subsequent requests warm service. Every test capsule is new; no warm capsule reuse.',
+  },
+  percentile: 'nearest-rank',
+  targetMs: 5000,
+  samples: measurements,
+  phases: [],
+  diagnostics: {
+    enabled: mode === 'SUBMIT',
+    channel: 'private-test-only',
+    interpretation:
+      'Durations are nested and overlap: submission.execute includes Docker phases, and docker.wait runs alongside docker.streams. Component durations and percentiles must not be added. Background overlap uses the shared API monotonic clock and approximates intervals; coincidence does not establish causality. Background spans emit on completion; work still open when the API stops may be absent, so missing overlap does not prove inactivity. Derived Docker evidence timestamps mark publication, not the original interval. Boundary snapshots remain outside measured requests. Optional continuous observations have bounded readers, measured parsing costs and gaps; clock alignment includes uncertainty and rejects detected jumps. TEST timing callbacks execute inside the API request and may add observation overhead.',
+    timingCoverage,
+    backgroundProfiles,
+    continuousEnabled,
+    continuousProfiles,
+    clockCoverage,
+  },
 };
-const UUID =
-  /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
-
-// Copy only bounded diagnostic fields; never export raw service logs or source.
-export function collectTimingEvents(output, concurrency) {
-  if (![1, 4].includes(concurrency)) throw new Error('Invalid timing profile.');
-  const observations = [];
-  for (const line of output.split(/\r?\n/)) {
-    let event;
-    try {
-      event = JSON.parse(line);
-    } catch {
-      continue;
-    }
-    if (
-      !event ||
-      typeof event !== 'object' ||
-      !Number.isFinite(event.durationMs) ||
-      event.durationMs < 0 ||
-      !Number.isFinite(event.observedAtMs) ||
-      event.observedAtMs < 0 ||
-      typeof event.completed !== 'boolean'
-    )
-      continue;
-    const common = {
-      concurrency,
-      phase: event.phase,
-      durationMs: event.durationMs,
-      observedAtMs: event.observedAtMs,
-      completed: event.completed,
-    };
-    if (
-      event.event === 'TEST_SUBMIT_TIMING' &&
-      event.version === 2 &&
-      ['submission', 'docker'].includes(event.source) &&
-      TIMING_PHASES[event.source].has(event.phase) &&
-      typeof event.requestId === 'string' &&
-      UUID.test(event.requestId) &&
-      (event.executionId === undefined ||
-        (typeof event.executionId === 'string' && UUID.test(event.executionId)))
-    ) {
-      observations.push({
-        ...common,
-        source: event.source,
-        requestId: event.requestId,
-        ...(event.executionId === undefined
-          ? {}
-          : { executionId: event.executionId }),
-      });
-    } else if (
-      event.event === 'TEST_SUBMIT_BACKGROUND' &&
-      event.version === 1 &&
-      ['RUN', 'SUBMIT'].includes(event.worker) &&
-      TIMING_PHASES.background.has(event.phase) &&
-      (event.count === undefined ||
-        (Number.isInteger(event.count) &&
-          event.count >= 0 &&
-          event.count <= 10000))
-    ) {
-      observations.push({
-        ...common,
-        source: 'background',
-        worker: event.worker,
-        ...(event.count === undefined ? {} : { count: event.count }),
-      });
-    }
-  }
-  return observations;
-}
-
-export function percentile95(values) {
-  return values.length
+const p95 = (values) =>
+  values.length
     ? [...values].sort((a, b) => a - b)[Math.ceil(values.length * 0.95) - 1]
     : null;
-}
-
-export function summarizeProfiles(samples) {
+function profiles() {
   return [1, 4].map((concurrency) => {
-    const selected = samples.filter(
-      (sample) => sample.concurrency === concurrency,
+    const samples = measurements.filter(
+      (item) => item.concurrency === concurrency,
     );
     return {
       concurrency,
-      count: selected.length,
-      failed: selected.filter((sample) => !sample.valid).length,
-      p95Ms: percentile95(selected.map((sample) => sample.durationMs)),
-      coldP95Ms: percentile95(
-        selected
-          .filter((sample) => sample.temperature === 'cold-service')
-          .map((sample) => sample.durationMs),
+      count: samples.length,
+      failed: samples.filter((item) => !item.valid).length,
+      p95Ms: p95(samples.map((item) => item.durationMs)),
+      cold: p95(
+        samples
+          .filter((item) => item.temperature === 'cold-service')
+          .map((item) => item.durationMs),
       ),
-      warmP95Ms: percentile95(
-        selected
-          .filter((sample) => sample.temperature === 'warm-service')
-          .map((sample) => sample.durationMs),
+      warm: p95(
+        samples
+          .filter((item) => item.temperature === 'warm-service')
+          .map((item) => item.durationMs),
       ),
+      ...(mode === 'SUBMIT'
+        ? {
+            phaseTimings: [
+              ...new Set(
+                samples.flatMap((item) =>
+                  (item.phaseTimings ?? []).map(
+                    (event) => `${event.source}.${event.phase}`,
+                  ),
+                ),
+              ),
+            ].map((key) => {
+              const values = samples.flatMap((sample) => {
+                const events = (sample.phaseTimings ?? []).filter(
+                  (event) => `${event.source}.${event.phase}` === key,
+                );
+                return events.length
+                  ? [
+                      {
+                        durationMs: events.reduce(
+                          (sum, event) => sum + event.durationMs,
+                          0,
+                        ),
+                        events: events.length,
+                        failed: events.filter((event) => !event.completed)
+                          .length,
+                      },
+                    ]
+                  : [];
+              });
+              return {
+                phase: key,
+                samples: values.length,
+                events: values.reduce((sum, value) => sum + value.events, 0),
+                failed: values.reduce((sum, value) => sum + value.failed, 0),
+                p95Ms: p95(values.map((value) => value.durationMs)),
+              };
+            }),
+          }
+        : {}),
     };
   });
 }
-
-export function performancePassed(summary) {
-  return (
-    summary.cleanupVerified === true &&
-    summary.runner?.imageUnchanged === true &&
-    summary.distinctExecutions === SAMPLE_COUNT * 2 &&
-    (summary.mode !== 'SUBMIT' ||
-      summary.distinctAttempts === SAMPLE_COUNT * 2) &&
-    summary.profiles?.length === 2 &&
-    summary.profiles.every(
-      (profile, index) =>
-        profile.concurrency === [1, 4][index] &&
-        profile.count === SAMPLE_COUNT &&
-        profile.failed === 0 &&
-        Number.isFinite(profile.p95Ms) &&
-        profile.p95Ms < TARGET_MS,
-    )
-  );
-}
-
-export function assertPerformanceEnvironment(ctx, state) {
-  const database = new URL(state.migrationUrl);
-  if (
-    ctx.test !== true ||
-    state.projectId !== 'alunza-edu-foundation-test' ||
-    state.authUrl !== 'http://127.0.0.1:16421' ||
-    database.hostname !== '127.0.0.1' ||
-    database.port !== '16422' ||
-    ctx.apiPort !== 4100
-  )
-    throw new Error('El perfil solo opera en el entorno TEST local aislado.');
-}
-
-export async function measureRequest({
-  baseUrl,
-  actor,
-  mode,
-  schema,
-  fetcher = fetch,
-  clock = () => performance.now(),
-}) {
-  const started = clock();
-  let status = 0,
-    diagnosis = null,
-    valid = false,
-    errorCode = null,
-    technical = null;
-  let executionId = null,
-    attemptId = null;
-  try {
-    const response = await fetcher(`${baseUrl}${actor.path}`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${actor.token}`,
-        'Content-Type': 'application/json',
-        'Idempotency-Key': randomUUID(),
-      },
-      body: JSON.stringify(actor.body),
-      redirect: 'error',
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-    status = response.status;
-    const payload = await response.json();
-    const parsed = schema.safeParse(payload);
-    if (parsed.success) {
-      const record = parsed.data.data;
-      const result = record.technicalResult;
-      diagnosis = result.diagnosisCode;
-      executionId = record.executionId;
-      attemptId = mode === 'SUBMIT' ? record.attemptId : null;
-      valid =
-        status === 201 &&
-        response.headers.get('cache-control')?.includes('no-store') === true &&
-        record.exerciseVersionId === actor.body.exerciseVersionId &&
-        diagnosis === 'SUCCESS' &&
-        result.runnerVersion === actor.runnerVersion &&
-        result.infrastructureStatus === 'OK' &&
-        result.terminationReason === 'COMPLETED' &&
-        result.visibleTotal === 1 &&
-        result.visiblePassed === 1 &&
-        (mode === 'RUN' ||
-          (record.activityId === actor.activityId &&
-            record.assignmentId === actor.assignmentId &&
-            record.code === actor.body.code &&
-            result.allRequiredPassed === true &&
-            result.hiddenChecksPassed === true));
-      technical = {
-        runtimeMs: result.runtimeMs,
-        lifecycleMs: result.lifecycleMs,
-        terminationReason: result.terminationReason,
-        infrastructureStatus: result.infrastructureStatus,
-        runnerVersion: result.runnerVersion,
-      };
-      if (!valid) errorCode = 'UNEXPECTED_EXECUTION_RESULT';
-    } else {
-      errorCode =
-        typeof payload?.error?.code === 'string' &&
-        /^[A-Z][A-Z0-9_]{0,79}$/.test(payload.error.code)
-          ? payload.error.code
-          : 'INVALID_HTTP_RESPONSE';
-    }
-  } catch (error) {
-    errorCode =
-      error?.name === 'TimeoutError'
-        ? 'CLIENT_DEADLINE'
-        : 'CLIENT_REQUEST_FAILED';
-  }
-  // Keep every attempt, including HTTP failures, invalid payloads and deadlines.
-  return {
-    durationMs: clock() - started,
-    status,
-    diagnosis,
-    valid,
-    errorCode,
-    technical,
-    executionId,
-    attemptId,
-  };
-}
-
-export async function measureProfile({
-  concurrency,
-  actors,
-  samples,
-  measure,
-  onSample = () => {},
-}) {
-  if (![1, 4].includes(concurrency) || actors.length < concurrency)
-    throw new Error('El perfil requiere uno o cuatro alumnos distintos.');
-  if (
-    new Set(actors.slice(0, concurrency).map((actor) => actor.id)).size !==
-    concurrency
-  )
-    throw new Error('Cada carril debe usar un alumno distinto.');
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: concurrency }, async (_, lane) => {
-      const actor = actors[lane];
-      while (next < SAMPLE_COUNT) {
-        const index = next++;
-        const sample = {
-          concurrency,
-          index,
-          lane,
-          temperature: index < concurrency ? 'cold-service' : 'warm-service',
-          ...(await measure(actor)),
-        };
-        samples.push(sample);
-        onSample(sample);
-      }
-    }),
-  );
-}
-
-async function prepareFixture({
-  state,
-  baseUrl,
-  runnerVersion,
-  mode,
-  sessions,
-}) {
-  const { createClient } = await import('@supabase/supabase-js');
-  const { root } = await import('./local.mjs');
-  const { default: academic } = await import('../tests/academic-fixture.cjs');
-  const foundation = JSON.parse(
-    await readFile(join(root, 'fixtures/foundation/identity.json'), 'utf8'),
-  );
-  const users = [
-    foundation.users[2],
-    ...[7, 8, 9].map((n) => ({
-      id: `20000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
-      email: `student.a${n - 5}@alunza.test`,
-    })),
-  ];
-  const tokens = new Map();
-  for (const user of [foundation.users[0], foundation.users[1], ...users]) {
-    const auth = createClient(state.authUrl, state.publishableKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-    });
-    const login = await auth.auth.signInWithPassword({
-      email: user.email,
-      password: state.fixturePassword,
-    });
-    if (login.error || !login.data.session)
-      throw new Error('No se obtuvo sesión ficticia para el perfil.');
-    sessions.push(auth);
-    tokens.set(user.id, login.data.session.access_token);
-  }
-  const org = foundation.organizations[0].id;
-  const admin = foundation.users[0].id,
-    teacher = foundation.users[1].id;
-  const suffix = randomUUID().slice(0, 8).toUpperCase();
-  async function create(actorId, path, body, status = 201, revision) {
-    const result = await academic.request(baseUrl, tokens.get(actorId), path, {
-      method: 'POST',
-      body,
-      key: randomUUID(),
-      revision,
-    });
-    if (result.status !== status)
-      throw Object.assign(
-        new Error('La preparación mediante API pública no se completó.'),
-        {
-          performanceFailure: {
-            operation: path,
-            status: result.status,
-            code:
-              typeof result.error?.code === 'string' &&
-              /^[A-Z][A-Z0-9_]{0,79}$/.test(result.error.code)
-                ? result.error.code
-                : 'INVALID_HTTP_RESPONSE',
-          },
-        },
+let phase = 'prepare-test-environment';
+try {
+  await withTestEnvironment(async ({ ctx, state }) => {
+    phase = 'seed-and-build';
+    await seedAcademic(state);
+    await buildApi();
+    const {
+      runExecutionResponseSchema,
+      attemptResponseSchema,
+      errorResponseSchema,
+    } = await import('@alunza/contracts');
+    const responseSchema =
+      mode === 'SUBMIT' ? attemptResponseSchema : runExecutionResponseSchema;
+    const runner = await import('@alunza/runner');
+    const availability = await runner.getDockerAvailability();
+    summary.runner = {
+      version: runner.RUNNER_VERSION,
+      image: availability.image,
+    };
+    if (!availability.available)
+      throw new Error(
+        'La imagen local preparada del ejecutor no está disponible.',
       );
-    return result.data;
-  }
-  const course = await create(admin, `/organizations/${org}/courses`, {
-    code: `PERF-${suffix}`,
-    name: 'Curso de medición ficticio',
-    academicPeriod: '2026-2',
-    startDate: '2026-01-01',
-    endDate: '2027-12-31',
-  });
-  const classroom = await create(teacher, `/organizations/${org}/classes`, {
-    courseId: course.id,
-    code: `PERF-${suffix}`,
-    name: 'Clase de medición ficticia',
-    startDate: '2026-02-01',
-    endDate: '2027-11-30',
-  });
-  const concept = await create(admin, `/organizations/${org}/concepts`, {
-    name: `Medición ${suffix}`,
-    description: 'Suma de valores ficticios.',
-  });
-  const exercise = await create(
-    teacher,
-    `/organizations/${org}/exercises`,
-    academic.exerciseInput(concept.currentVersionId),
-  );
-  let activity = await create(teacher, `/classes/${classroom.id}/activities`, {
-    title: 'Medición de práctica',
-    type: 'FORMATIVE',
-    instructions: 'Fixture de rendimiento.',
-    exercises: [
-      {
-        exerciseVersionId: exercise.currentVersionId,
-        position: 0,
-        required: true,
-      },
-    ],
-  });
-  activity = await create(
-    teacher,
-    `/activities/${activity.id}/publish`,
-    {},
-    200,
-    activity.revision,
-  );
-  const joinCode = await create(
-    teacher,
-    `/classes/${classroom.id}/join-codes`,
-    { expiresAt: new Date(Date.now() + 86400000).toISOString() },
-  );
-  for (const user of users)
-    await create(user.id, '/class-enrollments', {
-      organizationId: org,
-      code: joinCode.code,
-    });
-  const assignment = activity.exercises[0];
-  if (
-    !assignment?.id ||
-    assignment.exerciseVersionId !== exercise.currentVersionId
-  )
-    throw new Error(
-      'La versión publicada no coincide con el fixture de medición.',
+    summary.candidateFingerprint = await candidateFingerprint();
+    summary.environmentManifest = await submitEnvironmentManifest();
+    const identity = JSON.parse(
+      await readFile(join(root, 'fixtures/foundation/identity.json'), 'utf8'),
     );
-  return users.map((user) => ({
-    id: user.id,
-    token: tokens.get(user.id),
-    runnerVersion,
-    activityId: activity.id,
-    assignmentId: assignment.id,
-    path: `/api/v1/activities/${activity.id}/exercises/${assignment.id}/${mode === 'SUBMIT' ? 'attempts' : 'executions'}`,
-    body: { code: SOURCE, exerciseVersionId: exercise.currentVersionId },
-  }));
-}
-
-export async function main(args = process.argv.slice(2)) {
-  if (args.some((argument) => argument !== '--submit'))
-    throw new Error('Argumento de medición no admitido.');
-  const mode = args.includes('--submit') ? 'SUBMIT' : 'RUN';
-  const { withTestEnvironment, testApi, buildApi, report } =
-    await import('./test-environment.mjs');
-  const { seedAcademic } = await import('./academic-seed.mjs');
-  const { run } = await import('./local.mjs');
-  const samples = [];
-  const timings = [];
-  const { sourceFingerprint } = await import('./source-fingerprint.mjs');
-  const summary = {
-    schemaVersion: 1,
-    runId: randomUUID(),
-    environment: 'isolated-local-supabase-and-docker',
-    mode,
-    source: await sourceFingerprint(),
-    profile: {
-      sequential: SAMPLE_COUNT,
-      concurrent: SAMPLE_COUNT,
-      concurrency: 4,
-      actorConcurrency: 1,
-      submitActorConcurrency: 2,
-      organizationConcurrency: 4,
-      actorRequestsPerMinute: 100,
-      timeoutMs: REQUEST_TIMEOUT_MS,
-      rateOverride:
-        '100 admisiones/minuto únicamente en el proceso TEST de medición; límites de concurrencia sin ampliar.',
-      temperature:
-        'API reiniciada antes de cada perfil; primer lote frío y solicitudes siguientes calientes; cada prueba crea una cápsula nueva.',
-      instrumentation:
-        mode === 'SUBMIT'
-          ? 'TEST-only phase timings; raw logs excluded'
-          : 'none',
-    },
-    fixture: {
-      title: 'Sumar dos valores',
-      visibleCount: 1,
-      hiddenCount: mode === 'SUBMIT' ? 1 : 0,
-      sourceHash: createHash('sha256').update(SOURCE).digest('hex'),
-    },
-    percentile: 'nearest-rank',
-    targetMs: TARGET_MS,
-    samples,
-    timings,
-    cleanupVerified: false,
-    profiles: [],
-    status: 'failed',
-  };
-  let phase = 'prepare-test-environment';
-  try {
-    await withTestEnvironment(async ({ ctx, state }) => {
-      assertPerformanceEnvironment(ctx, state);
-      phase = 'seed-and-build';
-      await seedAcademic(ctx);
-      await buildApi();
-      const runner = await import('@alunza/runner');
-      const { OWNER_LABEL } = await import('../infra/runner/capsule.mjs');
-      const { runExecutionResponseSchema, attemptResponseSchema } =
-        await import('@alunza/contracts');
-      const availability = await runner.getDockerAvailability();
-      summary.runner = {
-        version: runner.RUNNER_VERSION,
-        image: availability.image,
-        imageUnchanged: false,
-      };
-      if (!availability.available)
-        throw new Error('Imagen del runner no disponible.');
-      const ownedCapsules = async () => {
-        const result = await run('docker', [
-          'ps',
-          '-a',
-          '--filter',
-          `label=${OWNER_LABEL}`,
-          '--format',
-          '{{.ID}}',
-        ]);
-        return result.stdout.trim()
-          ? result.stdout.trim().split(/\r?\n/).length
-          : 0;
-      };
-      summary.initialCapsules = await ownedCapsules();
-      if (summary.initialCapsules !== 0)
-        throw new Error(
-          'Ya existen cápsulas principales; no se inicia carga compartida.',
-        );
-      const baseUrl = `http://127.0.0.1:${ctx.apiPort}`;
-      const overrides = {
-        PRACTICE_ACTOR_REQUESTS_PER_MINUTE: '100',
-        ...(mode === 'SUBMIT' ? { ALUNZA_TEST_SUBMIT_TIMINGS: '1' } : {}),
-      };
-      const sessions = [];
-      let api;
-      try {
-        phase = 'prepare-public-fixture';
-        api = testApi(ctx, state, 3000, overrides);
-        await api.start(`${baseUrl}/health/ready`);
-        const actors = await prepareFixture({
-          state,
-          baseUrl,
-          runnerVersion: runner.RUNNER_VERSION,
-          mode,
-          sessions,
+    const users = [identity.users[2], ...additionalStudents.slice(0, 3)];
+    const sessions = [];
+    const actors = [];
+    let api;
+    let collector;
+    let collectorProfile;
+    async function stopCollector() {
+      if (!collector) return;
+      const owned = collector;
+      collector = undefined;
+      continuousProfiles.push({
+        concurrency: collectorProfile,
+        ...(await owned.stop()),
+      });
+    }
+    try {
+      phase = 'authenticate-fixture-students';
+      for (const user of users) {
+        const auth = createClient(state.authUrl, state.publishableKey, {
+          auth: { persistSession: false, autoRefreshToken: false },
         });
-        await api.stop();
-        for (const concurrency of [1, 4]) {
-          phase = `measure-concurrency-${concurrency}`;
-          api = testApi(ctx, state, 3000, overrides);
-          await api.start(`${baseUrl}/health/ready`);
-          try {
-            await measureProfile({
-              concurrency,
-              actors,
-              samples,
-              measure: (actor) =>
-                measureRequest({
-                  baseUrl,
-                  actor,
-                  mode,
-                  schema:
-                    mode === 'SUBMIT'
-                      ? attemptResponseSchema
-                      : runExecutionResponseSchema,
-                }),
-              onSample: () => {
-                if (samples.length % 10 === 0)
-                  console.log(
-                    `${mode}: ${samples.length}/100 solicitudes observadas.`,
-                  );
-              },
-            });
-          } finally {
-            await api.stop();
-            if (mode === 'SUBMIT')
-              timings.push(...collectTimingEvents(api.output, concurrency));
-          }
-        }
-      } finally {
-        phase = `${phase}:stop-owned-api`;
-        await api?.stop();
-        await Promise.allSettled(sessions.map((auth) => auth.auth.signOut()));
-        summary.remainingCapsules = await ownedCapsules();
-        summary.cleanupVerified = summary.remainingCapsules === 0;
-        const finalAvailability = await runner.getDockerAvailability();
-        summary.runner.imageUnchanged =
-          finalAvailability.available &&
-          finalAvailability.image === summary.runner.image;
+        const login = await auth.auth.signInWithPassword({
+          email: user.email,
+          password: state.fixturePassword,
+        });
+        if (login.error || !login.data.session)
+          throw new Error(
+            'No se pudo iniciar una sesión ficticia de medición.',
+          );
+        sessions.push(auth);
+        const classroom = classes.find((item) =>
+          item.studentIds.includes(user.id),
+        );
+        const activity = activities.find(
+          (item) => item.classId === classroom.id && item.state === 'PUBLISHED',
+        );
+        const assignment = activity.exercises[0];
+        const exercise = exercises.find(
+          (item) => item.versionId === assignment.exerciseVersionId,
+        );
+        const visibleCount = exercise.tests.filter(
+          (test) => test.visibility === 'visible',
+        ).length;
+        const hiddenCount = exercise.tests.filter(
+          (test) => test.visibility === 'hidden',
+        ).length;
+        if (mode === 'SUBMIT' && hiddenCount < 1)
+          throw new Error('La medición SUBMIT exige verificaciones ocultas.');
+        summary.fixture = {
+          title: exercise.title,
+          visibleCount,
+          hiddenCount: mode === 'SUBMIT' ? hiddenCount : 0,
+        };
+        actors.push({
+          token: login.data.session.access_token,
+          path: `/api/v1/activities/${activity.id}/exercises/${assignment.id}/${mode === 'SUBMIT' ? 'attempts' : 'executions'}`,
+          body: {
+            code: exercise.referenceSolution,
+            exerciseVersionId: exercise.versionId,
+          },
+        });
       }
-    });
-    summary.profiles = summarizeProfiles(samples);
-    summary.distinctExecutions = new Set(
-      samples.map((sample) => sample.executionId).filter(Boolean),
-    ).size;
-    summary.distinctAttempts = new Set(
-      samples.map((sample) => sample.attemptId).filter(Boolean),
-    ).size;
-    summary.status = performancePassed(summary) ? 'passed' : 'failed';
-  } catch (error) {
-    summary.phase = phase;
-    if (error.performanceFailure) summary.failure = error.performanceFailure;
-    summary.error =
-      'Medición incompleta; se conservan todas las muestras observadas sin datos privados.';
-    summary.profiles = summarizeProfiles(samples);
-  }
+      for (const concurrency of [1, 4]) {
+        phase = `measure-concurrency-${concurrency}`;
+        api = testApi(ctx, state, ctx.webPort, {
+          PRACTICE_ACTOR_REQUESTS_PER_MINUTE: '100',
+          ...(mode === 'SUBMIT' ? { ALUNZA_TEST_SUBMIT_TIMINGS: '1' } : {}),
+          ...(continuousEnabled
+            ? { ALUNZA_TEST_SUBMIT_CONTINUOUS_DIAGNOSTICS: '1' }
+            : {}),
+        });
+        try {
+          await api.start(`${ctx.apiUrl}/health/ready`);
+        } finally {
+          summary.phases.push({
+            profile: concurrency,
+            phase: 'api-start',
+            ...api.startupMeasurements.at(-1),
+            phases: startupPhaseTimings(api.output),
+            host: hostSnapshot(),
+          });
+        }
+        if (mode === 'SUBMIT')
+          summary.phases.push({
+            profile: concurrency,
+            phase: 'vm-before-profile',
+            observation: await dockerVmSnapshot(ctx),
+          });
+        if (mode === 'SUBMIT')
+          summary.phases.push({
+            profile: concurrency,
+            phase: 'host-before-profile',
+            host: hostSnapshot(),
+          });
+        if (continuousEnabled) {
+          collectorProfile = concurrency;
+          collector = await startContinuousDiagnostics(ctx);
+        }
+        let next = 0;
+        await Promise.all(
+          Array.from({ length: concurrency }, async (_, lane) => {
+            const actor = actors[lane];
+            while (next < 50) {
+              const index = next++;
+              const started = performance.now();
+              const startedAtUtcMs = Date.now();
+              const startedClockEndMs = performance.now();
+              let status = 0,
+                diagnosis = null,
+                valid = false,
+                errorCode = null,
+                technical = null;
+              try {
+                const response = await fetch(`${ctx.apiUrl}${actor.path}`, {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${actor.token}`,
+                    'Content-Type': 'application/json',
+                    'Idempotency-Key': randomUUID(),
+                  },
+                  body: JSON.stringify(actor.body),
+                  signal: AbortSignal.timeout(45000),
+                });
+                status = response.status;
+                const payload = await response.json();
+                const parsed = responseSchema.safeParse(payload);
+                if (parsed.success) {
+                  if (mode === 'SUBMIT')
+                    correlations.set(`${concurrency}:${index}`, {
+                      requestId: parsed.data.requestId,
+                      executionId: parsed.data.data.executionId,
+                    });
+                  diagnosis = parsed.data.data.technicalResult.diagnosisCode;
+                  valid =
+                    status === 201 &&
+                    diagnosis === 'SUCCESS' &&
+                    (mode === 'RUN' ||
+                      parsed.data.data.technicalResult.allRequiredPassed);
+                  const result = parsed.data.data.technicalResult;
+                  technical = {
+                    runtimeMs: result.runtimeMs,
+                    lifecycleMs: result.lifecycleMs,
+                    terminationReason: result.terminationReason,
+                    infrastructureStatus: result.infrastructureStatus,
+                    runnerVersion: result.runnerVersion,
+                    applicationOverheadMs: Math.max(
+                      0,
+                      performance.now() - started - result.lifecycleMs,
+                    ),
+                  };
+                } else {
+                  const parsedError = errorResponseSchema.safeParse(payload);
+                  if (mode === 'SUBMIT' && parsedError.success)
+                    correlations.set(`${concurrency}:${index}`, {
+                      requestId: parsedError.data.requestId,
+                    });
+                  errorCode =
+                    typeof payload?.error?.code === 'string' &&
+                    /^[A-Z][A-Z0-9_]{0,79}$/.test(payload.error.code)
+                      ? payload.error.code
+                      : 'INVALID_HTTP_RESPONSE';
+                }
+              } catch (error) {
+                errorCode =
+                  error.name === 'TimeoutError'
+                    ? 'CLIENT_DEADLINE'
+                    : 'CLIENT_REQUEST_FAILED';
+                /* A failed sample remains in latency and failure counts. */
+              }
+              const finishedAtMs = performance.now();
+              const finishedAtUtcMs = Date.now();
+              const finishedClockEndMs = performance.now();
+              measurements.push({
+                concurrency,
+                index,
+                temperature:
+                  index < concurrency ? 'cold-service' : 'warm-service',
+                durationMs: Math.round((finishedAtMs - started) * 100) / 100,
+                httpWindow: {
+                  startedAtMs: started,
+                  finishedAtMs,
+                  startedAtUtcMs,
+                  finishedAtUtcMs,
+                  startedClockMs: (started + startedClockEndMs) / 2,
+                  startedClockUncertaintyMs: startedClockEndMs - started,
+                  finishedClockMs: (finishedAtMs + finishedClockEndMs) / 2,
+                  finishedClockUncertaintyMs: finishedClockEndMs - finishedAtMs,
+                },
+                status,
+                diagnosis,
+                valid,
+                errorCode,
+                technical,
+              });
+              if (measurements.length % 10 === 0)
+                console.log(
+                  `${mode} medido: ${measurements.length}/100 respuestas observadas.`,
+                );
+            }
+          }),
+        );
+        await stopCollector();
+        if (mode === 'SUBMIT')
+          summary.phases.push({
+            profile: concurrency,
+            phase: 'host-after-profile',
+            host: hostSnapshot(),
+          });
+        if (mode === 'SUBMIT')
+          summary.phases.push({
+            profile: concurrency,
+            phase: 'vm-after-profile',
+            observation: await dockerVmSnapshot(ctx),
+          });
+        await api.stop();
+        if (mode === 'SUBMIT') {
+          const parsed = submitTimingEvents(api.output);
+          const background = submitBackgroundEvents(api.output);
+          const clocks = submitClockEvents(api.output);
+          backgroundProfiles.push({ concurrency, ...background });
+          const samples = measurements.filter(
+            (item) => item.concurrency === concurrency,
+          );
+          for (const sample of samples) {
+            sample.phaseTimings = timingsForSample(
+              parsed.events,
+              correlations.get(`${concurrency}:${sample.index}`),
+            );
+            sample.backgroundOverlap = backgroundForSample(
+              sample.phaseTimings,
+              background.events,
+            );
+            if (continuousEnabled) {
+              sample.clockAlignment = alignSubmitTimings(
+                sample.phaseTimings,
+                clocks.events,
+                correlations.get(`${concurrency}:${sample.index}`),
+                sample.httpWindow,
+              );
+              const collected = continuousProfiles.find(
+                (item) => item.concurrency === concurrency,
+              );
+              sample.resourceOverlap = correlateContinuousDiagnostics(
+                collected,
+                sample.httpWindow,
+              );
+            }
+          }
+          if (continuousEnabled)
+            clockCoverage.push({
+              concurrency,
+              events: clocks.events.length,
+              rejected: clocks.rejected,
+              completeSamples: samples.filter(
+                (sample) => sample.clockAlignment?.status === 'observed',
+              ).length,
+            });
+          timingCoverage.push({
+            concurrency,
+            samples: samples.length,
+            events: parsed.events.length,
+            rejected: parsed.rejected,
+            backgroundEvents: background.events.length,
+            backgroundRejected: background.rejected,
+            backgroundWorkers: ['RUN', 'SUBMIT'].filter((worker) =>
+              ['total', 'sweep', 'purge', 'claim'].every((phase) =>
+                background.events.some(
+                  (event) =>
+                    event.worker === worker &&
+                    event.phase === phase &&
+                    event.completed,
+                ),
+              ),
+            ),
+            completeSamples: samples.filter((sample) =>
+              hasCompleteSubmitTimings(
+                sample.phaseTimings,
+                summary.fixture.visibleCount + summary.fixture.hiddenCount,
+              ),
+            ).length,
+          });
+        }
+        summary.phases.push({
+          profile: concurrency,
+          phase: 'profile-completed',
+          host: hostSnapshot(),
+        });
+        console.log(
+          `${mode} medido: 50 solicitudes, concurrencia ${concurrency}.`,
+        );
+      }
+      phase = 'verify-capsule-cleanup';
+      const capsules = await run('docker', [
+        'ps',
+        '-a',
+        '--filter',
+        'label=org.alunza.runner=alunza-edu-laboratorio',
+        '--format',
+        '{{.ID}}',
+      ]);
+      // TEST owns this measurement exclusively; include failed HTTP requests
+      // whose response never supplied an execution id.
+      summary.cleanupVerified = capsules.stdout.trim().length === 0;
+      const finalAvailability = await runner.getDockerAvailability();
+      summary.runner.imageUnchanged =
+        finalAvailability.available &&
+        finalAvailability.image === summary.runner.image;
+      summary.candidateUnchanged =
+        summary.candidateFingerprint === (await candidateFingerprint());
+      const finalEnvironment = await submitEnvironmentManifest();
+      summary.finalEnvironmentManifest = finalEnvironment;
+      summary.environmentUnchanged =
+        JSON.stringify(finalEnvironment.docker) ===
+          JSON.stringify(summary.environmentManifest.docker) &&
+        finalEnvironment.workloadFingerprint ===
+          summary.environmentManifest.workloadFingerprint;
+      if (!summary.cleanupVerified)
+        throw new Error('Una ejecución medida dejó una cápsula propia.');
+    } finally {
+      phase = `${phase}:stop-owned-services`;
+      await stopCollector();
+      await api?.stop();
+      await Promise.all(sessions.map((auth) => auth.auth.signOut()));
+    }
+  });
+  summary.profiles = profiles();
+  summary.diagnostics.continuousCleanupVerified = continuousEnabled
+    ? continuousProfiles.length === 2 &&
+      continuousProfiles.every((item) => item.cleanupVerified === true)
+    : null;
+  summary.status =
+    summary.cleanupVerified &&
+    summary.runner.imageUnchanged &&
+    summary.candidateUnchanged &&
+    summary.environmentUnchanged &&
+    (!continuousEnabled || summary.diagnostics.continuousCleanupVerified) &&
+    (mode !== 'SUBMIT' ||
+      (timingCoverage.length === 2 &&
+        timingCoverage.every(
+          (item) =>
+            item.samples === 50 &&
+            item.completeSamples === 50 &&
+            item.rejected === 0 &&
+            item.backgroundRejected === 0 &&
+            item.backgroundWorkers.length === 2,
+        ))) &&
+    summary.profiles.every(
+      (profile) =>
+        profile.count === 50 && profile.failed === 0 && profile.p95Ms < 5000,
+    )
+      ? 'passed'
+      : 'failed';
   await report(
-    `${mode.toLowerCase()}-performance-${summary.runId}`,
+    `${mode.toLowerCase()}-performance`,
     summary,
-    'imp-03',
+    'imp-03-submissions',
   );
-  await report(`${mode.toLowerCase()}-performance`, summary, 'imp-03');
   console.log(
-    JSON.stringify({
-      mode,
-      status: summary.status,
-      profiles: summary.profiles,
-      cleanupVerified: summary.cleanupVerified,
-    }),
+    JSON.stringify({ status: summary.status, profiles: summary.profiles }),
   );
   if (summary.status !== 'passed') process.exitCode = 1;
-  return summary;
+} catch {
+  await report(
+    `${mode.toLowerCase()}-performance`,
+    {
+      ...summary,
+      profiles: profiles(),
+      phase,
+      status: 'failed',
+      error:
+        'No se completó la medición local; los datos parciales se conservan.',
+    },
+    'imp-03-submissions',
+  );
+  console.error(
+    `Medición ${mode} fallida; consultar el reporte local saneado.`,
+  );
+  process.exitCode = 1;
 }
-
-if (
-  process.argv[1] &&
-  resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
-  main().catch(() => {
-    console.error('No se pudo completar el informe de medición local.');
-    process.exitCode = 1;
-  });

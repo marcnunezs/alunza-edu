@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 2,
+  "operation": "help-product-evaluation",
+  "environment": "LAB-EVAL",
+  "provider": "AZURE",
+  "destination": {
+    "apiOrigin": "http://127.0.0.1:4400",
+    "authOrigin": "http://127.0.0.1:19421",
+    "operationsOrigin": "http://127.0.0.1:4401",
+    "projectId": "alunza-edu-laboratorio-eval"
+  },
+  "candidateFingerprint": null,
+  "corpusVersion": "help-evaluation-1",
+  "tokenizerVersion": "js-tiktoken-1.0.21-cl100k_base",
+  "queryVersion": "help-query-4",
+  "authorization": null,
+  "priceVersion": "azure-retail-eastus2-20261004-te3small-standard-gpt41mini-globalstandard",
+  "budgets": {
+    "global": {
+      "maxCalls": 857,
+      "maxInputTokens": 3912532,
+      "maxOutputTokens": 601600,
+      "maxCostMicroUsd": "2479287"
+    },
+    "INGESTION": {
+      "maxCalls": 135,
+      "maxInputTokens": 4032,
+      "maxOutputTokens": 0,
+      "maxCostMicroUsd": "150"
+    },
+    "CALIBRATION": {
+      "maxCalls": 4,
+      "maxInputTokens": 2000,
+      "maxOutputTokens": 0,
+      "maxCostMicroUsd": "44"
+    },
+    "FUNCTIONAL": {
+      "maxCalls": 12,
+      "maxInputTokens": 66000,
+      "maxOutputTokens": 10240,
+      "maxCostMicroUsd": "42032"
+    },
+    "EVALUATION": {
+      "maxCalls": 706,
+      "maxInputTokens": 3840500,
+      "maxOutputTokens": 591360,
+      "maxCostMicroUsd": "2437061"
+    }
+  },
+  "profiles": null,
+  "azure": null,
+  "latency": {
+    "serialAttempts": 25,
+    "concurrentAttempts": 25,
+    "concurrency": 4,
+    "helpsPerAttempt": 4
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "recordedAt": "2026-10-23T05:47:40.587Z",
+  "status": "passed",
+  "command": "npm run demo",
+  "build": "passed",
+  "mode": "compiled-local",
+  "environment": "alunza-edu-foundation",
+  "source": {
+    "algorithm": "sha256",
+    "value": "5a5ec24f2a9535101f7cb7a303460d479a06bdf866c4b592ab1b1fcf61076194",
+    "files": 290,
+    "scope": "source-contracts-migrations-tests-fixtures-tooling-infra; excludes docs, generated next-env.d.ts and private/ignored files"
+  },
+  "checks": [
+    {
+      "name": "web",
+      "url": "http://127.0.0.1:3000",
+      "status": 200
+    },
+    {
+      "name": "access",
+      "url": "http://127.0.0.1:3000/acceso",
+      "status": 200
+    },
+    {
+      "name": "apiReady",
+      "url": "http://127.0.0.1:4000/health/ready",
+      "status": 200
+    },
+    {
+      "name": "apiLive",
+      "url": "http://127.0.0.1:4000/health/live",
+      "status": 200
+    }
+  ],
+  "remainingOwnedCapsules": 0,
+  "scope": "HTTP smoke after complete local CI; no claim of manual academic acceptance"
+}

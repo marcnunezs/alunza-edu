@@ -50,7 +50,6 @@ const response: Attempt = {
   technicalResult: canonical.technicalResult,
 };
 const suite = {
-  limits: { memoryBytes: 67108864, runtimeMs: 1500, outputBytes: 4096 },
   testsVersion: reservation.testsVersion,
   tests: [
     { id: 'visible', visibility: 'visible', args: [2], expected: 4 },
@@ -87,6 +86,7 @@ function setup(enabled = true, environment = 'local') {
     }),
   };
   const lifecycle = {
+    requestClosed: jest.fn(),
     inspect: jest.fn(async (): Promise<RunnerInspection> => ({
       available: true,
       runnerVersion: 'unit',
@@ -113,6 +113,135 @@ function setup(enabled = true, environment = 'local') {
   return { service, repository, execution, lifecycle, events };
 }
 describe('SUBMIT durability and current access', () => {
+  it('returns capacity rejection without loading tests, staging UNKNOWN or creating an attempt', async () => {
+    const { service, repository, execution, lifecycle } = setup();
+    repository.admit.mockRejectedValueOnce(
+      new ApiError('RUNNER_BUSY', 'Ocupado.', 503, true),
+    );
+    await expect(
+      service.submit(who, activity, assignment, input, 'submit-key-busy'),
+    ).rejects.toMatchObject({
+      code: 'RUNNER_BUSY',
+      retryable: true,
+    });
+    expect(repository.suite).not.toHaveBeenCalled();
+    expect(repository.stage).not.toHaveBeenCalled();
+    expect(repository.finish).not.toHaveBeenCalled();
+    expect(execution.execute).not.toHaveBeenCalled();
+    expect(lifecycle.cleanup).not.toHaveBeenCalled();
+  });
+  it.each(['BUSY', 'UNCERTAIN'] as const)(
+    'replays while physical capacity is %s without dispatch',
+    async (capacity) => {
+      const { service, repository, execution, lifecycle } = setup();
+      lifecycle.inspect.mockResolvedValueOnce({
+        available: true,
+        runnerVersion: 'unit',
+        capacity,
+      });
+      repository.admit.mockResolvedValueOnce({
+        kind: 'replay',
+        response,
+      } as never);
+      await expect(
+        service.submit(who, activity, assignment, input, 'submit-key-replay'),
+      ).resolves.toEqual(response);
+      expect(repository.admit).toHaveBeenCalledWith(
+        who,
+        activity,
+        assignment,
+        input,
+        'submit-key-replay',
+        expect.objectContaining({ capacity }),
+        expect.anything(),
+      );
+      expect(repository.suite).not.toHaveBeenCalled();
+      expect(repository.stage).not.toHaveBeenCalled();
+      expect(execution.execute).not.toHaveBeenCalled();
+      expect(lifecycle.cleanup).not.toHaveBeenCalled();
+    },
+  );
+  it('passes the inspected context to admission and separately to execution without adding it to student input', async () => {
+    const { service, execution, repository, lifecycle } = setup();
+    const first = {
+      provider: 'docker' as const,
+      image: `sha256:${'a'.repeat(64)}`,
+      runnerVersion: 'unit',
+    };
+    const second = { ...first, image: `sha256:${'b'.repeat(64)}` };
+    lifecycle.inspect
+      .mockResolvedValueOnce({
+        available: true,
+        runnerVersion: 'unit',
+        context: first,
+      })
+      .mockResolvedValueOnce({
+        available: true,
+        runnerVersion: 'unit',
+        context: second,
+      });
+    await service.submit(who, activity, assignment, input, 'submit-image-1');
+    await service.submit(who, activity, assignment, input, 'submit-image-2');
+    const executionInput = {
+      executionId: reservation.executionId,
+      requestId: who.requestId,
+      exerciseVersionId: input.exerciseVersionId,
+      testsVersion: suite.testsVersion,
+      mode: 'SUBMIT',
+      entrypoint: 'solve',
+      code: input.code,
+      tests: suite.tests,
+    };
+    expect(execution.execute).toHaveBeenNthCalledWith(1, executionInput, first);
+    expect(execution.execute).toHaveBeenNthCalledWith(
+      2,
+      executionInput,
+      second,
+    );
+    expect(repository.admit).toHaveBeenCalledWith(
+      who,
+      activity,
+      assignment,
+      input,
+      'submit-image-1',
+      { available: true, runnerVersion: 'unit', context: first },
+      expect.any(Object),
+    );
+    expect(JSON.stringify(repository.stage.mock.calls)).not.toContain(
+      'sha256:',
+    );
+  });
+  it('fails closed before execution when inspected and admitted runner versions disagree', async () => {
+    const { service, execution, repository, lifecycle } = setup();
+    lifecycle.inspect.mockResolvedValueOnce({
+      available: true,
+      runnerVersion: 'unit',
+      context: {
+        provider: 'docker',
+        image: `sha256:${'a'.repeat(64)}`,
+        runnerVersion: 'different',
+      },
+    });
+    await service.submit(
+      who,
+      activity,
+      assignment,
+      input,
+      'submit-image-mismatch',
+    );
+    expect(execution.execute).not.toHaveBeenCalled();
+    expect(repository.stage).toHaveBeenCalledWith(
+      reservation,
+      expect.objectContaining({
+        technicalResult: expect.objectContaining({
+          runnerVersion: 'unit',
+          diagnosisCode: 'UNKNOWN',
+          infrastructureStatus: 'FAILED',
+        }),
+      }),
+    );
+    expect(lifecycle.cleanup).toHaveBeenCalledTimes(1);
+  });
   it('reserves before full suite execution, stores evidence and commits before delivery', async () => {
     const { service, execution, repository, events } = setup();
     await expect(
@@ -132,9 +261,7 @@ describe('SUBMIT durability and current access', () => {
         mode: 'SUBMIT',
         code: input.code,
         tests: suite.tests,
-        limits: suite.limits,
       }),
-      undefined,
     );
     expect(repository.admit.mock.calls[0]?.at(-1)).toEqual(
       expect.objectContaining({
@@ -144,78 +271,6 @@ describe('SUBMIT durability and current access', () => {
         actorRequestsPerMinute: 10,
       }),
     );
-  });
-  it('passes preparation only to the current execution, outside admission and durable evidence', async () => {
-    const { service, repository, execution, lifecycle } = setup();
-    const first = {
-      provider: 'docker' as const,
-      image: 'sha256:' + 'a'.repeat(64),
-    };
-    const second = {
-      provider: 'docker' as const,
-      image: 'sha256:' + 'b'.repeat(64),
-    };
-    lifecycle.inspect
-      .mockResolvedValueOnce({
-        available: true,
-        runnerVersion: 'unit',
-        preparation: first,
-      })
-      .mockResolvedValueOnce({
-        available: true,
-        runnerVersion: 'unit',
-        preparation: second,
-      });
-    for (const key of ['first', 'second'])
-      await service.submit(who, activity, assignment, input, key);
-    expect(execution.execute).toHaveBeenNthCalledWith(
-      1,
-      expect.not.objectContaining({ preparation: expect.anything() }),
-      first,
-    );
-    expect(execution.execute).toHaveBeenNthCalledWith(
-      2,
-      expect.not.objectContaining({ preparation: expect.anything() }),
-      second,
-    );
-    for (const calls of [
-      repository.admit.mock.calls,
-      repository.stage.mock.calls,
-      repository.finish.mock.calls,
-    ]) {
-      expect(JSON.stringify(calls)).not.toContain(first.image);
-      expect(JSON.stringify(calls)).not.toContain(second.image);
-      expect(JSON.stringify(calls)).not.toContain('preparation');
-    }
-    expect(repository.stage).toHaveBeenNthCalledWith(1, reservation, canonical);
-    expect(repository.finish).toHaveBeenNthCalledWith(1, reservation, true);
-  });
-
-  it('returns an enabled-runner replay without reading or using preparation', async () => {
-    const { service, repository, execution, lifecycle } = setup();
-    const preparation = jest.fn(() => {
-      throw new Error('Replay must not prepare execution');
-    });
-    lifecycle.inspect.mockResolvedValueOnce({
-      available: true,
-      runnerVersion: 'unit',
-      get preparation() {
-        return preparation();
-      },
-    });
-    repository.admit.mockResolvedValueOnce({
-      kind: 'replay',
-      response,
-    } as never);
-    await expect(
-      service.submit(who, activity, assignment, input, 'replay'),
-    ).resolves.toEqual(response);
-    expect(preparation).not.toHaveBeenCalled();
-    expect(repository.suite).not.toHaveBeenCalled();
-    expect(execution.execute).not.toHaveBeenCalled();
-    expect(repository.stage).not.toHaveBeenCalled();
-    expect(repository.finish).not.toHaveBeenCalled();
-    expect(lifecycle.cleanup).not.toHaveBeenCalled();
   });
   it('denies before provider inspection or admission', async () => {
     const { service, repository, lifecycle, execution } = setup();
@@ -386,6 +441,92 @@ describe('SUBMIT durability and current access', () => {
       service.submit(who, activity, assignment, input, 'submit-key-1'),
     ).rejects.toMatchObject({ code: 'DEPENDENCY_UNAVAILABLE' });
     expect(lifecycle.cleanup).not.toHaveBeenCalled();
+  });
+});
+
+describe('SUBMIT configured Docker request closure', () => {
+  const admitted = {
+    provider: 'docker' as const,
+    image: `sha256:${'a'.repeat(64)}`,
+    runnerVersion: 'unit',
+    engineId: 'engine-unit',
+    runtimeName: 'alunza-crun',
+    runtimeVersion: '1.31',
+    runtimeSha256: 'b'.repeat(64),
+    strategy: 'prepared-pair-v1' as const,
+  };
+  function configured() {
+    const f = setup();
+    f.lifecycle.inspect.mockResolvedValue({
+      available: true,
+      runnerVersion: 'unit',
+      context: admitted,
+    });
+    f.repository.admit.mockResolvedValue({
+      ...reservation,
+      executionContext: admitted,
+    } as never);
+    return f;
+  }
+  it('stages and confirms evidence before allowing post-response replenishment', async () => {
+    const f = configured();
+    const responseClosed = new Promise<boolean>(() => undefined);
+    f.lifecycle.requestClosed.mockImplementation(() => {
+      expect(f.events.at(-1)).toBe('authorize');
+      expect(f.repository.stage).toHaveBeenCalledTimes(1);
+      expect(f.repository.finish).toHaveBeenCalledTimes(1);
+    });
+    await expect(
+      f.service.submit(
+        who,
+        activity,
+        assignment,
+        input,
+        'configured',
+        responseClosed,
+      ),
+    ).resolves.toEqual(response);
+    expect(f.execution.execute).toHaveBeenCalledWith(
+      expect.anything(),
+      admitted,
+      expect.objectContaining({ leaseToken: reservation.leaseToken }),
+    );
+    expect(f.lifecycle.requestClosed).toHaveBeenCalledWith(
+      reservation.executionId,
+      admitted,
+      { committed: true, cleanupVerified: true, responseClosed },
+    );
+  });
+  it('preserves staged evidence but suppresses replenishment when confirmation fails', async () => {
+    const f = configured();
+    f.repository.finish.mockRejectedValueOnce(new Error('commit lost'));
+    await expect(
+      f.service.submit(who, activity, assignment, input, 'configured'),
+    ).rejects.toThrow('commit lost');
+    expect(f.repository.stage).toHaveBeenCalledWith(
+      expect.anything(),
+      canonical,
+    );
+    expect(f.lifecycle.requestClosed).toHaveBeenCalledWith(
+      reservation.executionId,
+      admitted,
+      expect.objectContaining({ committed: false, cleanupVerified: true }),
+    );
+  });
+  it('suppresses replenishment on final authorization failure without undoing the attempt', async () => {
+    const f = configured();
+    f.repository.authorize
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error('access revoked'));
+    await expect(
+      f.service.submit(who, activity, assignment, input, 'configured'),
+    ).rejects.toThrow('access revoked');
+    expect(f.repository.finish).toHaveBeenCalledTimes(1);
+    expect(f.lifecycle.requestClosed).toHaveBeenCalledWith(
+      reservation.executionId,
+      admitted,
+      expect.objectContaining({ committed: false }),
+    );
   });
 });
 

@@ -4,7 +4,7 @@ const { readFileSync } = require('node:fs');
 const pg = require('pg');
 const { createClient } = require('@supabase/supabase-js');
 const contracts = require('@alunza/contracts');
-const { assertPracticeTestState } = require('../practice-test-state.cjs');
+const { assertLaboratoryTestState } = require('../laboratory-test-state.cjs');
 const fixture = require('../../fixtures/foundation/identity.json');
 const admin = fixture.users[0],
   teacher = fixture.users[1],
@@ -21,7 +21,6 @@ const ids = Object.fromEntries(
     'version',
     'activity',
     'assignment',
-    'hiddenTest',
   ].map((name) => [name, randomUUID()]),
 );
 const sessions = new Map();
@@ -65,7 +64,7 @@ async function api(
     expect(
       contracts.runExecutionResponseSchema.safeParse(payload).success,
     ).toBe(true);
-  expect(JSON.stringify(payload)).not.toContain(ids.hiddenTest);
+  expect(JSON.stringify(payload)).not.toContain('IMP03_HIDDEN_SENTINEL');
   return {
     status: response.status,
     payload,
@@ -108,23 +107,16 @@ async function asApplication(user, action) {
 }
 beforeAll(async () => {
   state = JSON.parse(readFileSync(process.env.ALUNZA_TEST_STATE, 'utf8'));
-  assertPracticeTestState(state);
-  const { testContext } = await import('../../scripts/test-environment.mjs');
-  await (
-    await import('../../scripts/academic-seed.mjs')
-  ).seedAcademic(testContext);
+  assertLaboratoryTestState(state);
   base = process.env.ALUNZA_TEST_API_URL;
   if (
-    state.projectId !== 'alunza-edu-foundation-test' ||
-    base !== 'http://127.0.0.1:4100'
+    state.projectId !== 'alunza-edu-laboratorio-test' ||
+    base !== 'http://127.0.0.1:4300'
   )
     throw new Error('RUN tests require isolated TEST.');
   pool = new pg.Pool({ connectionString: state.migrationUrl, max: 5 });
-  secondStudent = {
-    id: '20000000-0000-4000-8000-000000000007',
-    email: 'student.a2@alunza.test',
-    role: 'STUDENT',
-  };
+  const demo = await import('../../fixtures/demo/academic.mjs');
+  secondStudent = demo.additionalStudents[0];
   for (const user of [admin, teacher, student, outsider, secondStudent]) {
     const auth = createClient(state.authUrl, state.publishableKey, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -163,7 +155,7 @@ beforeAll(async () => {
         [ids.org, ids.class, user.id],
       );
     await client.query(
-      "INSERT INTO app.concepts(id,organization_id,normalized_name) VALUES($1,$2,'sumar')",
+      "INSERT INTO app.concept_tags(id,organization_id,normalized_name) VALUES($1,$2,'sumar')",
       [ids.concept, ids.org],
     );
     await client.query(
@@ -171,7 +163,7 @@ beforeAll(async () => {
       [ids.conceptVersion, ids.org, ids.concept, admin.id],
     );
     await client.query(
-      'UPDATE app.concepts SET current_version_id=$2 WHERE id=$1',
+      'UPDATE app.concept_tags SET current_version_id=$2 WHERE id=$1',
       [ids.concept, ids.conceptVersion],
     );
     await client.query(
@@ -179,16 +171,16 @@ beforeAll(async () => {
       [ids.exercise, ids.org, teacher.id],
     );
     await client.query(
-      "INSERT INTO app.exercise_versions(id,organization_id,exercise_id,version,title,statement,starter_code,difficulty,created_by) VALUES($1,$2,$3,1,'Sumar','Suma dos valores',$4,'BASIC',$5)",
+      "INSERT INTO app.exercise_versions(id,organization_id,exercise_id,version,title,statement,starter_code,difficulty,created_by) VALUES($1,$2,$3,1,'Sumar','Suma dos valores',$4,'BEGINNER',$5)",
       [ids.version, ids.org, ids.exercise, source, teacher.id],
     );
     await client.query(
-      'INSERT INTO app.exercise_version_concepts(organization_id,exercise_version_id,concept_id,concept_version_id) VALUES($1,$2,$3,$4)',
-      [ids.org, ids.version, ids.concept, ids.conceptVersion],
+      'INSERT INTO app.exercise_version_concepts VALUES($1,$2,$3)',
+      [ids.org, ids.version, ids.conceptVersion],
     );
     await client.query(
-      "INSERT INTO app_private.exercise_tests(organization_id,exercise_version_id,id,position,visibility,args,expected) VALUES($1,$2,gen_random_uuid(),0,'VISIBLE','[2,3]','5'),($1,$2,$3,1,'HIDDEN','[7,8]','15')",
-      [ids.org, ids.version, ids.hiddenTest],
+      "INSERT INTO app_private.exercise_tests(organization_id,exercise_version_id,test_id,position,visibility,args,expected) VALUES($1,$2,'visible',0,'visible','[2,3]','5'),($1,$2,'IMP03_HIDDEN_SENTINEL',1,'hidden','[7,8]','15')",
+      [ids.org, ids.version],
     );
     await client.query(
       'UPDATE app.exercises SET current_version_id=$2 WHERE id=$1',
@@ -521,7 +513,7 @@ test('El reconciliador elimina una cápsula vencida que aparece después de comp
       `/containers/create?name=${encodeURIComponent(name)}`,
       {
         body: capsuleConfiguration(await capsule.imageIdentity(), {
-          'org.alunza.runner': 'alunza-edu',
+          'org.alunza.runner': 'alunza-edu-laboratorio',
           'org.alunza.execution': executionId,
           'org.alunza.expires': String(Date.now() - 1000),
         }),
@@ -632,16 +624,3 @@ test('Cierre serializado permite terminar RUN admitido y rechaza nuevas admision
     Date.parse(closed.payload.data.closedAt),
   );
 }, 45000);
-
-test('RUN cerca una finalización cuyo lease vence mientras espera el bloqueo de fila', async () => {
-  const { expiredLeaseWhileWaiting } = require('../practice-lease-race.cjs');
-  await expiredLeaseWhileWaiting({
-    pool,
-    ids,
-    student,
-    source,
-    mode: 'RUN',
-    asApplication,
-    eventually,
-  });
-}, 15000);

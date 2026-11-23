@@ -1,0 +1,2066 @@
+{
+  "recordedAt": "2026-10-23T05:37:24.799Z",
+  "schemaVersion": 1,
+  "runId": "5a8ad391-8685-455b-890a-a914949c8838",
+  "environment": "isolated-local-supabase-and-docker",
+  "mode": "RUN",
+  "source": {
+    "algorithm": "sha256",
+    "value": "5a5ec24f2a9535101f7cb7a303460d479a06bdf866c4b592ab1b1fcf61076194",
+    "files": 290,
+    "scope": "source-contracts-migrations-tests-fixtures-tooling-infra; excludes docs, generated next-env.d.ts and private/ignored files"
+  },
+  "profile": {
+    "sequential": 50,
+    "concurrent": 50,
+    "concurrency": 4,
+    "actorConcurrency": 1,
+    "submitActorConcurrency": 2,
+    "organizationConcurrency": 4,
+    "actorRequestsPerMinute": 100,
+    "timeoutMs": 45000,
+    "rateOverride": "100 admisiones/minuto únicamente en el proceso TEST de medición; límites de concurrencia sin ampliar.",
+    "temperature": "API reiniciada antes de cada perfil; primer lote frío y solicitudes siguientes calientes; cada prueba crea una cápsula nueva.",
+    "instrumentation": "none"
+  },
+  "fixture": {
+    "title": "Sumar dos valores",
+    "visibleCount": 1,
+    "hiddenCount": 0,
+    "sourceHash": "864f9b34a4c253e1414fc3c9ace57d7763ed103b8fcfa221bc396bb34be2fbcb"
+  },
+  "percentile": "nearest-rank",
+  "targetMs": 5000,
+  "samples": [
+    {
+      "concurrency": 1,
+      "index": 0,
+      "lane": 0,
+      "temperature": "cold-service",
+      "durationMs": 698.9680000000008,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 70.537014,
+        "lifecycleMs": 522.8036,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "7c7664d0-0d74-4a40-b499-f744b5a6cdb2",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 1,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 763.5829000000012,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 83.68469499999999,
+        "lifecycleMs": 610.6696000000002,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "9ba538e6-8a9b-4558-9217-c3185b716e88",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 2,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 891.1316999999981,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 110.04150299999999,
+        "lifecycleMs": 722.2381,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "4876cbfd-6abb-4efd-846a-18078c47725c",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 3,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 896.1401999999944,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 135.548253,
+        "lifecycleMs": 726.3096999999998,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "922ca0c7-ab4a-455f-b6dd-e085cfad1f0c",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 4,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 819.2376999999979,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 95.80954600000001,
+        "lifecycleMs": 645.4044000000004,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "dfe20747-15b4-459c-bfcc-74280caafa06",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 5,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 968.5342999999993,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 169.181916,
+        "lifecycleMs": 790.9423999999999,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "66937f36-8115-4123-ae89-b5c652e42fc1",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 6,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 914.9200999999957,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 87.12853700000001,
+        "lifecycleMs": 737.3397000000004,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "d54f6d1b-6616-47b6-98be-7985f0b92553",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 7,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 846.3122999999978,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 119.90864900000001,
+        "lifecycleMs": 707.6421999999993,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "f756062b-0946-4caa-a1ce-781c3f73bd0b",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 8,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 838.3508000000002,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 124.692947,
+        "lifecycleMs": 683.7942000000003,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "7b21a356-e2a9-4a4a-93f2-9275a51b627c",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 9,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 739.3315000000002,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 78.284764,
+        "lifecycleMs": 596.2883000000002,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "44e4c918-5d69-4e98-b93c-3c976461c829",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 10,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 761.9637999999977,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 125.224283,
+        "lifecycleMs": 631.843499999999,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "57515c5e-7045-4979-a93f-46727acab052",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 11,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 747.1941000000079,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 71.670994,
+        "lifecycleMs": 607.0314999999991,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "f4c641ce-9955-4080-9d53-39a658fb30c2",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 12,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 729.9573999999993,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 74.62905199999999,
+        "lifecycleMs": 603.9490000000005,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "3385c665-20ee-431f-8f3b-9b22aeaa6dd7",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 13,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 719.5578999999998,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 73.473851,
+        "lifecycleMs": 590.3837000000003,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "7dc7b750-9b5d-4f6a-adb4-5045a89c0e66",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 14,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 818.119200000001,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 126.562385,
+        "lifecycleMs": 662.0115000000005,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "1b78ba01-3cf9-4be9-90ff-0868ae10efe8",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 15,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 834.016300000003,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 146.235129,
+        "lifecycleMs": 666.6185999999998,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "24d3e737-7ffa-4413-84a3-1f0640cfdf95",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 16,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 784.3611999999994,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 78.498821,
+        "lifecycleMs": 638.4961000000003,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "b346d78c-92fa-4961-b7f5-03b80543a11f",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 17,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 811.0663999999961,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 92.74295500000001,
+        "lifecycleMs": 673.1913999999997,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "490879c2-90a7-4c7a-ba48-ddb7001887f4",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 18,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 1036.7148000000016,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 130.48774600000002,
+        "lifecycleMs": 844.3603999999978,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "ccf5f873-1a8e-4db7-afa4-71a66dbaa8e6",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 19,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 831.9752000000008,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 111.230246,
+        "lifecycleMs": 679.5148999999983,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "9199bd32-760c-425e-871c-5f4fcdcce29e",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 20,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 856.3957999999984,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 95.398014,
+        "lifecycleMs": 720.7268000000004,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "20f9c381-5de2-452a-9f61-bdb72b71478a",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 21,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 865.998900000006,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 94.70590700000001,
+        "lifecycleMs": 680.0512000000017,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "28a7ed26-ba35-48de-abd8-b2ad76815943",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 22,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 951.9700000000012,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 149.613966,
+        "lifecycleMs": 781.0273000000016,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "5f9ff4bc-2b70-4c34-94b3-70b639fe8d91",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 23,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 864.0306999999884,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 89.686274,
+        "lifecycleMs": 710.867000000002,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "2eb1fc73-7174-41af-a1dc-3b51a4f61a5b",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 24,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 875.0820999999996,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 95.37933699999999,
+        "lifecycleMs": 719.5977999999996,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "0bfdbfa5-83c5-42d5-9937-0f0a6ee77dfb",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 25,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 835.5578000000096,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 102.306351,
+        "lifecycleMs": 671.3921000000009,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "8b734d1c-5e5a-4b4b-a7c4-e06340013441",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 26,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 860.5088000000105,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 139.37770999999998,
+        "lifecycleMs": 726.8119000000006,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "5860a793-f2bd-4db4-b8a5-8aa8a6e996d0",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 27,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 870.1171999999933,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 126.287851,
+        "lifecycleMs": 705.3129000000008,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "a7cdd025-0a39-4327-ada1-8eafad451c23",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 28,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 783.7804999999935,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 81.256579,
+        "lifecycleMs": 622.901600000001,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "12dd9f2f-3d1b-40a7-ac65-696710d8d1fe",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 29,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 1030.1419000000024,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 105.61553199999999,
+        "lifecycleMs": 842.3234000000011,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "94f3fa2b-bbf6-4171-a3ca-72e89d293839",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 30,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 925.5302999999985,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 89.71419000000002,
+        "lifecycleMs": 797.764900000002,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "e1114813-248b-468e-a951-7fe4395830e7",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 31,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 871.9559000000008,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 102.695763,
+        "lifecycleMs": 723.2755999999972,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "83c5c429-122b-4bd6-81d1-c3a2e72d530b",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 32,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 862.3886000000057,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 88.33328099999999,
+        "lifecycleMs": 711.3750999999975,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "ee871328-7d38-4fc4-a6e6-517c155fda13",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 33,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 768.4134999999951,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 74.73191099999998,
+        "lifecycleMs": 613.4966999999997,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "9a334532-3113-4f9a-9009-807d7e52d404",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 34,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 775.1125000000029,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 86.007254,
+        "lifecycleMs": 634.137200000001,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "92682255-b186-40ea-9810-f3c66d92e5d6",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 35,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 853.8291000000027,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 141.598169,
+        "lifecycleMs": 698.5077000000019,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "1a8bbfbe-7d82-4ac7-93c5-8575006d9566",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 36,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 756.4657000000007,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 81.168879,
+        "lifecycleMs": 597.9226999999992,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "47d49c47-becd-41c1-b207-e84b8af269a3",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 37,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 814.6448999999993,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 99.49449800000001,
+        "lifecycleMs": 664.571600000003,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "9a2dfa4f-4377-4ad2-8077-3a162ff085b7",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 38,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 920.448900000003,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 95.10407799999999,
+        "lifecycleMs": 742.8819000000003,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "63bf5073-4328-4a26-835a-6c021de221c1",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 39,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 903.4078000000009,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 131.39310700000001,
+        "lifecycleMs": 750.4447999999975,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "59a556f2-d301-4ad4-be73-aff649077549",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 40,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 960.2490000000107,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 140.25239299999998,
+        "lifecycleMs": 785.5394000000015,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "d7c02b01-31a5-4405-bcb1-cc5a5e49c285",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 41,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 922.7449999999953,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 82.40413999999998,
+        "lifecycleMs": 720.914300000004,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "1a1eaf18-8824-433c-8aa3-3c3154e4e354",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 42,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 886.4563000000053,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 140.67508099999998,
+        "lifecycleMs": 743.3962000000029,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "ff15b6f7-7580-47e3-9cc7-df9c45cc6ae8",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 43,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 1083.9353999999876,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 104.373639,
+        "lifecycleMs": 915.7304000000004,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "a5cc0f54-43e3-4bc6-9146-6b0155d57ccf",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 44,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 829.2245000000112,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 122.579378,
+        "lifecycleMs": 669.4070999999967,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "202f334b-04c4-4197-a4e4-5170ac2355ec",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 45,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 773.3073999999906,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 89.784237,
+        "lifecycleMs": 637.6742999999988,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "6b545a56-a077-463e-8113-3ad22d15eb52",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 46,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 719.5291999999899,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 76.84039699999998,
+        "lifecycleMs": 591.4328000000023,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "fb716dd6-4769-4afb-ac83-85657e2fee60",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 47,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 783.1984999999986,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 120.489353,
+        "lifecycleMs": 641.2769000000044,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "cc5a79d0-e3f9-44e1-997c-6ecb495ff8f3",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 48,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 710.7580000000016,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 83.540627,
+        "lifecycleMs": 580.8978000000061,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "1e0b5a7b-ed4f-4d01-8baa-b973cb1bb0ae",
+      "attemptId": null
+    },
+    {
+      "concurrency": 1,
+      "index": 49,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 812.1464000000124,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 101.836877,
+        "lifecycleMs": 665.2291000000041,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "a8551cc8-d9a5-4ef5-b023-13e24a09b20c",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 0,
+      "lane": 0,
+      "temperature": "cold-service",
+      "durationMs": 1370.6695999999938,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 298.11078,
+        "lifecycleMs": 1169.7359000000001,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "b1307110-b0be-4fcf-8df5-9e74ffd1725f",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 1,
+      "lane": 1,
+      "temperature": "cold-service",
+      "durationMs": 1433.1014999999898,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 274.033945,
+        "lifecycleMs": 1222.8636000000001,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "04260eaa-7401-4552-bf6b-bb74ad7cd6c6",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 3,
+      "lane": 3,
+      "temperature": "cold-service",
+      "durationMs": 1440.6940999999933,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 337.77866000000006,
+        "lifecycleMs": 1213.3908000000001,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "8a745a4f-2410-4eda-bcbd-89925911319c",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 2,
+      "lane": 2,
+      "temperature": "cold-service",
+      "durationMs": 1489.132300000012,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 252.616736,
+        "lifecycleMs": 1276.0173000000002,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "4d25542d-7389-4b94-94f5-b17657842c67",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 6,
+      "lane": 3,
+      "temperature": "warm-service",
+      "durationMs": 1561.5381999999954,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 236.091072,
+        "lifecycleMs": 1254.2949000000003,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "9b26d075-e830-4fe1-a626-4eea53c2d5df",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 5,
+      "lane": 1,
+      "temperature": "warm-service",
+      "durationMs": 1668.580700000006,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 253.01797800000003,
+        "lifecycleMs": 1402.7673999999997,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "b0d86913-ac10-408d-addb-7dc86539f8df",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 4,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 1809.5443999999989,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 291.407161,
+        "lifecycleMs": 1462.0032,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "6b447989-8f08-4488-935b-c324a82cf21d",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 7,
+      "lane": 2,
+      "temperature": "warm-service",
+      "durationMs": 1731.349199999997,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 282.388949,
+        "lifecycleMs": 1477.9998000000005,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "0fc3ef79-9041-4d6d-b53d-9eceb3883dcf",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 8,
+      "lane": 3,
+      "temperature": "warm-service",
+      "durationMs": 1614.3525999999983,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 214.33360299999998,
+        "lifecycleMs": 1296.3397999999997,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "b3979536-189a-4531-9737-016c5f797e57",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 10,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 1510.8031000000046,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 211.90497399999998,
+        "lifecycleMs": 1385.6315999999997,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "c62f40ab-0b3d-4d37-b035-f39f7856afac",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 9,
+      "lane": 1,
+      "temperature": "warm-service",
+      "durationMs": 1667.300700000007,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 236.05718000000002,
+        "lifecycleMs": 1432.3689999999997,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "5e524129-9f76-433c-a6f8-e24978e68db6",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 11,
+      "lane": 2,
+      "temperature": "warm-service",
+      "durationMs": 1644.0005999999994,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 262.565379,
+        "lifecycleMs": 1364.3459999999995,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "c5a3ee81-3ea2-4d7c-af57-e9ba963feb3c",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 14,
+      "lane": 1,
+      "temperature": "warm-service",
+      "durationMs": 1546.0778000000137,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 247.043069,
+        "lifecycleMs": 1372.1070999999993,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "17125b37-be1f-4c5b-a47f-f2c9f424f09e",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 13,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 1705.5125000000116,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 236.17820800000004,
+        "lifecycleMs": 1476.5720000000001,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "ba9090ca-4894-4e00-a7ce-3874a38e4fd2",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 12,
+      "lane": 3,
+      "temperature": "warm-service",
+      "durationMs": 1810.754700000005,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 232.269494,
+        "lifecycleMs": 1501.2546000000002,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "ceec1575-d178-4e22-a7bb-0ef173982773",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 15,
+      "lane": 2,
+      "temperature": "warm-service",
+      "durationMs": 1641.64929999999,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 235.951011,
+        "lifecycleMs": 1380.9006,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "4ec08229-5b1a-46a9-aed2-1da9d64692de",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 17,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 1364.2332000000024,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 201.746241,
+        "lifecycleMs": 1151.9643000000005,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "7917f78e-f1cf-480c-a546-0e6074e11b39",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 16,
+      "lane": 1,
+      "temperature": "warm-service",
+      "durationMs": 1567.950800000006,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 219.380878,
+        "lifecycleMs": 1264.8397999999988,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "886439e1-67a8-45bc-8a36-2cdd8aba697d",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 18,
+      "lane": 3,
+      "temperature": "warm-service",
+      "durationMs": 1488.2514999999985,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 209.03481499999998,
+        "lifecycleMs": 1324.0416999999998,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "358e23b4-7e1d-48e3-814d-6c41c3ea388c",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 19,
+      "lane": 2,
+      "temperature": "warm-service",
+      "durationMs": 1457.5529999999999,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 202.59317999999996,
+        "lifecycleMs": 1236.3124000000007,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "948c26ba-1de7-4f87-a628-f5953a11c51f",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 21,
+      "lane": 1,
+      "temperature": "warm-service",
+      "durationMs": 1307.4654999999912,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 153.38288,
+        "lifecycleMs": 1165.1448,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "f47e00e5-84e0-4641-92ae-0e724ac309a3",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 20,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 1525.824099999998,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 220.952204,
+        "lifecycleMs": 1275.1311999999998,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "a9b09831-d0b9-4bc6-b00c-ac7315e7048b",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 22,
+      "lane": 3,
+      "temperature": "warm-service",
+      "durationMs": 1444.3286999999982,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 233.479029,
+        "lifecycleMs": 1312.5270999999993,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "bfcf4bec-c915-4d3b-84d8-9280bbf15505",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 23,
+      "lane": 2,
+      "temperature": "warm-service",
+      "durationMs": 1553.9630999999936,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 290.53068499999995,
+        "lifecycleMs": 1339.7068999999992,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "4af9a5bc-05a3-458f-b4d3-86f75bddcbd0",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 24,
+      "lane": 1,
+      "temperature": "warm-service",
+      "durationMs": 1635.618399999992,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 198.78947500000004,
+        "lifecycleMs": 1330.0439000000006,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "ecb97e63-3145-40ac-ad49-621c8744a885",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 25,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 1605.5485000000044,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 231.256474,
+        "lifecycleMs": 1376.4760999999999,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "a6048579-ce23-4dad-80c1-8c1a6f9e64cb",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 26,
+      "lane": 3,
+      "temperature": "warm-service",
+      "durationMs": 1577.7620000000024,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 195.60995100000002,
+        "lifecycleMs": 1422.2468000000008,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "9ecb9072-d358-4cd4-b949-edce4058558c",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 27,
+      "lane": 2,
+      "temperature": "warm-service",
+      "durationMs": 1430.948199999999,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 195.02605200000002,
+        "lifecycleMs": 1241.785100000001,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "9f657f81-83c5-4eba-8ed7-a9b183400292",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 29,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 2086.2976000000053,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 202.71336799999997,
+        "lifecycleMs": 1792.4447999999993,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "7fcace36-7aed-44af-91a3-61d9283e7ca0",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 28,
+      "lane": 1,
+      "temperature": "warm-service",
+      "durationMs": 2227.8690999999963,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 280.062556,
+        "lifecycleMs": 1857.2191999999995,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "68bf3d7b-f25d-42ef-bfa9-fb1348a042bc",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 30,
+      "lane": 3,
+      "temperature": "warm-service",
+      "durationMs": 2200.6382000000012,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 270.16096400000004,
+        "lifecycleMs": 1921.0380999999998,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "8aa954b9-b554-4b34-8c22-8700b1b5eef5",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 31,
+      "lane": 2,
+      "temperature": "warm-service",
+      "durationMs": 2286.649399999995,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 267.299962,
+        "lifecycleMs": 2056.846800000001,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "a273a787-55c6-4a81-92d3-fc833708a1d4",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 34,
+      "lane": 3,
+      "temperature": "warm-service",
+      "durationMs": 2055.2844999999943,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 212.098239,
+        "lifecycleMs": 1696.1033000000007,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "ad9b37b8-50e2-48c3-8ad7-a4cd1e73d88c",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 33,
+      "lane": 1,
+      "temperature": "warm-service",
+      "durationMs": 2197.709499999997,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 262.834343,
+        "lifecycleMs": 1782.0830000000005,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "4f00df67-2cdb-4aad-9694-b70099fe2227",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 35,
+      "lane": 2,
+      "temperature": "warm-service",
+      "durationMs": 2114.8574999999983,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 197.43019200000003,
+        "lifecycleMs": 1831.541699999998,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "1d3bf12f-7241-4104-bb76-2be455d63a72",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 32,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 2390.4992000000057,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 262.86943499999995,
+        "lifecycleMs": 1888.3248000000003,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "a36d9538-6449-4726-b2db-9a090fef6115",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 39,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 1469.7146999999968,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 223.352693,
+        "lifecycleMs": 1306.2189999999973,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "b65b0abb-3d58-47a5-b859-328e937c4324",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 37,
+      "lane": 1,
+      "temperature": "warm-service",
+      "durationMs": 1649.934699999998,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 227.63604499999997,
+        "lifecycleMs": 1350.4605999999985,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "59846692-1726-4db3-a9e8-eabf98791a8b",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 38,
+      "lane": 2,
+      "temperature": "warm-service",
+      "durationMs": 1605.8206000000064,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 223.96484600000002,
+        "lifecycleMs": 1418.7014999999992,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "824da1e4-e5a3-407e-a6dd-96298f8459e7",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 36,
+      "lane": 3,
+      "temperature": "warm-service",
+      "durationMs": 1765.9358999999968,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 236.397037,
+        "lifecycleMs": 1385.7704999999987,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "8f31747d-f4ca-479f-b6de-b46f99a41ac9",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 43,
+      "lane": 3,
+      "temperature": "warm-service",
+      "durationMs": 1320.8937000000005,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 182.98281000000003,
+        "lifecycleMs": 1184.9320000000007,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "875e1310-4cec-4b19-9c20-c371b7274e00",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 40,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 1503.5463000000018,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 193.97789699999998,
+        "lifecycleMs": 1217.084899999998,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "3e9564d1-993c-4e80-93ba-bae383014fc2",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 41,
+      "lane": 1,
+      "temperature": "warm-service",
+      "durationMs": 1500.153999999995,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 220.55814999999998,
+        "lifecycleMs": 1298.9301000000014,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "d0ae4c44-207c-4db3-a8c6-0f4035db3131",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 42,
+      "lane": 2,
+      "temperature": "warm-service",
+      "durationMs": 1447.6330000000016,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 227.01587800000001,
+        "lifecycleMs": 1281.5887000000002,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "22fae838-7ce0-4ca5-b958-9070cb485224",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 46,
+      "lane": 1,
+      "temperature": "warm-service",
+      "durationMs": 1473.1277000000118,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 193.101303,
+        "lifecycleMs": 1352.1411999999982,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "caab613e-5ef8-4c5e-b537-01ae8b63ad44",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 44,
+      "lane": 3,
+      "temperature": "warm-service",
+      "durationMs": 1672.7652999999991,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 207.563586,
+        "lifecycleMs": 1418.142899999999,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "efe752e7-e752-4330-a584-e6d4c974bc09",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 47,
+      "lane": 2,
+      "temperature": "warm-service",
+      "durationMs": 1598.3893000000098,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 207.483941,
+        "lifecycleMs": 1452.3279000000002,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "94cb9754-8f36-49e2-933e-b75a5e2babde",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 45,
+      "lane": 0,
+      "temperature": "warm-service",
+      "durationMs": 1662.921199999997,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 194.00460299999997,
+        "lifecycleMs": 1450.8859000000011,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "64c843f0-2c76-4500-8a27-d9bc243225cf",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 49,
+      "lane": 3,
+      "temperature": "warm-service",
+      "durationMs": 1249.1122000000032,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 188.311462,
+        "lifecycleMs": 1056.2712999999967,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "e71e7d82-52b3-4412-83ef-db5f255d02dc",
+      "attemptId": null
+    },
+    {
+      "concurrency": 4,
+      "index": 48,
+      "lane": 1,
+      "temperature": "warm-service",
+      "durationMs": 1421.1619999999966,
+      "status": 201,
+      "diagnosis": "SUCCESS",
+      "valid": true,
+      "errorCode": null,
+      "technical": {
+        "runtimeMs": 157.633937,
+        "lifecycleMs": 1134.1055000000015,
+        "terminationReason": "COMPLETED",
+        "infrastructureStatus": "OK",
+        "runnerVersion": "imp-03-quickjs-main.1"
+      },
+      "executionId": "12306180-5d80-4035-a5c9-3ea895453417",
+      "attemptId": null
+    }
+  ],
+  "timings": [],
+  "cleanupVerified": true,
+  "profiles": [
+    {
+      "concurrency": 1,
+      "count": 50,
+      "failed": 0,
+      "p95Ms": 1030.1419000000024,
+      "coldP95Ms": 698.9680000000008,
+      "warmP95Ms": 1030.1419000000024
+    },
+    {
+      "concurrency": 4,
+      "count": 50,
+      "failed": 0,
+      "p95Ms": 2227.8690999999963,
+      "coldP95Ms": 1489.132300000012,
+      "warmP95Ms": 2227.8690999999963
+    }
+  ],
+  "status": "passed",
+  "runner": {
+    "version": "imp-03-quickjs-main.1",
+    "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+    "imageUnchanged": true
+  },
+  "initialCapsules": 0,
+  "remainingCapsules": 0,
+  "distinctExecutions": 100,
+  "distinctAttempts": 0
+}

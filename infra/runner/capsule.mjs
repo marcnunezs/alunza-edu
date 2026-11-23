@@ -1,8 +1,12 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { performance } from 'node:perf_hooks';
-import { measureTiming } from './timing.mjs';
-import { readImageIdentity } from './docker-image.mjs';
+import { measureTiming, recordDriverFailure } from './timing.mjs';
+import {
+  inspectDockerRuntime,
+  runtimeConfigFromIdentity,
+} from './docker-runtime.mjs';
+import { verifyKernelControls } from './kernel-controls.mjs';
 import {
   localDockerEngine,
   pinnedDockerEnvironment,
@@ -11,10 +15,10 @@ import {
   CreationTracker,
 } from './docker-engine.mjs';
 
-const OWNER_VALUE = 'alunza-edu';
+const OWNER_VALUE = 'alunza-edu-laboratorio';
 export const OWNER_LABEL = `org.alunza.runner=${OWNER_VALUE}`;
-export const IMAGE_TAG = 'alunza-runner-capsule:imp-03-quickjs-main-1';
-export const RUNNER_PREFIX = 'alunza-runner-';
+export const IMAGE_TAG = 'alunza-laboratorio-runner-capsule:imp-03-quickjs-2';
+export const RUNNER_PREFIX = 'alunza-laboratorio-runner-';
 const ownedName = new RegExp(`^/${RUNNER_PREFIX}[a-f0-9-]{36}$`);
 const creationTracker = new CreationTracker();
 // No shell and bounded diagnostics. These commands execute trusted Docker tooling only.
@@ -82,29 +86,40 @@ export function command(
 }
 export async function imageIdentity(image = IMAGE_TAG, signal) {
   const engine = await localDockerEngine(command, signal);
-  return readImageIdentity(engine, image, signal);
+  const result = await engine.request(
+    'GET',
+    `/images/${encodeURIComponent(image)}/json`,
+    { signal },
+  );
+  const id = result.data?.Id;
+  if (result.status !== 200 || !/^sha256:[a-f0-9]{64}$/.test(id ?? ''))
+    throw new Error('Prepared runner image unavailable');
+  return id;
 }
 export async function runCapsule(input, options = {}) {
-  const requestedMemory = input.memoryBytes ?? 134217728;
+  if (options.expectedBoundary !== undefined && !options.runtime)
+    throw new Error('Executor boundary requires configured Docker runtime');
   if (
-    !Number.isInteger(requestedMemory) ||
-    requestedMemory < 6 * 1024 * 1024 ||
-    requestedMemory > 134217728 ||
-    !Number.isFinite(input.budgetMs) ||
-    input.budgetMs <= 0 ||
-    input.budgetMs > 3000 ||
-    !Number.isInteger(input.outputRemaining) ||
-    input.outputRemaining < 0 ||
-    input.outputRemaining > 65536
+    options.deadlineMs !== undefined &&
+    !Number.isSafeInteger(options.deadlineMs)
   )
-    throw new Error('Unsupported capsule resource limits');
-  const memoryBytes = Math.floor(requestedMemory / 4096) * 4096;
-  input = { ...input, memoryBytes };
+    throw new Error('Invalid supervisor deadline');
+  const deadlineMs = Math.min(
+    options.deadlineMs ?? Infinity,
+    Date.now() + 30000,
+  );
+  const remaining = deadlineMs - Date.now();
+  const timeout =
+    remaining <= 0
+      ? AbortSignal.abort(
+          new globalThis.DOMException('Supervisor deadline', 'TimeoutError'),
+        )
+      : AbortSignal.timeout(remaining);
   options = {
     ...options,
     signal: options.signal
-      ? AbortSignal.any([options.signal, AbortSignal.timeout(30000)])
-      : AbortSignal.timeout(30000),
+      ? AbortSignal.any([options.signal, timeout])
+      : timeout,
   };
   if (
     !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(
@@ -125,30 +140,53 @@ export async function runCapsule(input, options = {}) {
   )
     throw new Error('Invalid fixed probe');
   options.signal?.throwIfAborted();
-  const engine = await measureTiming(
-    options.observeTiming,
-    'engineResolve',
-    () => localDockerEngine(command, options.signal),
-  );
-  const image =
-    options.image ??
-    (await measureTiming(options.observeTiming, 'imageResolve', () =>
-      imageIdentity(IMAGE_TAG, options.signal),
-    ));
-  if (!/^sha256:[a-f0-9]{64}$/.test(image))
-    throw new Error('Runner requires immutable local image ID');
+  let phase = 'ENGINE_RESOLVE';
+  let engine, image;
+  try {
+    engine = await measureTiming(options.observeTiming, 'engineResolve', () =>
+      localDockerEngine(command, options.signal),
+    );
+    if (options.runtime) {
+      const identity = await measureTiming(
+        options.observeTiming,
+        'runtimeIdentity',
+        () =>
+          inspectDockerRuntime(
+            engine,
+            runtimeConfigFromIdentity(options.runtime),
+            options.signal,
+          ),
+      );
+      if (identity.engineId !== options.runtime.engineId)
+        throw new Error('Admitted Docker engine changed');
+    }
+    phase = 'IMAGE_RESOLVE';
+    image =
+      options.image ??
+      (await measureTiming(options.observeTiming, 'imageResolve', () =>
+        imageIdentity(IMAGE_TAG, options.signal),
+      ));
+    if (!/^sha256:[a-f0-9]{64}$/.test(image))
+      throw new Error('Runner requires immutable local image ID');
+  } catch (error) {
+    recordDriverFailure(options.observeFailure, phase);
+    throw error;
+  }
   const name = `${RUNNER_PREFIX}${randomUUID()}`;
   const started = performance.now();
   let created = false,
     cleanupVerified = false;
+  let createdId;
   let packet,
     exitCode = null,
     acknowledgedExitCode,
     oomKilled = false,
     programWallMs,
     containerWallMs = null,
+    kernelBoundary,
     failure;
   try {
+    phase = 'CREATE';
     // A timed-out client can lose the create response after Docker accepted it.
     // Always attempt cleanup of this generated name, including that uncertain case.
     created = true;
@@ -169,7 +207,7 @@ export async function runCapsule(input, options = {}) {
               'org.alunza.execution': input.executionId,
             },
             options.probe,
-            memoryBytes,
+            options.runtime?.runtimeName,
           ),
         },
       );
@@ -178,8 +216,10 @@ export async function runCapsule(input, options = {}) {
       creationTracker.observed(name);
       if (create.status !== 201)
         throw new Error('Runner container creation failed');
+      createdId = create.data?.Id;
     });
     created = true;
+    phase = 'PRE_INSPECT';
     const inspect = await measureTiming(
       options.observeTiming,
       'preInspect',
@@ -195,8 +235,9 @@ export async function runCapsule(input, options = {}) {
       effective.Config?.Tty !== false ||
       effective.Config?.OpenStdin !== true ||
       effective.Config?.StdinOnce !== true ||
-      h.Memory !== memoryBytes ||
-      h.MemorySwap !== memoryBytes ||
+      (options.runtime && h.Runtime !== options.runtime.runtimeName) ||
+      h.Memory !== 134217728 ||
+      h.MemorySwap !== 134217728 ||
       h.NanoCpus !== 1000000000 ||
       h.PidsLimit !== 32 ||
       h.NetworkMode !== 'none' ||
@@ -207,10 +248,10 @@ export async function runCapsule(input, options = {}) {
       [...(h.CapAdd ?? [])]
         .map((value) => value.replace(/^CAP_/, ''))
         .sort()
-        .join(',') !== 'SETGID,SETPCAP,SETUID' ||
+        .join(',') !== 'KILL,SETGID,SETPCAP,SETUID' ||
       !h.SecurityOpt?.includes('no-new-privileges:true') ||
       Object.keys(h.PortBindings ?? {}).length > 0 ||
-      h.PidMode === 'host' ||
+      h.PidMode !== '' ||
       h.IpcMode === 'host'
     )
       throw new Error('Runner resource configuration mismatch');
@@ -226,6 +267,7 @@ export async function runCapsule(input, options = {}) {
     };
     options.signal?.addEventListener('abort', abort, { once: true });
     try {
+      phase = 'ATTACH_OUTPUT';
       if (options.signal?.aborted)
         throw new Error('Execution cancelled before launch');
       const programStart = performance.now();
@@ -234,6 +276,29 @@ export async function runCapsule(input, options = {}) {
         timeoutMs: 30000,
         signal: options.signal,
         observeTiming: options.observeTiming,
+        observeFailure: options.observeFailure,
+        observeStartFailure: options.observeStartFailure,
+        ownedContainerId:
+          createdId === effective.Id &&
+          effective.Config.Labels?.['org.alunza.runner'] === OWNER_VALUE &&
+          effective.Config.Labels?.['org.alunza.execution'] ===
+            input.executionId
+            ? createdId
+            : undefined,
+        deadlineMs,
+        beforeSend: options.runtime
+          ? async () => {
+              await options.beforeSend?.();
+              if (createdId !== effective.Id)
+                throw new Error('Runner created identity unconfirmed');
+              kernelBoundary = await verifyKernelControls(engine, {
+                engineId: options.runtime.engineId,
+                id: createdId,
+                expectedBoundary: options.expectedBoundary,
+                signal: options.signal,
+              });
+            }
+          : options.beforeSend,
       });
       programWallMs = performance.now() - programStart;
       acknowledgedExitCode = result.exitCode;
@@ -245,6 +310,7 @@ export async function runCapsule(input, options = {}) {
     } finally {
       options.signal?.removeEventListener('abort', abort);
     }
+    phase = 'FINAL_STATE';
     const state = await measureTiming(
       options.observeTiming,
       'postInspect',
@@ -270,6 +336,7 @@ export async function runCapsule(input, options = {}) {
         containerWallMs = finishedAt - startedAt;
     }
   } catch (error) {
+    recordDriverFailure(options.observeFailure, phase);
     failure = error;
   } finally {
     if (created) {
@@ -295,8 +362,10 @@ export async function runCapsule(input, options = {}) {
       }
     }
   }
-  if (created && !cleanupVerified)
+  if (created && !cleanupVerified) {
+    recordDriverFailure(options.observeFailure, 'CONTAINER_CLEANUP');
     throw new Error('Runner owned container cleanup failed');
+  }
   if (failure) throw failure;
   return {
     packet: packet ?? null,
@@ -309,6 +378,7 @@ export async function runCapsule(input, options = {}) {
     containerWallMs,
     lifecycleMs: performance.now() - started,
     image,
+    ...(kernelBoundary === undefined ? {} : { kernelBoundary }),
   };
 }
 export async function getDockerAvailability(
@@ -316,10 +386,10 @@ export async function getDockerAvailability(
 ) {
   try {
     const engine = await localDockerEngine(command, signal);
-    const [info, image] = await Promise.all([
-      engine.request('GET', '/info', { signal, timeoutMs: 10000 }),
-      imageIdentity(IMAGE_TAG, signal),
-    ]);
+    const info = await engine.request('GET', '/info', {
+      signal,
+      timeoutMs: 10000,
+    });
     const data = info.data;
     if (
       info.status !== 200 ||
@@ -330,10 +400,37 @@ export async function getDockerAvailability(
       !data.PidsLimit
     )
       return { available: false, image: null };
+    const image = await imageIdentity(IMAGE_TAG, signal);
     return { available: true, image };
   } catch {
     return { available: false, image: null };
   }
+}
+export async function inspectConfiguredDocker(
+  config,
+  signal = AbortSignal.timeout(10000),
+) {
+  try {
+    const available = await getDockerAvailability(signal);
+    if (!available.available)
+      return { available: false, image: null, runtime: null };
+    const engine = await localDockerEngine(command, signal);
+    const runtime = await inspectDockerRuntime(engine, config, signal);
+    return { available: true, image: available.image, runtime };
+  } catch {
+    return { available: false, image: null, runtime: null };
+  }
+}
+export async function getDockerEngineId(signal = AbortSignal.timeout(10000)) {
+  const engine = await localDockerEngine(command, signal);
+  const info = await engine.request('GET', '/info', { signal });
+  if (
+    info.status !== 200 ||
+    typeof info.data?.ID !== 'string' ||
+    !/^[a-zA-Z0-9:_-]{1,128}$/.test(info.data.ID)
+  )
+    throw new Error('Docker engine identity unavailable');
+  return info.data.ID;
 }
 export async function cleanupDockerExecution(
   executionId,
@@ -435,6 +532,9 @@ export async function collectExpired(
       throw new Error('Runner orphan inspection failed');
     const item = inspected.data;
     const labels = item.Config.Labels ?? {};
+    // Prepared resources have a durable ledger and immutable pre-admission
+    // ownership. Their collector must persist cleanup evidence atomically.
+    if (labels['org.alunza.prepared-pair'] !== undefined) continue;
     const expiry = Number(labels['org.alunza.expires']);
     if (
       labels['org.alunza.runner'] === OWNER_VALUE &&

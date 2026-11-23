@@ -50,3 +50,23 @@ export function validatePublicEnvironment(environment) {
     Object.keys(validators).map((field) => [field, environment[field]]),
   );
 }
+
+// Only literal booleans enter the client bundle; no private environment value
+// is forwarded. A normal production build cannot enable the diagnostic hook.
+export function dashboardTimingEnvironment(environment) {
+  const enabled = environment.ALUNZA_TEST_DASHBOARD_TIMINGS === '1';
+  const e2e = environment.ALUNZA_E2E_BUILD === '1';
+  if (enabled && !e2e)
+    throw new Error('Dashboard timings require an isolated E2E build.');
+  if (
+    environment.ALUNZA_TEST_DASHBOARD_TIMINGS !== undefined &&
+    !['0', '1'].includes(environment.ALUNZA_TEST_DASHBOARD_TIMINGS)
+  )
+    throw new Error(
+      'Dashboard timings must be disabled or explicitly enabled.',
+    );
+  return {
+    ALUNZA_E2E_BUILD: e2e ? '1' : '0',
+    ALUNZA_TEST_DASHBOARD_TIMINGS: enabled && e2e ? '1' : '0',
+  };
+}

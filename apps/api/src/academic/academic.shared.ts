@@ -1,195 +1,139 @@
-import { Injectable } from '@nestjs/common';
 import type { PoolClient } from 'pg';
-import type { Role } from '@alunza/contracts';
 import { z } from 'zod';
-import { academicPageQuerySchema } from '@alunza/contracts';
-import { DatabaseService } from '../database/database.service';
+import { ApiError, notFound } from '../http/errors';
 import {
   activeProfile,
   organizationContext,
 } from '../governance/governance.shared';
 import type { Actor } from '../governance/governance.shared';
-import { ApiError, notFound } from '../http/errors';
 
-export type AcademicQuery = z.infer<typeof academicPageQuerySchema>;
-export type Context = {
-  client: PoolClient;
-  who: Actor;
-  organizationId: string;
-  role: Role;
-};
-export const forbidden = () =>
-  new ApiError(
+export const academicPaginationSchema = z.strictObject({
+  cursor: z.uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  search: z.string().trim().max(160).optional(),
+  state: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
+});
+export type AcademicQuery = z.infer<typeof academicPaginationSchema>;
+export const activityPaginationSchema = academicPaginationSchema.extend({
+  state: z.enum(['DRAFT', 'PUBLISHED', 'CLOSED']).optional(),
+});
+export const exercisePaginationSchema = academicPaginationSchema.extend({
+  difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']).optional(),
+  conceptId: z.uuid().optional(),
+});
+export function forbidden(): never {
+  throw new ApiError(
     'FORBIDDEN',
     'No tienes permiso para realizar esta operación.',
     403,
   );
-export const invalid = (message: string, field = '') =>
-  new ApiError('VALIDATION_FAILED', message, 422, false, [{ field, message }]);
-export const conflict = (message: string) =>
-  new ApiError('DEPENDENCIES_ACTIVE', message, 409);
-export function operational(row: Record<string, unknown>) {
+}
+export function conflict(message: string): never {
+  throw new ApiError('INVALID_REQUEST', message, 409);
+}
+export function available(row: Record<string, unknown>) {
   if (row.archived_at)
+    conflict('El recurso archivado permite únicamente consultas.');
+}
+export async function academicContext(
+  client: PoolClient,
+  who: Actor,
+  orgId: string,
+  write: boolean,
+  roles: string[] = [],
+) {
+  await activeProfile(client, who.actorId);
+  const initial = await organizationContext(client, orgId, false);
+  if (write && initial.archived_at)
     throw new ApiError(
-      'RESOURCE_ARCHIVED',
-      'El recurso archivado permite únicamente consultas.',
+      'ORGANIZATION_ARCHIVED',
+      'La organización archivada permite únicamente consultas.',
       409,
     );
-}
-export function validateDates(
-  start: string | null,
-  end: string | null,
-  parent?: { start: string | null; end: string | null },
-) {
-  if (start && end && start > end)
-    throw invalid('La fecha final no puede preceder a la inicial.', 'endDate');
-  if (
-    parent &&
-    ((start && parent.start && start < parent.start) ||
-      (end && parent.end && end > parent.end))
-  )
-    throw invalid(
-      'Las fechas de clase deben pertenecer al período del curso.',
-      'startDate',
+  if (write)
+    await client.query(
+      'SELECT app_private.lock_academic_organization($1::uuid)',
+      [orgId],
     );
-}
-export function normalizeConcept(value: string) {
-  return value
-    .normalize('NFKC')
-    .trim()
-    .replace(/\s+/g, ' ')
-    .toLocaleLowerCase('es');
-}
-export function dateValue(value: unknown): string | null {
-  if (value == null) return null;
-  if (value instanceof Date)
-    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
-  return String(value);
-}
-export function queryValues(query: AcademicQuery) {
-  return [
-    query.cursor ?? null,
-    query.search ?? null,
-    query.state ?? null,
-    query.limit + 1,
-  ];
-}
-export const listCondition = `( $2::uuid IS NULL OR id>$2 ) AND ($3::text IS NULL OR name ILIKE '%'||$3||'%') AND ($4::text IS NULL OR (CASE WHEN archived_at IS NULL THEN 'ACTIVE' ELSE 'ARCHIVED' END)=$4)`;
-
-@Injectable()
-export class AcademicAccess {
-  constructor(private readonly database: DatabaseService) {}
-
-  async organization<T>(
-    who: Actor,
-    organizationId: string,
-    write: boolean,
-    roles: Role[],
-    action: (context: Context) => Promise<T>,
-  ): Promise<T> {
-    return this.transaction(who, write, async (client) => {
-      const context = await this.context(
-        client,
-        who,
-        organizationId,
-        write,
-        roles,
-      );
-      return action(context);
-    });
-  }
-
-  async resource<T>(
-    who: Actor,
-    kind: 'course' | 'class' | 'concept' | 'exercise' | 'activity',
-    id: string,
-    write: boolean,
-    roles: Role[],
-    action: (context: Context) => Promise<T>,
-  ): Promise<T> {
-    return this.transaction(who, write, async (client) => {
-      const found = await client.query(
-        'SELECT app_private.academic_resource_org($1,$2::uuid) AS organization_id',
-        [kind, id],
-      );
-      const organizationId = found.rows[0]?.organization_id as
-        string | undefined;
-      if (!organizationId) throw notFound();
-      return action(
-        await this.context(client, who, organizationId, write, roles),
-      );
-    });
-  }
-
-  private async transaction<T>(
-    who: Actor,
-    write: boolean,
-    action: (client: PoolClient) => Promise<T>,
-  ) {
-    const run = write
-      ? this.database.writeAs.bind(this.database)
-      : this.database.readAs.bind(this.database);
-    return run(
-      who.actorId,
-      async (client) => {
-        await activeProfile(client, who.actorId);
-        return action(client);
-      },
-      who.sessionId,
+  const org = write ? await organizationContext(client, orgId, false) : initial;
+  if (write && org.archived_at)
+    throw new ApiError(
+      'ORGANIZATION_ARCHIVED',
+      'La organización archivada permite únicamente consultas.',
+      409,
     );
-  }
-
-  private async context(
-    client: PoolClient,
-    who: Actor,
-    organizationId: string,
-    write: boolean,
-    roles: Role[],
-  ): Promise<Context> {
-    await organizationContext(client, organizationId, false);
-    if (write)
-      await client.query(
-        'SELECT app_private.lock_academic_organization($1::uuid)',
-        [organizationId],
-      );
-    const org = await organizationContext(client, organizationId, false);
-    if (write && org.archived_at)
-      throw new ApiError(
-        'ORGANIZATION_ARCHIVED',
-        'La organización archivada permite únicamente consultas.',
-        409,
-      );
-    const membership = (
-      await client.query(
-        "SELECT role FROM app.organization_memberships WHERE organization_id=$1 AND user_id=$2 AND state='ACTIVE'",
-        [organizationId, who.actorId],
-      )
-    ).rows[0];
-    if (!membership || !roles.includes(membership.role as Role))
-      throw forbidden();
-    return { client, who, organizationId, role: membership.role as Role };
-  }
-}
-
-export async function classRow(context: Context, id: string, write = false) {
-  const row = (
-    await context.client.query(
-      'SELECT * FROM app.classes WHERE id=$1 AND organization_id=$2',
-      [id, context.organizationId],
+  const membership = (
+    await client.query(
+      'SELECT role,state FROM app.organization_memberships WHERE organization_id=$1 AND user_id=$2',
+      [orgId, who.actorId],
     )
   ).rows[0];
-  if (!row) throw notFound();
-  if (write) operational(row);
-  return row;
+  if (!membership || membership.state !== 'ACTIVE') forbidden();
+  if (roles.length && !roles.includes(membership.role)) forbidden();
+  return { role: String(membership.role), timezone: String(org.timezone) };
 }
-
-export async function teacherClass(
-  context: Context,
+const resourceTables = {
+  course: 'courses',
+  class: 'classes',
+  concept: 'concept_tags',
+  exercise: 'exercises',
+  activity: 'activities',
+} as const;
+export async function resource(
+  client: PoolClient,
+  who: Actor,
+  kind: keyof typeof resourceTables,
   id: string,
   write = false,
+  roles: string[] = [],
 ) {
-  const row = await classRow(context, id, write);
-  if (context.role !== 'TEACHER' || row.teacher_id !== context.who.actorId)
-    throw forbidden();
-  return row;
+  const table = resourceTables[kind];
+  const initial = (
+    await client.query(`SELECT * FROM app.${table} WHERE id=$1`, [id])
+  ).rows[0];
+  if (!initial) throw notFound();
+  const context = await academicContext(
+    client,
+    who,
+    initial.organization_id,
+    write,
+    roles,
+  );
+  const row = (
+    await client.query(`SELECT * FROM app.${table} WHERE id=$1`, [id])
+  ).rows[0];
+  if (!row) throw notFound();
+  return { ...context, row };
+}
+export async function classAccess(
+  client: PoolClient,
+  who: Actor,
+  id: string,
+  write = false,
+  teacherOnly = false,
+) {
+  const result = await resource(client, who, 'class', id, write);
+  const { row, role } = result;
+  const assigned = role === 'TEACHER' && row.teacher_id === who.actorId;
+  if (teacherOnly && !assigned) forbidden();
+  if (role === 'TEACHER' && !assigned) throw notFound();
+  if (role === 'STUDENT') {
+    const member = (
+      await client.query(
+        'SELECT id FROM app.class_memberships WHERE organization_id=$1 AND class_id=$2 AND user_id=$3 AND ended_at IS NULL',
+        [row.organization_id, id, who.actorId],
+      )
+    ).rows[0];
+    if (!member) throw notFound();
+    if (write) forbidden();
+  }
+  if (write) available(row);
+  return result;
+}
+export function dateOnly(value: unknown): string | null {
+  return value == null
+    ? null
+    : value instanceof Date
+      ? value.toISOString().slice(0, 10)
+      : String(value).slice(0, 10);
 }

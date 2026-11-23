@@ -1,4 +1,8 @@
 import type { TimingObserver } from './timing.mjs';
+import type {
+  DockerRuntimeConfig,
+  DockerRuntimeIdentity,
+} from '../../packages/runner/src/docker-prepared.js';
 export type { TimingEvent, TimingObserver } from './timing.mjs';
 
 export const OWNER_LABEL: string;
@@ -31,12 +35,15 @@ export function runCapsule(
     args: unknown[];
     budgetMs: number;
     outputRemaining: number;
-    memoryBytes?: number;
   },
   options?: {
     image?: string;
     signal?: AbortSignal;
     observeTiming?: TimingObserver;
+    runtime?: DockerRuntimeIdentity;
+    expectedBoundary?: string;
+    beforeSend?: () => Promise<void>;
+    deadlineMs?: number;
     probe?:
       | 'identity'
       | 'memory'
@@ -56,6 +63,7 @@ export function runCapsule(
   containerWallMs: number | null;
   lifecycleMs: number;
   image: string;
+  kernelBoundary?: string;
 }>;
 export function collectExpired(
   signal?: AbortSignal,
@@ -67,6 +75,15 @@ export function sweepExpiredDockerExecutions(
 export function getDockerAvailability(
   signal?: AbortSignal,
 ): Promise<{ available: boolean; image: string | null }>;
+export function inspectConfiguredDocker(
+  config: DockerRuntimeConfig,
+  signal?: AbortSignal,
+): Promise<{
+  available: boolean;
+  image: string | null;
+  runtime: DockerRuntimeIdentity | null;
+}>;
+export function getDockerEngineId(signal?: AbortSignal): Promise<string>;
 export function cleanupDockerExecution(
   executionId: string,
   signal?: AbortSignal,

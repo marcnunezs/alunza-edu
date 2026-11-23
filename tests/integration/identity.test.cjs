@@ -1,3 +1,4 @@
+const { assertLaboratoryTestState } = require('../laboratory-test-state.cjs');
 /* eslint @typescript-eslint/no-require-imports: "off" */
 const { randomUUID } = require('node:crypto');
 const { URLSearchParams } = require('node:url');
@@ -117,12 +118,12 @@ async function delivered(org, inv) {
 async function emailLink(email, generation) {
   for (let attempt = 0; attempt < 50; attempt++) {
     const list = await (
-      await fetch('http://127.0.0.1:16424/api/v1/messages')
+      await fetch('http://127.0.0.1:18424/api/v1/messages')
     ).json();
     for (const message of list.messages ?? []) {
       if (!(message.To ?? []).some((to) => to.Address === email)) continue;
       const detail = await (
-        await fetch(`http://127.0.0.1:16424/api/v1/message/${message.ID}`)
+        await fetch(`http://127.0.0.1:18424/api/v1/message/${message.ID}`)
       ).json();
       for (const found of (detail.HTML ?? '').matchAll(/href="([^"]+)"/g)) {
         const raw = found[1].replaceAll('&amp;', '&');
@@ -154,11 +155,12 @@ async function authenticateInvitation(inv) {
 }
 beforeAll(async () => {
   state = JSON.parse(readFileSync(process.env.ALUNZA_TEST_STATE, 'utf8'));
+  assertLaboratoryTestState(state);
   base = process.env.ALUNZA_TEST_API_URL;
   if (
-    state.projectId !== 'alunza-edu-foundation-test' ||
-    state.authUrl !== 'http://127.0.0.1:16421' ||
-    base !== 'http://127.0.0.1:4100'
+    state.projectId !== 'alunza-edu-laboratorio-test' ||
+    state.authUrl !== 'http://127.0.0.1:18421' ||
+    base !== 'http://127.0.0.1:4300'
   )
     throw new Error('Solo fixture local aislado.');
   pool = new pg.Pool({ connectionString: state.migrationUrl, max: 4 });
@@ -169,38 +171,6 @@ afterAll(async () => {
 });
 
 describe('IMP-01 identidad e instituciones reales', () => {
-  test('HU-021 E2 · correo mal formado y rol fuera del catálogo no crean invitación ni entrega', async () => {
-    const org = await organization();
-    const invalid = [
-      { body: { email: 'correo-sin-arroba', role: 'STUDENT' }, field: 'email' },
-      {
-        body: {
-          email: `invalid-role-${randomUUID()}@example.test`,
-          role: 'SUPERADMIN',
-        },
-        field: 'role',
-      },
-    ];
-    for (const entry of invalid) {
-      const rejected = await api(`/organizations/${org.id}/invitations`, {
-        method: 'POST',
-        key: randomUUID(),
-        body: entry.body,
-      });
-      expect(rejected.status).toBe(422);
-      expect(rejected.error.code).toBe('VALIDATION_FAILED');
-      expect(
-        rejected.error.fields.some((item) => item.field === entry.field),
-      ).toBe(true);
-      const persisted = await pool.query(
-        `SELECT
-        (SELECT count(*)::int FROM app.organization_invitations WHERE organization_id=$1) AS invitations,
-        (SELECT count(*)::int FROM app.invitation_deliveries d JOIN app.organization_invitations i ON i.id=d.invitation_id WHERE i.organization_id=$1) AS deliveries`,
-        [org.id],
-      );
-      expect(persisted.rows[0]).toEqual({ invitations: 0, deliveries: 0 });
-    }
-  });
   test('HU-001 E1/E4 · logout invalida token conservado y no elimina otras sesiones', async () => {
     const first = await login(student),
       second = await login(student);

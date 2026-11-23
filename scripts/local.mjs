@@ -1,13 +1,25 @@
 import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, realpath, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import net from 'node:net';
 import pg from 'pg';
 import { createClient } from '@supabase/supabase-js';
+import { seedAcademic } from './academic-fixture.mjs';
+import { ensureMaterialsStorage } from './materials-storage.mjs';
+import { normalizeSigningKeys } from './local-signing-keys.mjs';
+import {
+  developmentTarget,
+  testTarget,
+  physicalTestTarget,
+  evaluationTarget,
+  targetFor,
+  assertLocalTarget,
+  assertRuntimeTarget,
+} from './local-target.mjs';
 
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
@@ -17,16 +29,15 @@ const cliPath = join(
 );
 export function context(projectDir = root, test = false) {
   return {
+    ...(test === 'physical-test'
+      ? physicalTestTarget
+      : test === 'evaluation'
+        ? evaluationTarget
+        : test
+          ? testTarget
+          : developmentTarget),
     projectDir,
-    test,
     statePath: join(projectDir, '.local/runtime.json'),
-    apiPort: test ? 4100 : 4000,
-    authPort: test ? 16421 : 15421,
-    dbPort: test ? 16422 : 15422,
-    projectId: test ? 'alunza-edu-foundation-test' : 'alunza-edu-foundation',
-    networkName: test
-      ? 'alunza-foundation-test-local'
-      : 'alunza-foundation-local',
   };
 }
 
@@ -72,6 +83,9 @@ export function redactDiagnostics(text) {
     );
 }
 export async function cli(ctx, args, options = {}) {
+  assertLocalTarget(ctx);
+  // In particular, stop/reset must never trust a stale copied project config.
+  if (args[0] !== '--version') await assertProjectConfiguration(ctx);
   return run(
     process.execPath,
     [
@@ -86,31 +100,58 @@ export async function cli(ctx, args, options = {}) {
   );
 }
 export async function readState(ctx) {
+  assertLocalTarget(ctx);
   const state = JSON.parse(await readFile(ctx.statePath, 'utf8'));
-  if (
-    state.projectId !== ctx.projectId ||
-    state.authUrl !== `http://127.0.0.1:${ctx.authPort}`
-  ) {
-    throw new Error(
-      'El estado local no corresponde al proyecto y destino esperado.',
-    );
-  }
-  assertLocalDatabase(state.migrationUrl, ctx.dbPort);
+  assertRuntimeTarget(state, targetFor(ctx));
   return state;
 }
 export function assertLocalDatabase(url, expectedPort) {
+  if (
+    ![
+      developmentTarget.dbPort,
+      testTarget.dbPort,
+      evaluationTarget.dbPort,
+    ].includes(expectedPort)
+  )
+    throw new Error('Puerto ajeno a las bases aisladas del laboratorio.');
   const parsed = new URL(url);
   if (parsed.protocol !== 'postgresql:' && parsed.protocol !== 'postgres:')
     throw new Error('Protocolo de BD inesperado.');
   if (
     !['127.0.0.1', 'localhost'].includes(parsed.hostname) ||
     Number(parsed.port) !== expectedPort ||
-    parsed.pathname !== '/postgres'
+    parsed.pathname !== '/postgres' ||
+    parsed.search ||
+    parsed.hash
   ) {
     throw new Error(
       'Operacion rechazada: destino fuera de la BD local de Alunza.',
     );
   }
+}
+async function assertProjectConfiguration(ctx) {
+  assertLocalTarget(ctx);
+  const config = await readFile(
+    join(ctx.projectDir, 'supabase/config.toml'),
+    'utf8',
+  );
+  if (
+    !new RegExp(`^project_id\\s*=\\s*"${ctx.projectId}"\\s*$`, 'm').test(config)
+  )
+    throw new Error('project_id local inesperado.');
+  for (const [section, key, value] of [
+    ['api', 'port', ctx.authPort],
+    ['db', 'port', ctx.dbPort],
+    ['db', 'shadow_port', ctx.shadowPort],
+    ['studio', 'port', ctx.studioPort],
+    ['inbucket', 'port', ctx.mailPort],
+  ]) {
+    const block = config.split(`[${section}]`)[1]?.split(/^\s*\[/m)[0];
+    if (!block || !new RegExp(`^${key}\\s*=\\s*${value}\\s*$`, 'm').test(block))
+      throw new Error('Los puertos Supabase no corresponden al laboratorio.');
+  }
+  if (!config.includes(`jwt_issuer = "${ctx.authUrl}/auth/v1"`))
+    throw new Error('El emisor Auth no corresponde al laboratorio.');
 }
 export async function doctor() {
   if (process.version !== 'v24.21.0')
@@ -145,13 +186,9 @@ async function saveJson(path, value) {
   await writeFile(path, JSON.stringify(value, null, 2) + '\n', { mode: 0o600 });
 }
 export async function up(ctx) {
+  await assertProjectConfiguration(ctx);
+  if (existsSync(ctx.statePath)) await readState(ctx);
   await doctor();
-  const config = await readFile(
-    join(ctx.projectDir, 'supabase/config.toml'),
-    'utf8',
-  );
-  if (!config.includes(`project_id = "${ctx.projectId}"`))
-    throw new Error('project_id local inesperado.');
   const network = await run('docker', ['network', 'inspect', ctx.networkName], {
     allowFailure: true,
   });
@@ -181,8 +218,9 @@ export async function up(ctx) {
     for (const port of [
       ctx.authPort,
       ctx.dbPort,
-      ctx.authPort + 2,
-      ctx.authPort + 3,
+      ctx.shadowPort,
+      ctx.studioPort,
+      ctx.mailPort,
     ]) {
       if (!(await portAvailable(port)))
         throw new Error(
@@ -191,6 +229,11 @@ export async function up(ctx) {
     }
   }
   const signingFile = join(ctx.projectDir, 'supabase/signing_keys.json');
+  if (
+    existsSync(signingFile) &&
+    resolve(await realpath(signingFile)) !== resolve(signingFile)
+  )
+    throw new Error('La clave local de firma no puede ser un enlace externo.');
   if (!existsSync(signingFile)) {
     await writeFile(signingFile, '[]\n', { mode: 0o600 });
   }
@@ -199,14 +242,9 @@ export async function up(ctx) {
     await cli(ctx, ['gen', 'signing-key', '--algorithm', 'ES256', '--append']);
   }
   const signingKeys = JSON.parse(await readFile(signingFile, 'utf8'));
-  if (
-    !Array.isArray(signingKeys) ||
-    !signingKeys.some((key) => key.alg === 'ES256' && key.d && key.kid)
-  ) {
-    throw new Error(
-      'Falta clave ES256 privada valida en el archivo local de firma.',
-    );
-  }
+  const normalizedSigningKeys = normalizeSigningKeys(signingKeys);
+  if (JSON.stringify(signingKeys) !== JSON.stringify(normalizedSigningKeys))
+    await saveJson(signingFile, normalizedSigningKeys);
   console.log(`Iniciando Supabase local (${ctx.projectId})...`);
   await cli(ctx, ['start']);
   const bindings = await run('docker', [
@@ -249,6 +287,8 @@ export async function up(ctx) {
   );
 }
 export function applicationUrl(ctx, state, hostname = '127.0.0.1') {
+  assertLocalTarget(ctx);
+  assertRuntimeTarget(state, targetFor(ctx));
   const url = new URL(state.migrationUrl);
   url.hostname = hostname;
   url.username = 'alunza_app';
@@ -259,8 +299,8 @@ export function apiEnvironment(ctx, state, hostname = '127.0.0.1') {
   return {
     PORT: String(ctx.apiPort),
     HOST: hostname === '127.0.0.1' ? '127.0.0.1' : '0.0.0.0',
-    APP_ORIGIN: 'http://localhost:3000',
-    ALLOWED_ORIGINS: 'http://localhost:3000,http://127.0.0.1:3000',
+    APP_ORIGIN: `http://localhost:${ctx.webPort}`,
+    ALLOWED_ORIGINS: `http://localhost:${ctx.webPort},${ctx.webUrl}`,
     DATABASE_URL: applicationUrl(ctx, state, hostname),
     SUPABASE_JWKS_URL: `http://${hostname}:${ctx.authPort}/auth/v1/.well-known/jwks.json`,
     SUPABASE_JWT_ISSUER: `${state.authUrl}/auth/v1`,
@@ -269,18 +309,40 @@ export function apiEnvironment(ctx, state, hostname = '127.0.0.1') {
     SUPABASE_PUBLISHABLE_KEY: state.publishableKey,
     SUPABASE_SECRET_KEY: state.authAdminKey,
     INVITATION_WORKER_ENABLED: 'true',
+    MATERIALS_WORKER_ENABLED: 'true',
+    HELP_WORKER_ENABLED: 'true',
+    INVITATION_CALLBACK_URL: `http://localhost:${ctx.webPort}/acceso/invitacion`,
+    ENVIRONMENT: ctx.evaluation ? 'evaluation' : ctx.test ? 'test' : 'local',
     PRACTICE_RUNNER_ENABLED: hostname === '127.0.0.1' ? 'true' : 'false',
-    INVITATION_CALLBACK_URL: 'http://localhost:3000/acceso/invitacion',
-    ENVIRONMENT: ctx.test ? 'test' : 'local',
   };
 }
 async function writeEnv(path, values) {
   await mkdir(dirname(path), { recursive: true });
+  if (resolve(await realpath(dirname(path))) !== resolve(dirname(path)))
+    throw new Error(
+      'El archivo local de entorno no puede apuntar fuera de su carpeta.',
+    );
+  try {
+    if (resolve(await realpath(path)) !== resolve(path))
+      throw new Error(
+        'El archivo local de entorno no puede ser un enlace externo.',
+      );
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
   const content =
     Object.entries(values)
       .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
       .join('\n') + '\n';
   await writeFile(path, content, { mode: 0o600 });
+}
+async function writeComposeEnvironment(ctx, state) {
+  await writeEnv(join(root, '.local/compose.env'), {
+    ...apiEnvironment(ctx, state, 'host.docker.internal'),
+    NEXT_PUBLIC_API_BASE_URL: ctx.apiUrl,
+    NEXT_PUBLIC_SUPABASE_URL: state.authUrl,
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: state.publishableKey,
+  });
 }
 export async function migrate(ctx) {
   const state = await readState(ctx);
@@ -306,6 +368,9 @@ export async function migrate(ctx) {
      DROP POLICY IF EXISTS alunza_current_identity ON auth.users;
      CREATE POLICY alunza_current_identity ON auth.users FOR SELECT TO alunza_identity
        USING (id = nullif(current_setting('app.actor_id',true),'')::uuid);
+     DROP POLICY IF EXISTS alunza_materials_private ON storage.objects;
+     CREATE POLICY alunza_materials_private ON storage.objects AS RESTRICTIVE FOR ALL TO anon,authenticated
+       USING (bucket_id <> 'materials') WITH CHECK (bucket_id <> 'materials');
      COMMIT;`,
   ]);
   const client = new pg.Client({ connectionString: state.migrationUrl });
@@ -320,7 +385,7 @@ export async function migrate(ctx) {
   } finally {
     await client.end();
   }
-  if (!ctx.test) {
+  if (!ctx.test && !ctx.evaluation) {
     await writeEnv(
       join(root, 'apps/api/.env.local'),
       apiEnvironment(ctx, state),
@@ -330,18 +395,14 @@ export async function migrate(ctx) {
       NEXT_PUBLIC_SUPABASE_URL: state.authUrl,
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: state.publishableKey,
     });
-    await writeEnv(join(root, '.local/compose.env'), {
-      ...apiEnvironment(ctx, state, 'host.docker.internal'),
-      NEXT_PUBLIC_API_BASE_URL: `http://127.0.0.1:${ctx.apiPort}`,
-      NEXT_PUBLIC_SUPABASE_URL: state.authUrl,
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: state.publishableKey,
-    });
+    await writeComposeEnvironment(ctx, state);
   }
+  await ensureMaterialsStorage(ctx, state);
   console.log(
     'Migraciones aplicadas. Rol de aplicación limitado y configuración por consumidor preparados.',
   );
 }
-export async function seed(ctx) {
+export async function seed(ctx, { academic = true } = {}) {
   const state = await readState(ctx);
   const fixture = JSON.parse(
     await readFile(join(root, 'fixtures/foundation/identity.json'), 'utf8'),
@@ -416,6 +477,7 @@ export async function seed(ctx) {
   console.log(
     'Fixture incremental preparado: 2 organizaciones, 6 usuarios, 6 membresias.',
   );
+  if (academic) await seedAcademic(state);
 }
 export async function down(ctx) {
   await cli(ctx, ['stop']);
@@ -435,7 +497,6 @@ async function main() {
       break;
     case 'seed':
       await seed(ctx);
-      await (await import('./academic-seed.mjs')).seedAcademic(ctx);
       break;
     case 'down':
       await down(ctx);
@@ -450,8 +511,11 @@ async function main() {
       console.log('Password ficticio local:', state.fixturePassword);
       break;
     }
-    case 'compose-up':
-      await readState(ctx);
+    case 'compose-up': {
+      const state = await readState(ctx);
+      // Never consume a copied or stale connection file independently of the
+      // verified laboratory runtime. Compose overrides its internal ports.
+      await writeComposeEnvironment(ctx, state);
       await run(
         'docker',
         [
@@ -467,6 +531,7 @@ async function main() {
         { inherit: true },
       );
       break;
+    }
     default:
       throw new Error('Comando local desconocido.');
   }

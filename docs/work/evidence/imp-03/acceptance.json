@@ -1,0 +1,12 @@
+{
+  "recordedAt": "2026-10-23T05:34:58.563Z",
+  "status": "passed",
+  "http": {
+    "passed": 111,
+    "total": 111
+  },
+  "sql": {
+    "files": 7,
+    "tests": 313
+  }
+}

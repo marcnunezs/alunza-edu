@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { performance } from 'node:perf_hooks';
 import {
   mkdir,
   cp,
@@ -13,6 +14,7 @@ import {
 import { join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import pg from 'pg';
+import { randomUUID } from 'node:crypto';
 import {
   root,
   context,
@@ -26,39 +28,93 @@ import {
   run,
   cli,
 } from './local.mjs';
+import {
+  developmentTarget,
+  testTarget,
+  testWorkspaceDirectory,
+} from './local-target.mjs';
 
-export const testContext = context(
-  join(root, '.local/integration-workspace'),
-  true,
-);
+export const testContext = context(join(root, testWorkspaceDirectory), true);
 export const reportDirectory = join(root, '.local/reports/imp-00-05');
+
+export function buildTestConfig(source) {
+  if (!source.includes(`project_id = "${developmentTarget.projectId}"`))
+    throw new Error('La configuración fuente no pertenece al laboratorio.');
+  let config = source.replace(
+    `project_id = "${developmentTarget.projectId}"`,
+    `project_id = "${testTarget.projectId}"`,
+  );
+  for (const key of [
+    'authPort',
+    'dbPort',
+    'shadowPort',
+    'studioPort',
+    'mailPort',
+    'webPort',
+  ])
+    config = config.replaceAll(
+      new RegExp(`\\b${developmentTarget[key]}\\b`, 'g'),
+      String(testTarget[key]),
+    );
+  return config;
+}
 
 export async function report(name, summary, group = 'imp-00-05') {
   if (!/^[a-z0-9-]+$/.test(name))
     throw new Error('Nombre de informe inválido.');
   if (
-    !['imp-00-05', 'imp-00-06-08', 'imp-01', 'imp-02', 'imp-03'].includes(group)
+    ![
+      'imp-00-05',
+      'imp-00-06-08',
+      'imp-01',
+      'imp-02',
+      'imp-03',
+      'imp-03-submissions',
+      'imp-04',
+      'imp-05',
+      'imp-06',
+    ].includes(group)
   )
     throw new Error('Grupo de informe inválido.');
   const directory = join(root, '.local/reports', group);
   await mkdir(directory, { recursive: true });
-  await writeFile(
-    join(directory, `${name}.json`),
+  const content =
     JSON.stringify(
       { recordedAt: new Date().toISOString(), ...summary },
       null,
       2,
-    ) + '\n',
+    ) + '\n';
+  await mkdir(join(directory, 'history'), { recursive: true });
+  await writeFile(
+    join(directory, 'history', `${name}-${Date.now()}-${randomUUID()}.json`),
+    content,
   );
+  await writeFile(join(directory, `${name}.json`), content);
 }
 
 export async function withTestEnvironment(
   action,
   extraPorts = [],
-  { upgradeFromFoundation = false, upgradeFromAcademic = false } = {},
+  { upgradeFromFoundation = false, upgradeFromVersion, beforeUpgrade } = {},
 ) {
+  if (
+    upgradeFromVersion &&
+    (upgradeFromFoundation ||
+      !/^\d{14}$/.test(upgradeFromVersion) ||
+      typeof beforeUpgrade !== 'function')
+  )
+    throw new Error(
+      'La actualización focal requiere una base y un fixture explícitos.',
+    );
   const ctx = testContext;
   await mkdir(join(root, '.local'), { recursive: true });
+  if (
+    resolve(await realpath(join(root, '.local'))) !==
+    resolve(join(root, '.local'))
+  )
+    throw new Error(
+      'La carpeta local del laboratorio no puede ser un enlace externo.',
+    );
   const lockPath = join(root, '.local/integration.lock');
   // The existing integration lock is also used by E2E: neither suite can mutate
   // the fixture or stop services while the other owns the test environment.
@@ -72,14 +128,35 @@ export async function withTestEnvironment(
           `Puerto de prueba ${port} no disponible; no se tocarán procesos existentes.`,
         );
     }
-    await mkdir(join(ctx.projectDir, 'supabase'), { recursive: true });
-    const config = (await readFile(join(root, 'supabase/config.toml'), 'utf8'))
-      .replace(
-        'project_id = "alunza-edu-foundation"',
-        `project_id = "${ctx.projectId}"`,
+    await mkdir(ctx.projectDir, { recursive: true });
+    if (resolve(await realpath(ctx.projectDir)) !== resolve(ctx.projectDir))
+      throw new Error(
+        'El workspace de pruebas no puede ser un enlace externo.',
+      );
+    const supabaseDirectory = join(ctx.projectDir, 'supabase');
+    await mkdir(supabaseDirectory, { recursive: true });
+    if (
+      resolve(await realpath(supabaseDirectory)) !== resolve(supabaseDirectory)
+    )
+      throw new Error(
+        'El directorio Supabase de pruebas no puede ser un enlace externo.',
+      );
+    const configurationPath = join(supabaseDirectory, 'config.toml');
+    try {
+      if (
+        resolve(await realpath(configurationPath)) !==
+        resolve(configurationPath)
       )
-      .replaceAll('1542', '1642');
-    await writeFile(join(ctx.projectDir, 'supabase/config.toml'), config);
+        throw new Error(
+          'La configuración de pruebas no puede ser un enlace externo.',
+        );
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+    const config = buildTestConfig(
+      await readFile(join(root, 'supabase/config.toml'), 'utf8'),
+    );
+    await writeFile(configurationPath, config);
     // Replace only these owned source copies: removed migrations/tests must not
     // survive in the test workspace. Refuse links that escape the fixed path.
     for (const name of ['migrations', 'tests', 'templates']) {
@@ -103,6 +180,24 @@ export async function withTestEnvironment(
       await rm(target, { recursive: true, force: true });
       await cp(join(root, 'supabase', name), target, { recursive: true });
     }
+    const deferredMigrations = upgradeFromVersion
+      ? (await readdir(join(root, 'supabase/migrations')))
+          .filter(
+            (name) =>
+              name.endsWith('.sql') && name.split('_')[0] > upgradeFromVersion,
+          )
+          .sort()
+      : [];
+    if (
+      upgradeFromVersion &&
+      (!deferredMigrations.length ||
+        !(await readdir(join(root, 'supabase/migrations'))).some((name) =>
+          name.startsWith(`${upgradeFromVersion}_`),
+        ))
+    )
+      throw new Error('La base incremental solicitada no existe.');
+    for (const name of deferredMigrations)
+      await unlink(join(ctx.projectDir, 'supabase/migrations', name));
     owned = true;
     await up(ctx);
     await readState(ctx);
@@ -114,18 +209,16 @@ export async function withTestEnvironment(
     // CLI 2.101 has both a global and a reset-local --version flag: invoking
     // it can return version text without resetting. Restrict the owned copy to
     // IMP-00 instead, then restore the incremental migration before migrate.
-    const upgrade = upgradeFromFoundation || upgradeFromAcademic;
-    const cutoff = upgradeFromAcademic
-      ? '20260928222008_academic_content_publication.sql'
-      : '20260910185307_foundation_identity.sql';
     const incrementalNames = (await readdir(join(root, 'supabase/migrations')))
-      .filter((name) => /^\d+_.+\.sql$/.test(name) && name > cutoff)
+      .filter(
+        (name) =>
+          name.endsWith('.sql') &&
+          name !== '20260910185307_foundation_identity.sql',
+      )
       .sort();
-    if (upgrade) {
-      for (const name of incrementalNames) {
+    if (upgradeFromFoundation)
+      for (const name of incrementalNames)
         await unlink(join(ctx.projectDir, 'supabase/migrations', name));
-      }
-    }
     await cli(ctx, ['db', 'reset', '--local', '--no-seed', '--yes']);
     let foundationSnapshot;
     const snapshot = async () => {
@@ -135,31 +228,6 @@ export async function withTestEnvironment(
       });
       await database.connect();
       try {
-        if (upgradeFromAcademic) {
-          const snapshotRows = [];
-          for (const relation of [
-            'app.organizations',
-            'app.profiles',
-            'app.organization_memberships',
-            'app.courses',
-            'app.classes',
-            'app.class_memberships',
-            'app.concepts',
-            'app.concept_versions',
-            'app.exercises',
-            'app.exercise_versions',
-            'app.exercise_version_concepts',
-            'app_private.exercise_tests',
-            'app.activities',
-            'app.activity_exercises',
-          ]) {
-            const result = await database.query(
-              `SELECT to_jsonb(t) AS row FROM ${relation} t ORDER BY to_jsonb(t)::text`,
-            );
-            snapshotRows.push({ relation, rows: result.rows });
-          }
-          return JSON.stringify(snapshotRows);
-        }
         const records = await database.query(`
           SELECT 'organization' AS kind, id::text AS id, created_at FROM app.organizations
           UNION ALL SELECT 'profile', id::text, created_at FROM app.profiles
@@ -170,15 +238,10 @@ export async function withTestEnvironment(
         await database.end();
       }
     };
-    if (upgrade) {
-      // Seed uses the restricted application role set by migrate. This applies
-      // only migrations already present in the owned baseline copy.
-      if (upgradeFromAcademic) await migrate(ctx);
-      await seed(ctx);
-      if (upgradeFromAcademic)
-        await (await import('./academic-seed.mjs')).seedAcademic(ctx);
+    if (upgradeFromFoundation) {
+      await seed(ctx, { academic: false });
       foundationSnapshot = await snapshot();
-      if (upgradeFromFoundation && JSON.parse(foundationSnapshot).length !== 14)
+      if (JSON.parse(foundationSnapshot).length !== 14)
         throw new Error(
           'La base IMP-00 de actualización no contiene exclusivamente el fixture canónico.',
         );
@@ -190,40 +253,56 @@ export async function withTestEnvironment(
         const structure = await foundationDatabase.query(
           "SELECT count(*)::int count FROM information_schema.tables WHERE table_schema='app' AND table_type='BASE TABLE'",
         );
-        if (upgradeFromFoundation && structure.rows[0].count !== 3)
+        if (structure.rows[0].count !== 3)
           throw new Error(
             'La actualización debe comenzar con las tres tablas de IMP-00.',
           );
       } finally {
         await foundationDatabase.end();
       }
-      for (const name of incrementalNames) {
+      for (const name of incrementalNames)
         await cp(
           join(root, 'supabase/migrations', name),
           join(ctx.projectDir, 'supabase/migrations', name),
         );
-      }
+    }
+    let verifyUpgrade;
+    if (upgradeFromVersion) {
+      // Reset recreates the limited role. Configure its local runtime password
+      // through the existing migration helper before starting the old API.
+      await migrate(ctx);
+      await seed(ctx, { academic: false });
+      verifyUpgrade = await beforeUpgrade({ ctx, state: await readState(ctx) });
+      if (typeof verifyUpgrade !== 'function')
+        throw new Error('Falta verificación del fixture previo a migración.');
+      for (const name of deferredMigrations)
+        await cp(
+          join(root, 'supabase/migrations', name),
+          join(ctx.projectDir, 'supabase/migrations', name),
+        );
     }
     await migrate(ctx);
-    if (upgrade) {
+    const upgrade = verifyUpgrade ? await verifyUpgrade() : undefined;
+    if (upgradeFromFoundation) {
       if (foundationSnapshot !== (await snapshot()))
-        throw new Error('La migración cambió datos de la base existente.');
+        throw new Error(
+          'La migración cambió identidades o fechas de fundación existentes.',
+        );
       await report(
         'migration-upgrade',
         {
           status: 'passed',
-          from: cutoff.split('_')[0],
+          from: '20260910185307',
           to: incrementalNames.at(-1)?.split('_')[0],
-          preserved: upgradeFromAcademic
-            ? 'all-canonical-institutional-and-academic-rows'
-            : 'organization-profile-membership-identifiers-and-created-at',
+          preserved:
+            'organization-profile-membership-identifiers-and-created-at',
         },
-        upgradeFromAcademic ? 'imp-03' : 'imp-01',
+        'imp-01',
       );
     }
-    await seed(ctx);
-    await seed(ctx);
-    return await action({ ctx, state: await readState(ctx) });
+    await seed(ctx, { academic: false });
+    await seed(ctx, { academic: false });
+    return await action({ ctx, state: await readState(ctx), upgrade });
   } finally {
     try {
       if (owned) await down(ctx);
@@ -237,18 +316,27 @@ export async function withTestEnvironment(
 export function publicTestEnvironment(state) {
   return {
     ALUNZA_E2E_BUILD: '1',
-    NEXT_PUBLIC_API_BASE_URL: 'http://127.0.0.1:4100',
+    NEXT_PUBLIC_API_BASE_URL: testTarget.apiUrl,
     NEXT_PUBLIC_SUPABASE_URL: state.authUrl,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: state.publishableKey,
     NEXT_TELEMETRY_DISABLED: '1',
   };
 }
 
-export function nodeService(args, environment, cwd = root) {
+export function nodeService(
+  args,
+  environment,
+  cwd = root,
+  { spawnProcess = spawn } = {},
+) {
   let child;
   let spawnError;
   let output = '';
+  const startupMeasurements = [];
   return {
+    get startupMeasurements() {
+      return [...startupMeasurements];
+    },
     get output() {
       return output;
     },
@@ -261,31 +349,57 @@ export function nodeService(args, environment, cwd = root) {
       );
     },
     async start(url) {
-      if (!this.running) {
-        spawnError = undefined;
-        child = spawn(process.execPath, args, {
-          cwd,
-          windowsHide: true,
-          env: {
-            PATH: process.env.PATH,
-            SystemRoot: process.env.SystemRoot,
-            TEMP: process.env.TEMP,
-            TMP: process.env.TMP,
-            ...environment,
-          },
-          stdio: ['ignore', 'pipe', 'pipe'],
-        });
-        child.stdout.on('data', (chunk) => {
-          output += chunk;
-        });
-        child.stderr.on('data', (chunk) => {
-          output += chunk;
-        });
-        child.on('error', (error) => {
-          spawnError = error;
+      const startedAt = performance.now();
+      let status = 'FAILED';
+      let failureCode = 'PROCESS_SPAWN_FAILED';
+      try {
+        if (!this.running) {
+          spawnError = undefined;
+          child = spawnProcess(process.execPath, args, {
+            cwd,
+            windowsHide: true,
+            env: {
+              PATH: process.env.PATH,
+              SystemRoot: process.env.SystemRoot,
+              USERPROFILE: process.env.USERPROFILE,
+              HOME: process.env.HOME,
+              TEMP: process.env.TEMP,
+              TMP: process.env.TMP,
+              ...environment,
+            },
+            stdio: ['ignore', 'pipe', 'pipe'],
+          });
+          child.stdout.on('data', (chunk) => {
+            output += chunk;
+          });
+          child.stderr.on('data', (chunk) => {
+            output += chunk;
+          });
+          child.on('error', (error) => {
+            spawnError = error;
+          });
+        }
+        failureCode = 'READINESS_FAILED';
+        try {
+          await this.wait(url, 200);
+        } catch (error) {
+          if (spawnError) failureCode = 'PROCESS_SPAWN_FAILED';
+          else if (!this.running) failureCode = 'PROCESS_EXITED';
+          throw error;
+        }
+        status = 'READY';
+      } finally {
+        const durationMs =
+          Math.round((performance.now() - startedAt) * 100) / 100;
+        startupMeasurements.push({
+          status,
+          readyMs: status === 'READY' ? durationMs : null,
+          durationMs,
+          timeoutMs: 30_000,
+          failureCode: status === 'READY' ? null : failureCode,
+          at: new Date().toISOString(),
         });
       }
-      await this.wait(url, 200);
     },
     async wait(url, expectedStatus, timeout = 30_000) {
       const deadline = Date.now() + timeout;
@@ -323,13 +437,12 @@ export function nodeService(args, environment, cwd = root) {
   };
 }
 
-export function testApi(ctx, state, webPort = 3000, overrides = {}) {
-  return nodeService([join(root, 'apps/api/dist/main.js')], {
+export function testApi(ctx, state, webPort = ctx.webPort, overrides = {}) {
+  return nodeService([join(root, 'tests/materials-api.cjs')], {
     ...apiEnvironment(ctx, state),
     APP_ORIGIN: `http://127.0.0.1:${webPort}`,
     ALLOWED_ORIGINS: `http://127.0.0.1:${webPort}`,
     INVITATION_CALLBACK_URL: `http://127.0.0.1:${webPort}/acceso/invitacion`,
-    PRACTICE_RUNNER_ENABLED: 'true',
     ...overrides,
   });
 }
@@ -338,6 +451,7 @@ export async function buildApi() {
   for (const configuration of [
     'packages/contracts/tsconfig.json',
     'packages/runner/tsconfig.json',
+    'packages/ai/tsconfig.json',
     'apps/api/tsconfig.build.json',
   ]) {
     await run(

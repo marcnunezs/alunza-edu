@@ -33,6 +33,7 @@ export interface ApiRequest extends Request {
   requestId: string;
   actorId?: string;
   sessionId?: string;
+  auditOrganizationId?: string;
 }
 
 @Catch()
@@ -81,6 +82,7 @@ export class SafeExceptionFilter implements ExceptionFilter {
     if (error.code === 'REQUEST_IN_PROGRESS')
       response.setHeader('Retry-After', '1');
     if (error.code === 'RATE_LIMITED') response.setHeader('Retry-After', '60');
+    if (error.code === 'RUNNER_BUSY') response.setHeader('Retry-After', '1');
     response.status(error.getStatus()).json(
       errorResponseSchema.parse({
         error: {

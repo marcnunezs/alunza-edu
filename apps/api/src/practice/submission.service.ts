@@ -10,7 +10,10 @@ import {
   SubmissionExecutionPort,
   failedSubmission,
 } from './submission-execution.port';
-import type { CanonicalSubmissionResult } from './submission-execution.port';
+import type {
+  CanonicalSubmissionResult,
+  SubmissionExecutionInput,
+} from './submission-execution.port';
 import { SubmissionRepository } from './submission.repository';
 import {
   createSubmitTimingObserver,
@@ -33,6 +36,7 @@ export class SubmissionService {
     assignmentId: string,
     input: SubmitAttemptInput,
     key: string,
+    responseClosed?: Promise<boolean>,
   ) {
     const timingContext: SubmitTimingContext = { requestId: who.requestId };
     const observer = createSubmitTimingObserver(
@@ -60,7 +64,7 @@ export class SubmissionService {
           assignmentId,
           input,
           key,
-          { available: runner.available, runnerVersion: runner.runnerVersion },
+          runner,
           this.config.practiceQuotas,
         ),
       );
@@ -80,85 +84,109 @@ export class SubmissionService {
         return reservation.response;
       }
       const started = performance.now();
+      const startedAt = Date.now();
+      const context = reservation.executionContext ?? runner.context;
+      let committed = false;
       let result: CanonicalSubmissionResult;
       let cleaned = false;
       try {
-        const suite = await measure('suite', () =>
-          this.repository.suite(reservation),
+        try {
+          const suite = await measure('suite', () =>
+            this.repository.suite(reservation),
+          );
+          const executionInput: SubmissionExecutionInput = {
+            executionId: reservation.executionId,
+            requestId: who.requestId,
+            exerciseVersionId: input.exerciseVersionId,
+            testsVersion: suite.testsVersion,
+            mode: 'SUBMIT',
+            entrypoint: 'solve',
+            code: input.code,
+            tests: suite.tests,
+          };
+          const output = await measure('execute', () => {
+            if (context) {
+              if (
+                context.runnerVersion !== runner.runnerVersion ||
+                context.runnerVersion !== reservation.runnerVersion
+              )
+                throw new Error('Runner inspection version mismatch');
+              return context.provider === 'vercel' ||
+                context.provider === 'local-vm' ||
+                context.engineId
+                ? this.execution.execute(executionInput, context, {
+                    leaseToken: reservation.leaseToken,
+                    normalDeadlineMs: startedAt + 30_000,
+                    cleanupDeadlineMs: startedAt + 40_000,
+                  })
+                : this.execution.execute(executionInput, context);
+            }
+            return this.execution.execute(executionInput);
+          });
+          result = {
+            technicalResult: output.technicalResult,
+            privateTestResults: output.privateTestResults,
+          };
+          cleaned = output.cleanupVerified;
+        } catch {
+          result = failedSubmission(
+            reservation.runnerVersion,
+            reservation.visibleTotal,
+            performance.now() - started,
+          );
+        } finally {
+          if (!cleaned) {
+            const remaining = 40_000 - (performance.now() - started);
+            if (remaining > 0)
+              cleaned = await measure('cleanupFallback', () =>
+                this.lifecycle.cleanup(
+                  reservation.executionId,
+                  Math.min(10_000, remaining),
+                  ...(context ? [context] : []),
+                ),
+              );
+          }
+        }
+        // Durable normalized evidence survives a failure of the following attempt commit.
+        // Recovery consumes this evidence; it never executes student code a second time.
+        const staged = await measure('stage', () =>
+          this.repository.stage(reservation, result),
         );
-        const output = await measure('execute', () =>
-          this.execution.execute(
-            {
-              executionId: reservation.executionId,
-              requestId: who.requestId,
-              exerciseVersionId: input.exerciseVersionId,
-              testsVersion: suite.testsVersion,
-              mode: 'SUBMIT',
-              entrypoint: 'solve',
-              code: input.code,
-              tests: suite.tests,
-              limits: suite.limits,
-            },
-            runner.preparation,
+        const response = staged
+          ? await measure('finish', () =>
+              this.repository.finish(reservation, cleaned),
+            )
+          : null;
+        if (!response)
+          throw new ApiError(
+            'DEPENDENCY_UNAVAILABLE',
+            'No se pudo confirmar el envío. Conserva tu código y recupera la misma solicitud.',
+            503,
+            true,
+          );
+        await measure('authorizeFinal', () =>
+          this.repository.authorize(
+            who,
+            activityId,
+            assignmentId,
+            input.exerciseVersionId,
           ),
         );
-        result = {
-          technicalResult: output.technicalResult,
-          privateTestResults: output.privateTestResults,
-        };
-        cleaned = output.cleanupVerified;
-      } catch {
-        result = failedSubmission(
-          reservation.runnerVersion,
-          reservation.visibleTotal,
-          performance.now() - started,
-        );
+        committed = true;
+        return response;
       } finally {
-        if (!cleaned) {
-          const remaining = 40_000 - (performance.now() - started);
-          if (remaining > 0)
-            cleaned = await measure('cleanupFallback', () =>
-              this.lifecycle.cleanup(
-                reservation.executionId,
-                Math.min(10_000, remaining),
-              ),
-            );
-        }
+        if (context?.provider === 'docker' && context.engineId)
+          this.lifecycle.requestClosed(reservation.executionId, context, {
+            committed,
+            cleanupVerified: cleaned,
+            responseClosed,
+          });
       }
-      // Durable normalized evidence survives a failure of the following attempt commit.
-      // Recovery consumes this evidence; it never executes student code a second time.
-      const staged = await measure('stage', () =>
-        this.repository.stage(reservation, result),
-      );
-      const response = staged
-        ? await measure('finish', () =>
-            this.repository.finish(reservation, cleaned),
-          )
-        : null;
-      if (!response)
-        throw new ApiError(
-          'DEPENDENCY_UNAVAILABLE',
-          'No se pudo confirmar el envío. Conserva tu código y recupera la misma solicitud.',
-          503,
-          true,
-        );
-      await measure('authorizeFinal', () =>
-        this.repository.authorize(
-          who,
-          activityId,
-          assignmentId,
-          input.exerciseVersionId,
-        ),
-      );
-      return response;
     });
   }
 
   detail(who: Actor, attemptId: string) {
     return this.repository.detail(who, attemptId);
-  }
-  attemptedActivities(who: Actor, classId: string) {
-    return this.repository.attemptedActivities(who, classId);
   }
   list(
     who: Actor,

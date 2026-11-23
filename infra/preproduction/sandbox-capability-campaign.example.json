@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "e78f696a-b67a-4586-ac33-f5a9fa6fe8ad",
+  "environment": "preproduction",
+  "authorized": false,
+  "expiresAt": null,
+  "teamId": null,
+  "projectId": null,
+  "region": null,
+  "image": null,
+  "runnerVersion": "imp-03-quickjs.9",
+  "maxCreations": 1,
+  "maxRequests": 36,
+  "maxCost": 0,
+  "currency": "USD",
+  "candidate": {
+    "commit": null,
+    "sourceDigest": null
+  },
+  "approval": {
+    "approvedBy": null,
+    "reference": null,
+    "approvedAt": null
+  },
+  "rates": null,
+  "stages": [
+    {
+      "id": "capability",
+      "kind": "capsule",
+      "enabled": true,
+      "fixtures": ["sync-json-success"],
+      "creations": 1,
+      "maxRequests": 36,
+      "maxDurationSeconds": 40
+    }
+  ]
+}

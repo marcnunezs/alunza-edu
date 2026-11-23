@@ -4,6 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { URLSearchParams } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
 import pg from 'pg';
+import { testTarget, assertRuntimeTarget } from './local-target.mjs';
 
 const authOptions = {
   auth: {
@@ -29,7 +30,7 @@ async function until(action, message, timeout = 30_000) {
 }
 
 async function capturedLinks(email) {
-  const response = await fetch('http://127.0.0.1:16424/api/v1/messages', {
+  const response = await fetch(`${testTarget.mailUrl}/api/v1/messages`, {
     signal: AbortSignal.timeout(5000),
   });
   requireCondition(
@@ -42,7 +43,7 @@ async function capturedLinks(email) {
     if (!(message.To ?? []).some((recipient) => recipient.Address === email))
       continue;
     const detailResponse = await fetch(
-      `http://127.0.0.1:16424/api/v1/message/${encodeURIComponent(message.ID)}`,
+      `${testTarget.mailUrl}/api/v1/message/${encodeURIComponent(message.ID)}`,
       { signal: AbortSignal.timeout(5000) },
     );
     requireCondition(
@@ -63,19 +64,21 @@ async function capturedLinks(email) {
 
 /** Runs only inside the already-owned, real, isolated Supabase integration stack. */
 export async function verifyIdentityRecovery({ ctx, state, api }) {
+  assertRuntimeTarget(state, testTarget);
   requireCondition(
-    ctx.projectId === 'alunza-edu-foundation-test' &&
+    ctx.projectId === testTarget.projectId &&
       state.projectId === ctx.projectId &&
-      ctx.apiPort === 4100 &&
-      state.authUrl === 'http://127.0.0.1:16421',
+      ctx.apiPort === testTarget.apiPort &&
+      state.authUrl === testTarget.authUrl,
     'La recuperación solo admite el entorno local exclusivo de pruebas.',
   );
   const database = new URL(state.migrationUrl);
   requireCondition(
-    database.hostname === '127.0.0.1' && database.port === '16422',
+    database.hostname === '127.0.0.1' &&
+      database.port === String(testTarget.dbPort),
     'La recuperación no puede modificar otra base de datos.',
   );
-  const base = 'http://127.0.0.1:4100';
+  const base = testTarget.apiUrl;
   const fixture = JSON.parse(
     await readFile(
       new URL('../fixtures/foundation/identity.json', import.meta.url),

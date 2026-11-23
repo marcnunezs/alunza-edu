@@ -18,7 +18,10 @@ export function Shell({ children }: Readonly<{ children: React.ReactNode }>) {
   const navigation = [
     { href: '/', label: 'Estado' },
     ...(signedIn
-      ? [{ href: '/inicio', label: 'Inicio' }]
+      ? [
+          { href: '/inicio', label: 'Inicio' },
+          { href: '/academia', label: 'Clases y contenido' },
+        ]
       : [{ href: '/acceso', label: 'Acceso' }]),
     ...(signedIn && admin
       ? [{ href: '/administracion/organizaciones', label: 'Organizaciones' }]
@@ -86,21 +89,12 @@ export function Shell({ children }: Readonly<{ children: React.ReactNode }>) {
         tabIndex={-1}
         className="mx-auto w-full max-w-6xl flex-1 px-5 py-10 outline-none sm:px-8 sm:py-14"
       >
-        {auth.draftCleanupWarning && (
-          <p
-            role="alert"
-            data-cy="draft-cleanup-warning"
-            className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm"
-          >
-            {auth.draftCleanupWarning}
-          </p>
-        )}
         {children}
       </main>
       <footer className="border-t px-5 py-6 sm:px-8">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 text-xs leading-relaxed text-muted-foreground">
           <p>Alunza · Programación I</p>
-          <p>Clases y ejercicios · Programación I</p>
+          <p>Aprende, practica y conserva tu trabajo</p>
         </div>
       </footer>
     </div>

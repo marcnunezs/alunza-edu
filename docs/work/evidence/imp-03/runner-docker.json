@@ -1,0 +1,3293 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-23T05:29:23.224Z",
+  "provider": "docker",
+  "runnerVersion": "imp-03-quickjs-main.1",
+  "limits": {
+    "memoryBytes": 134217728,
+    "runtimeMs": 3000,
+    "outputBytes": 65536,
+    "returnBytes": 65536,
+    "codeBytes": 65536
+  },
+  "remote": "NOT_RUN",
+  "acceptance": "EXPERIMENTAL_ONLY",
+  "knownLimits": [
+    "Guest uses QuickJS WASM; host owns return emission after normal synchronous invocation",
+    "Trusted bridge UID0 retains SETUID/SETGID/SETPCAP; student must have zero capabilities",
+    "Bridge memory counts within128MiB",
+    "Kernel transient memory overshoot and kill scheduling latency",
+    "No full-flow p95 or business RF acceptance"
+  ],
+  "cases": [
+    {
+      "id": "published-function-solve",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 78,
+      "lifecycleMs": 490,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32157696",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 345.24239999999986,
+        "timings": [
+          {
+            "hostStartAttachMs": 345.24239999999986,
+            "containerWallMs": 266,
+            "supervisorProcessMs": 78.127836,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "declared-solve-precedes-module-export",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 86,
+      "lifecycleMs": 625,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32944128",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 403.27729999999997,
+        "timings": [
+          {
+            "hostStartAttachMs": 403.27729999999997,
+            "containerWallMs": 307,
+            "supervisorProcessMs": 85.517833,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "top-level-return-is-not-an-entrypoint",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 80,
+      "lifecycleMs": 628,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32567296",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 385.88110000000006,
+        "timings": [
+          {
+            "hostStartAttachMs": 385.88110000000006,
+            "containerWallMs": 300,
+            "supervisorProcessMs": 79.67210899999999,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "published-lower-memory",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 148,
+      "lifecycleMs": 704,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "100663296",
+            "memory.swap.max": "0",
+            "memory.peak": "33488896",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 450.83150000000023,
+        "timings": [
+          {
+            "hostStartAttachMs": 450.83150000000023,
+            "containerWallMs": 360,
+            "supervisorProcessMs": 147.89252499999998,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "published-unavailable-memory",
+      "status": "PASS",
+      "diagnosis": "UNKNOWN",
+      "reason": "CAPABILITY_GAP",
+      "runtimeMs": 0,
+      "lifecycleMs": 0,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": null,
+        "cleanupVerified": true,
+        "cgroups": [],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 0,
+        "timings": []
+      }
+    },
+    {
+      "id": "published-lower-time",
+      "status": "PASS",
+      "diagnosis": "TIMEOUT",
+      "reason": "EXECUTION_DEADLINE",
+      "runtimeMs": 149,
+      "lifecycleMs": 707,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "44580864",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 461.7575999999999,
+        "timings": [
+          {
+            "hostStartAttachMs": 461.7575999999999,
+            "containerWallMs": 383,
+            "supervisorProcessMs": 148.813131,
+            "budgetMs": 100
+          }
+        ]
+      }
+    },
+    {
+      "id": "published-output-15",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 132,
+      "lifecycleMs": 745,
+      "outputBytes": 15,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "31629312",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 481.3048000000008,
+        "timings": [
+          {
+            "hostStartAttachMs": 481.3048000000008,
+            "containerWallMs": 370,
+            "supervisorProcessMs": 132.171937,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "published-output-16",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 206,
+      "lifecycleMs": 878,
+      "outputBytes": 16,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "31760384",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 584.8230999999996,
+        "timings": [
+          {
+            "hostStartAttachMs": 584.8230999999996,
+            "containerWallMs": 459,
+            "supervisorProcessMs": 206.218054,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "published-output-17",
+      "status": "PASS",
+      "diagnosis": "UNKNOWN",
+      "reason": "OUTPUT_LIMIT",
+      "runtimeMs": 89,
+      "lifecycleMs": 708,
+      "outputBytes": 16,
+      "outputTruncated": true,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "33882112",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 393.6963000000005,
+        "timings": [
+          {
+            "hostStartAttachMs": 393.6963000000005,
+            "containerWallMs": 304,
+            "supervisorProcessMs": 88.53084299999999,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "promise-null-prototype",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 122,
+      "lifecycleMs": 760,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32722944",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 467.2062999999998,
+        "timings": [
+          {
+            "hostStartAttachMs": 467.2062999999998,
+            "containerWallMs": 358,
+            "supervisorProcessMs": 122.396857,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "promise-null-prototype-nested",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 151,
+      "lifecycleMs": 724,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "44769280",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 481.96250000000055,
+        "timings": [
+          {
+            "hostStartAttachMs": 481.96250000000055,
+            "containerWallMs": 364,
+            "supervisorProcessMs": 150.848544,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "promise-pending-prototype",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 99,
+      "lifecycleMs": 613,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "33116160",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 399.3038000000006,
+        "timings": [
+          {
+            "hostStartAttachMs": 399.3038000000006,
+            "containerWallMs": 311,
+            "supervisorProcessMs": 99.37694499999999,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "promise-rejected-prototype",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 155,
+      "lifecycleMs": 744,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "36618240",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 506.6250999999993,
+        "timings": [
+          {
+            "hostStartAttachMs": 506.6250999999993,
+            "containerWallMs": 408,
+            "supervisorProcessMs": 154.840313,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "promise-masked-then",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 101,
+      "lifecycleMs": 646,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32464896",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 406.95390000000043,
+        "timings": [
+          {
+            "hostStartAttachMs": 406.95390000000043,
+            "containerWallMs": 312,
+            "supervisorProcessMs": 101.40510700000002,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "non-json-map-prototype",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 145,
+      "lifecycleMs": 758,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "37253120",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 515.3300999999992,
+        "timings": [
+          {
+            "hostStartAttachMs": 515.3300999999992,
+            "containerWallMs": 412,
+            "supervisorProcessMs": 145.13529799999998,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "non-json-date-prototype",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 102,
+      "lifecycleMs": 623,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "38055936",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 384.97339999999895,
+        "timings": [
+          {
+            "hostStartAttachMs": 384.97339999999895,
+            "containerWallMs": 307,
+            "supervisorProcessMs": 102.211695,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "non-json-set-prototype",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 124,
+      "lifecycleMs": 709,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "36614144",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 456.4246999999996,
+        "timings": [
+          {
+            "hostStartAttachMs": 456.4246999999996,
+            "containerWallMs": 338,
+            "supervisorProcessMs": 124.36680400000002,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "non-json-regexp-prototype",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 167,
+      "lifecycleMs": 658,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "35885056",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 446.9254999999994,
+        "timings": [
+          {
+            "hostStartAttachMs": 446.9254999999994,
+            "containerWallMs": 369,
+            "supervisorProcessMs": 166.837428,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "non-json-arraybuffer-prototype",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 129,
+      "lifecycleMs": 687,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "39559168",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 429.9315000000006,
+        "timings": [
+          {
+            "hostStartAttachMs": 429.9315000000006,
+            "containerWallMs": 339,
+            "supervisorProcessMs": 129.344413,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "non-json-typedarray-prototype",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 139,
+      "lifecycleMs": 656,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "38047744",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 431.1232,
+        "timings": [
+          {
+            "hostStartAttachMs": 431.1232,
+            "containerWallMs": 356,
+            "supervisorProcessMs": 139.206223,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "non-json-boxed-number-prototype",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 124,
+      "lifecycleMs": 701,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "34373632",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 444.10329999999885,
+        "timings": [
+          {
+            "hostStartAttachMs": 444.10329999999885,
+            "containerWallMs": 333,
+            "supervisorProcessMs": 124.01713600000001,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "non-json-error-prototype",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 234,
+      "lifecycleMs": 967,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "36655104",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 626.0966000000008,
+        "timings": [
+          {
+            "hostStartAttachMs": 626.0966000000008,
+            "containerWallMs": 458,
+            "supervisorProcessMs": 234.17961499999996,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "console-nul-preserved",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 112,
+      "lifecycleMs": 768,
+      "outputBytes": 101,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32735232",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 462.36059999999816,
+        "timings": [
+          {
+            "hostStartAttachMs": 462.36059999999816,
+            "containerWallMs": 353,
+            "supervisorProcessMs": 112.037042,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "return-nul-preserved",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 106,
+      "lifecycleMs": 674,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "30617600",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 437.4721000000027,
+        "timings": [
+          {
+            "hostStartAttachMs": 437.4721000000027,
+            "containerWallMs": 350,
+            "supervisorProcessMs": 106.10501500000001,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "argument-nul-preserved",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 123,
+      "lifecycleMs": 856,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "33890304",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 529.7020999999986,
+        "timings": [
+          {
+            "hostStartAttachMs": 529.7020999999986,
+            "containerWallMs": 378,
+            "supervisorProcessMs": 123.22733799999999,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "sync-json-success",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 180,
+      "lifecycleMs": 726,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32960512",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 496.8862000000008,
+        "timings": [
+          {
+            "hostStartAttachMs": 496.8862000000008,
+            "containerWallMs": 391,
+            "supervisorProcessMs": 179.996689,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "syntax",
+      "status": "PASS",
+      "diagnosis": "SYNTAX_ERROR",
+      "reason": "STUDENT_SYNTAX",
+      "runtimeMs": 84,
+      "lifecycleMs": 642,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32649216",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 395.023799999999,
+        "timings": [
+          {
+            "hostStartAttachMs": 395.023799999999,
+            "containerWallMs": 309,
+            "supervisorProcessMs": 83.744476,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "exception",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 82,
+      "lifecycleMs": 627,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "33497088",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 384.29039999999804,
+        "timings": [
+          {
+            "hostStartAttachMs": 384.29039999999804,
+            "containerWallMs": 301,
+            "supervisorProcessMs": 82.05347899999998,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "runtime-syntax-exception",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 109,
+      "lifecycleMs": 715,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32169984",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 436.47469999999885,
+        "timings": [
+          {
+            "hostStartAttachMs": 436.47469999999885,
+            "containerWallMs": 323,
+            "supervisorProcessMs": 109.082152,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "assertion",
+      "status": "PASS",
+      "diagnosis": "FAILED_TEST",
+      "reason": "ASSERTION_FAILED",
+      "runtimeMs": 82,
+      "lifecycleMs": 695,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "33869824",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 386.7525999999998,
+        "timings": [
+          {
+            "hostStartAttachMs": 386.7525999999998,
+            "containerWallMs": 290,
+            "supervisorProcessMs": 82.337284,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "infinite-loop",
+      "status": "PASS",
+      "diagnosis": "TIMEOUT",
+      "reason": "EXECUTION_DEADLINE",
+      "runtimeMs": 3057,
+      "lifecycleMs": 3570,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "45137920",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 3345.205399999999,
+        "timings": [
+          {
+            "hostStartAttachMs": 3345.205399999999,
+            "containerWallMs": 3262,
+            "supervisorProcessMs": 3056.5223170000004,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "module-infinite-loop",
+      "status": "PASS",
+      "diagnosis": "TIMEOUT",
+      "reason": "EXECUTION_DEADLINE",
+      "runtimeMs": 3062,
+      "lifecycleMs": 3628,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "45703168",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 3401.7782000000007,
+        "timings": [
+          {
+            "hostStartAttachMs": 3401.7782000000007,
+            "containerWallMs": 3302,
+            "supervisorProcessMs": 3061.839176,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "cumulative-budget",
+      "status": "PASS",
+      "diagnosis": "TIMEOUT",
+      "reason": "EXECUTION_DEADLINE",
+      "runtimeMs": 3045,
+      "lifecycleMs": 3994,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "44548096",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          },
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "46518272",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 3635.227399999996,
+        "timings": [
+          {
+            "hostStartAttachMs": 2082.4925999999978,
+            "containerWallMs": 1989,
+            "supervisorProcessMs": 1774.738416,
+            "budgetMs": 3000
+          },
+          {
+            "hostStartAttachMs": 1552.7347999999984,
+            "containerWallMs": 1462,
+            "supervisorProcessMs": 1270.3537820000001,
+            "budgetMs": 1225.261584
+          }
+        ]
+      }
+    },
+    {
+      "id": "javascript-heap-memory",
+      "status": "PASS",
+      "diagnosis": "UNKNOWN",
+      "reason": "MEMORY_LIMIT",
+      "runtimeMs": 0,
+      "lifecycleMs": 995,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": true,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 757.3431999999957,
+        "timings": [
+          {
+            "hostStartAttachMs": 757.3431999999957,
+            "containerWallMs": 659,
+            "supervisorProcessMs": 407.52470999999997,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "arraybuffer-memory",
+      "status": "PASS",
+      "diagnosis": "UNKNOWN",
+      "reason": "MEMORY_LIMIT",
+      "runtimeMs": 0,
+      "lifecycleMs": 950,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": true,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 665.1487000000052,
+        "timings": [
+          {
+            "hostStartAttachMs": 665.1487000000052,
+            "containerWallMs": 547,
+            "supervisorProcessMs": 283.819115,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "output-65535",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 126,
+      "lifecycleMs": 796,
+      "outputBytes": 65535,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32096256",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 503.79819999999745,
+        "timings": [
+          {
+            "hostStartAttachMs": 503.79819999999745,
+            "containerWallMs": 398,
+            "supervisorProcessMs": 125.83619399999999,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "output-65536",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 195,
+      "lifecycleMs": 1105,
+      "outputBytes": 65536,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32378880",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 584.1229000000021,
+        "timings": [
+          {
+            "hostStartAttachMs": 584.1229000000021,
+            "containerWallMs": 456,
+            "supervisorProcessMs": 195.45051899999999,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "output-65537",
+      "status": "PASS",
+      "diagnosis": "UNKNOWN",
+      "reason": "OUTPUT_LIMIT",
+      "runtimeMs": 140,
+      "lifecycleMs": 789,
+      "outputBytes": 65536,
+      "outputTruncated": true,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "33271808",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 481.6466999999975,
+        "timings": [
+          {
+            "hostStartAttachMs": 481.6466999999975,
+            "containerWallMs": 378,
+            "supervisorProcessMs": 140.035727,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "combined-stdout-stderr",
+      "status": "PASS",
+      "diagnosis": "UNKNOWN",
+      "reason": "OUTPUT_LIMIT",
+      "runtimeMs": 94,
+      "lifecycleMs": 907,
+      "outputBytes": 65536,
+      "outputTruncated": true,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "34021376",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 499.9618000000046,
+        "timings": [
+          {
+            "hostStartAttachMs": 499.9618000000046,
+            "containerWallMs": 379,
+            "supervisorProcessMs": 94.25584200000002,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "output-utf8",
+      "status": "PASS",
+      "diagnosis": "UNKNOWN",
+      "reason": "OUTPUT_LIMIT",
+      "runtimeMs": 86,
+      "lifecycleMs": 692,
+      "outputBytes": 65536,
+      "outputTruncated": true,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "33230848",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 430.59730000000127,
+        "timings": [
+          {
+            "hostStartAttachMs": 430.59730000000127,
+            "containerWallMs": 335,
+            "supervisorProcessMs": 86.251226,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "caught-output-limit",
+      "status": "PASS",
+      "diagnosis": "UNKNOWN",
+      "reason": "OUTPUT_LIMIT",
+      "runtimeMs": 95,
+      "lifecycleMs": 742,
+      "outputBytes": 65536,
+      "outputTruncated": true,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32542720",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 482.2985000000044,
+        "timings": [
+          {
+            "hostStartAttachMs": 482.2985000000044,
+            "containerWallMs": 373,
+            "supervisorProcessMs": 94.84631299999998,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "return-limit",
+      "status": "PASS",
+      "diagnosis": "UNKNOWN",
+      "reason": "RETURN_LIMIT",
+      "runtimeMs": 119,
+      "lifecycleMs": 680,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "33722368",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 435.93130000000383,
+        "timings": [
+          {
+            "hostStartAttachMs": 435.93130000000383,
+            "containerWallMs": 350,
+            "supervisorProcessMs": 118.66344800000002,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "return-65535",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 128,
+      "lifecycleMs": 680,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32501760",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 448.97580000000016,
+        "timings": [
+          {
+            "hostStartAttachMs": 448.97580000000016,
+            "containerWallMs": 355,
+            "supervisorProcessMs": 127.746914,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "return-65536",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 85,
+      "lifecycleMs": 648,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "34250752",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 398.5136999999959,
+        "timings": [
+          {
+            "hostStartAttachMs": 398.5136999999959,
+            "containerWallMs": 294,
+            "supervisorProcessMs": 85.00893299999998,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "return-65537",
+      "status": "PASS",
+      "diagnosis": "UNKNOWN",
+      "reason": "RETURN_LIMIT",
+      "runtimeMs": 91,
+      "lifecycleMs": 645,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "33546240",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 420.4470000000001,
+        "timings": [
+          {
+            "hostStartAttachMs": 420.4470000000001,
+            "containerWallMs": 317,
+            "supervisorProcessMs": 90.785343,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "async-rejected",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 107,
+      "lifecycleMs": 654,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32976896",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 409.571299999996,
+        "timings": [
+          {
+            "hostStartAttachMs": 409.571299999996,
+            "containerWallMs": 316,
+            "supervisorProcessMs": 106.651503,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "cyclic-return",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 181,
+      "lifecycleMs": 1102,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "38842368",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 816.2958999999973,
+        "timings": [
+          {
+            "hostStartAttachMs": 816.2958999999973,
+            "containerWallMs": 724,
+            "supervisorProcessMs": 180.937282,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "getter-return",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 156,
+      "lifecycleMs": 694,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "37228544",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 467.34449999999924,
+        "timings": [
+          {
+            "hostStartAttachMs": 467.34449999999924,
+            "containerWallMs": 383,
+            "supervisorProcessMs": 156.146753,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "tojson-return",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 217,
+      "lifecycleMs": 964,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "38494208",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 639.828800000003,
+        "timings": [
+          {
+            "hostStartAttachMs": 639.828800000003,
+            "containerWallMs": 478,
+            "supervisorProcessMs": 216.63041600000003,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "thenable-return",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 108,
+      "lifecycleMs": 941,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32002048",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 468.43529999999737,
+        "timings": [
+          {
+            "hostStartAttachMs": 468.43529999999737,
+            "containerWallMs": 363,
+            "supervisorProcessMs": 107.511565,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "bigint-return",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 121,
+      "lifecycleMs": 690,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32985088",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 451.4303,
+        "timings": [
+          {
+            "hostStartAttachMs": 451.4303,
+            "containerWallMs": 360,
+            "supervisorProcessMs": 121.10810599999999,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "invalid-json-return",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 137,
+      "lifecycleMs": 774,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32882688",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 513.3340000000026,
+        "timings": [
+          {
+            "hostStartAttachMs": 513.3340000000026,
+            "containerWallMs": 400,
+            "supervisorProcessMs": 136.811754,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "mutated-serializer",
+      "status": "PASS",
+      "diagnosis": "FAILED_TEST",
+      "reason": "ASSERTION_FAILED",
+      "runtimeMs": 138,
+      "lifecycleMs": 720,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32645120",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 479.33580000000075,
+        "timings": [
+          {
+            "hostStartAttachMs": 479.33580000000075,
+            "containerWallMs": 362,
+            "supervisorProcessMs": 137.70430199999998,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "polluted-prototype",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 195,
+      "lifecycleMs": 801,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "34324480",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 550.0872000000018,
+        "timings": [
+          {
+            "hostStartAttachMs": 550.0872000000018,
+            "containerWallMs": 432,
+            "supervisorProcessMs": 194.86400200000003,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "fake-stdout-verdict",
+      "status": "PASS",
+      "diagnosis": "FAILED_TEST",
+      "reason": "ASSERTION_FAILED",
+      "runtimeMs": 121,
+      "lifecycleMs": 706,
+      "outputBytes": 38,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32788480",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 450.19600000000355,
+        "timings": [
+          {
+            "hostStartAttachMs": 450.19600000000355,
+            "containerWallMs": 340,
+            "supervisorProcessMs": 120.82017200000001,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "fake-return-verdict",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 90,
+      "lifecycleMs": 689,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "33669120",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 445.52300000000105,
+        "timings": [
+          {
+            "hostStartAttachMs": 445.52300000000105,
+            "containerWallMs": 344,
+            "supervisorProcessMs": 89.762677,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "forged-return-known-gap",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 80,
+      "lifecycleMs": 705,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32153600",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 414.97490000000107,
+        "timings": [
+          {
+            "hostStartAttachMs": 414.97490000000107,
+            "containerWallMs": 320,
+            "supervisorProcessMs": 79.687326,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "return-envelope-as-value",
+      "status": "PASS",
+      "diagnosis": "FAILED_TEST",
+      "reason": "ASSERTION_FAILED",
+      "runtimeMs": 119,
+      "lifecycleMs": 661,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "37744640",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 422.26900000000023,
+        "timings": [
+          {
+            "hostStartAttachMs": 422.26900000000023,
+            "containerWallMs": 334,
+            "supervisorProcessMs": 119.12914,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "process-exit-incomplete",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 99,
+      "lifecycleMs": 671,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32677888",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 416.6215000000011,
+        "timings": [
+          {
+            "hostStartAttachMs": 416.6215000000011,
+            "containerWallMs": 315,
+            "supervisorProcessMs": 98.615717,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "guest-no-host-globals",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 113,
+      "lifecycleMs": 689,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "36147200",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 418.30169999999634,
+        "timings": [
+          {
+            "hostStartAttachMs": 418.30169999999634,
+            "containerWallMs": 330,
+            "supervisorProcessMs": 113.31427099999999,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "constructor-escape-denied",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 103,
+      "lifecycleMs": 658,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "31920128",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 413.7246000000014,
+        "timings": [
+          {
+            "hostStartAttachMs": 413.7246000000014,
+            "containerWallMs": 318,
+            "supervisorProcessMs": 102.664433,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "eval-escape-denied",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 73,
+      "lifecycleMs": 601,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32788480",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 370.1950999999972,
+        "timings": [
+          {
+            "hostStartAttachMs": 370.1950999999972,
+            "containerWallMs": 293,
+            "supervisorProcessMs": 72.86707100000001,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "import-denied",
+      "status": "PASS",
+      "diagnosis": "RUNTIME_ERROR",
+      "reason": "STUDENT_EXCEPTION",
+      "runtimeMs": 203,
+      "lifecycleMs": 934,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32841728",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 622.0426999999981,
+        "timings": [
+          {
+            "hostStartAttachMs": 622.0426999999981,
+            "containerWallMs": 474,
+            "supervisorProcessMs": 203.186063,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "case-state-isolation",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 252,
+      "lifecycleMs": 1482,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "33644544",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          },
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32915456",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 969.8480999999956,
+        "timings": [
+          {
+            "hostStartAttachMs": 464.61419999999634,
+            "containerWallMs": 353,
+            "supervisorProcessMs": 101.303993,
+            "budgetMs": 3000
+          },
+          {
+            "hostStartAttachMs": 505.23389999999927,
+            "containerWallMs": 396,
+            "supervisorProcessMs": 150.230581,
+            "budgetMs": 2898.696007
+          }
+        ]
+      }
+    },
+    {
+      "id": "json-arguments",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 201,
+      "lifecycleMs": 834,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "38690816",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 533.7575999999972,
+        "timings": [
+          {
+            "hostStartAttachMs": 533.7575999999972,
+            "containerWallMs": 445,
+            "supervisorProcessMs": 200.51124800000002,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "json-argument-prototype",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 78,
+      "lifecycleMs": 605,
+      "outputBytes": 0,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "32980992",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 381.6400999999969,
+        "timings": [
+          {
+            "hostStartAttachMs": 381.6400999999969,
+            "containerWallMs": 289,
+            "supervisorProcessMs": 77.796452,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "hidden-projection",
+      "status": "PASS",
+      "diagnosis": "SUCCESS",
+      "reason": "COMPLETED",
+      "runtimeMs": 80,
+      "lifecycleMs": 633,
+      "outputBytes": 80,
+      "outputTruncated": false,
+      "evidence": {
+        "provider": "docker",
+        "image": "sha256:e0769161a0f42bee4cc42fd4fd4e10cf7cacfc93b551ea230ce3a2994d48cf72",
+        "cleanupVerified": true,
+        "cgroups": [
+          {
+            "memory.max": "134217728",
+            "memory.swap.max": "0",
+            "memory.peak": "33161216",
+            "memory.events": "low 0\nhigh 0\nmax 0\noom 0\noom_kill 0\noom_group_kill 0",
+            "pids.max": "32",
+            "cpu.max": "100000 100000"
+          }
+        ],
+        "invocationAuthenticity": "QUICKJS_SYNC_CALL",
+        "engine": "quickjs-wasm-release-sync@0.32.0",
+        "bridgeUid": 0,
+        "bridgeCapabilities": [
+          "CAP_SETUID",
+          "CAP_SETGID",
+          "CAP_SETPCAP"
+        ],
+        "studentUid": 10001,
+        "studentCapabilities": "ZERO_REQUIRED",
+        "bridgeCountsAgainstMemory": true,
+        "oomObserved": false,
+        "hostDeadlineObserved": false,
+        "hostProgramWallMs": 402.3306999999986,
+        "timings": [
+          {
+            "hostStartAttachMs": 402.3306999999986,
+            "containerWallMs": 318,
+            "supervisorProcessMs": 80.097379,
+            "budgetMs": 3000
+          }
+        ]
+      }
+    },
+    {
+      "id": "execution-cleanup-isolation",
+      "status": "PASS",
+      "cleanup": {
+        "cleanupVerified": true,
+        "removed": 1
+      },
+      "siblingPreserved": true,
+      "foreignPreserved": true
+    },
+    {
+      "id": "os-identity",
+      "status": "PASS",
+      "oomObserved": false,
+      "cleanupVerified": true,
+      "observation": {
+        "node": "v24.21.0",
+        "uid": 10001,
+        "capabilities": {
+          "CapInh": "0000000000000000",
+          "CapPrm": "0000000000000000",
+          "CapEff": "0000000000000000",
+          "CapBnd": "0000000000000000",
+          "CapAmb": "0000000000000000"
+        }
+      }
+    },
+    {
+      "id": "os-permissions",
+      "status": "PASS",
+      "oomObserved": false,
+      "cleanupVerified": true,
+      "observation": {
+        "parentDenied": true,
+        "readonly": true,
+        "environment": [
+          "HOME",
+          "LANG",
+          "PATH"
+        ]
+      }
+    },
+    {
+      "id": "os-memory",
+      "status": "PASS",
+      "oomObserved": true,
+      "cleanupVerified": true
+    },
+    {
+      "id": "os-descendant-memory",
+      "status": "PASS",
+      "oomObserved": true,
+      "cleanupVerified": true,
+      "observation": true
+    },
+    {
+      "id": "os-processes",
+      "status": "PASS",
+      "oomObserved": false,
+      "cleanupVerified": true,
+      "observation": {
+        "attempted": 40,
+        "started": 18,
+        "eagain": 22,
+        "unexpectedErrors": 0,
+        "identitiesValid": true,
+        "pidsMax": 32,
+        "pidsCurrent": 32,
+        "uid": 10001
+      }
+    },
+    {
+      "id": "os-network",
+      "status": "PASS",
+      "oomObserved": false,
+      "cleanupVerified": true,
+      "observation": {
+        "loopbackOnly": true,
+        "ipv6": "ENETUNREACH",
+        "udp": "ENETUNREACH",
+        "dns": "ECONNREFUSED"
+      }
+    },
+    {
+      "id": "execution-cleanup-empty",
+      "status": "PASS"
+    },
+    {
+      "id": "expired-owned-orphan",
+      "status": "PASS",
+      "clock": "FUTURE_OBSERVATION_SCOPED_TO_THREE_FIXTURE_IDS",
+      "removed": 1,
+      "expiredWasRunning": true,
+      "expiredRemoved": true,
+      "freshPreserved": true,
+      "unrelatedPreserved": true,
+      "outsideScopePreserved": true
+    },
+    {
+      "id": "cancellation",
+      "status": "PASS",
+      "reason": "CANCELLED"
+    },
+    {
+      "id": "concurrent-capsules",
+      "status": "PASS",
+      "results": [
+        {
+          "diagnosis": "SUCCESS",
+          "reason": "COMPLETED",
+          "runtimeMs": 215.30825799999997,
+          "cleanupVerified": true
+        },
+        {
+          "diagnosis": "SUCCESS",
+          "reason": "COMPLETED",
+          "runtimeMs": 197.28704000000002,
+          "cleanupVerified": true
+        }
+      ]
+    }
+  ],
+  "ownedContainersRemaining": 0,
+  "notRun": [],
+  "remoteCalls": 0,
+  "failures": 0,
+  "authorizationChecked": false
+}

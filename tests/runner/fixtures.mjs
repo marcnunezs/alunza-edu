@@ -7,56 +7,6 @@ const one = (expected = true, args = []) => [
 ];
 // These fixed programs execute only in the QuickJS guest inside a capsule.
 export const runnerFixtures = [
-  {
-    id: 'published-function-solve',
-    code: 'function solve(a, b) { return a + b; }',
-    tests: one(3, [1, 2]),
-    expected: 'SUCCESS',
-  },
-  {
-    id: 'declared-solve-precedes-module-export',
-    code: 'function solve() { return true; } module.exports.solve = () => false;',
-    tests: one(),
-    expected: 'SUCCESS',
-  },
-  {
-    id: 'top-level-return-is-not-an-entrypoint',
-    code: 'return () => true;',
-    tests: one(),
-    expected: 'RUNTIME_ERROR',
-    reason: 'STUDENT_EXCEPTION',
-  },
-  {
-    id: 'published-lower-memory',
-    code: 'function solve(a, b) { return a + b; }',
-    tests: one(3, [1, 2]),
-    limits: { memoryBytes: 100663297, runtimeMs: 3000, outputBytes: 65536 },
-    expected: 'SUCCESS',
-  },
-  {
-    id: 'published-unavailable-memory',
-    code: 'function solve() { return true; }',
-    tests: one(),
-    limits: { memoryBytes: 1, runtimeMs: 3000, outputBytes: 65536 },
-    expected: 'UNKNOWN',
-    reason: 'CAPABILITY_GAP',
-  },
-  {
-    id: 'published-lower-time',
-    code: 'function solve() { while (true) {} }',
-    tests: one(),
-    limits: { memoryBytes: 134217728, runtimeMs: 100, outputBytes: 65536 },
-    expected: 'TIMEOUT',
-    reason: 'EXECUTION_DEADLINE',
-  },
-  ...[15, 16, 17].map((bytes) => ({
-    id: `published-output-${bytes}`,
-    code: `function solve() { console.log('x'.repeat(${bytes - 1})); return true; }`,
-    tests: one(),
-    limits: { memoryBytes: 134217728, runtimeMs: 3000, outputBytes: 16 },
-    expected: bytes <= 16 ? 'SUCCESS' : 'UNKNOWN',
-    reason: bytes <= 16 ? 'COMPLETED' : 'OUTPUT_LIMIT',
-  })),
   ...[
     [
       'promise-null-prototype',

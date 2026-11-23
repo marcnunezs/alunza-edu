@@ -1,7 +1,42 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { validatePublicEnvironment } from '../config/public-environment.mjs';
+import {
+  dashboardTimingEnvironment,
+  validatePublicEnvironment,
+} from '../config/public-environment.mjs';
+
+test('dashboard timings require both isolated build and explicit opt-in', () => {
+  for (const environment of [
+    {},
+    { ALUNZA_E2E_BUILD: '1' },
+    { ALUNZA_TEST_DASHBOARD_TIMINGS: '0' },
+  ])
+    assert.equal(
+      dashboardTimingEnvironment(environment).ALUNZA_TEST_DASHBOARD_TIMINGS,
+      '0',
+    );
+  assert.deepEqual(
+    dashboardTimingEnvironment({
+      ALUNZA_E2E_BUILD: '1',
+      ALUNZA_TEST_DASHBOARD_TIMINGS: '1',
+      PRIVATE: 'sentinel',
+    }),
+    {
+      ALUNZA_E2E_BUILD: '1',
+      ALUNZA_TEST_DASHBOARD_TIMINGS: '1',
+    },
+  );
+  for (const environment of [
+    { ALUNZA_TEST_DASHBOARD_TIMINGS: '1' },
+    { ALUNZA_E2E_BUILD: '0', ALUNZA_TEST_DASHBOARD_TIMINGS: '1' },
+    { ALUNZA_E2E_BUILD: '1', ALUNZA_TEST_DASHBOARD_TIMINGS: 'sentinel' },
+  ])
+    assert.throws(
+      () => dashboardTimingEnvironment(environment),
+      (error) => !error.message.includes('sentinel'),
+    );
+});
 
 const valid = {
   NEXT_PUBLIC_API_BASE_URL: 'http://127.0.0.1:4000',

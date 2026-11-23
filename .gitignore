@@ -16,7 +16,7 @@ supabase/.branches/
 supabase/signing_keys.json
 *.tsbuildinfo
 *.log
-
-# Documentación y especificaciones locales
-/docs/
-/specs/
+# Generated Python caches stay on disk, outside source inventories.
+__pycache__/
+*.pyc
+*.pyo

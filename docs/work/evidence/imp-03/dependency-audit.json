@@ -1,0 +1,37 @@
+{
+  "observedDate": "2026-10-23",
+  "baseline": "c8bc969 lockfile",
+  "source": "npm audit JSON for baseline and candidate",
+  "unchangedVulnerabilityObjects": true,
+  "packageEntries": {
+    "info": 0,
+    "low": 0,
+    "moderate": 2,
+    "high": 7,
+    "critical": 5,
+    "total": 14
+  },
+  "affectedPackages": [
+    "@nestjs/platform-express",
+    "@next/eslint-plugin-next",
+    "brace-expansion",
+    "braces",
+    "concurrently",
+    "fast-glob",
+    "handlebars",
+    "micromatch",
+    "multer",
+    "next",
+    "proxy-addr",
+    "sharp",
+    "shell-quote",
+    "source-map-js"
+  ],
+  "addedPackages": [
+    "@jitl/quickjs-ffi-types@0.32.0",
+    "@jitl/quickjs-wasmfile-release-sync@0.32.0",
+    "quickjs-emscripten-core@0.32.0"
+  ],
+  "quickjsPackagesFlagged": [],
+  "limitation": "Pre-existing dependency findings remain. Compiled demo uses next start to avoid the development MCP endpoint; this is not a clean security audit or production approval."
+}

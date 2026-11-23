@@ -19,7 +19,7 @@ function openAsAdmin(path: string) {
       cy.visit(path, {
         onBeforeLoad(window) {
           window.localStorage.setItem(
-            'alunza.auth.127.0.0.1:16421',
+            'alunza.auth.127.0.0.1:18421',
             JSON.stringify(session),
           );
         },
@@ -28,6 +28,62 @@ function openAsAdmin(path: string) {
 }
 function prepare() {
   return cy.task<Institution>('identity:prepare', null, { log: false });
+}
+let organizationLookupSequence = 0;
+function organizationCard(target: { id: string } | { code: string }) {
+  const lookup = ++organizationLookupSequence;
+  const seenCursors = new Set<string>();
+  function seek(
+    page = 0,
+    previousCursor: string | null = null,
+  ): Cypress.Chainable<JQuery<HTMLElement>> {
+    expect(page, 'Organization lookup stays bounded').to.be.lessThan(100);
+    return cy
+      .get<HTMLElement>('[data-cy="organization-card"]')
+      .then(($cards) => {
+        const match = $cards
+          .toArray()
+          .find((card) =>
+            'id' in target
+              ? card.getAttribute('data-organization-id') === target.id
+              : Array.from(card.querySelectorAll('p')).some(
+                  (text) => text.textContent?.trim() === target.code,
+                ),
+          );
+        if (match)
+          return cy.get<HTMLElement>(
+            `[data-cy="organization-card"][data-organization-id="${match.getAttribute('data-organization-id')}"]`,
+          );
+        const lastId = $cards.last().attr('data-organization-id');
+        const alias = `organizationLookup${lookup}Page${page}`;
+        // Pagination remains a real UI/API operation. Wait for the new page's
+        // first card before searching again, so an older rendered page cannot
+        // trigger a second click or make the lookup depend on response timing.
+        cy.intercept({ method: 'GET', pathname: '/api/v1/organizations' }).as(
+          alias,
+        );
+        cy.contains('button', /^Siguiente página$/)
+          .should('be.enabled')
+          .click();
+        return cy.wait(`@${alias}`).then(({ request, response }) => {
+          expect(response?.statusCode).to.equal(200);
+          const cursor = new URL(request.url).searchParams.get('cursor');
+          expect(cursor).to.equal(lastId);
+          expect(cursor).to.be.a('string').and.not.equal('');
+          expect(seenCursors.has(cursor!)).to.equal(false);
+          if (previousCursor) expect(cursor! > previousCursor).to.equal(true);
+          seenCursors.add(cursor!);
+          expect(response!.body.data.length).to.be.greaterThan(0);
+          const firstId = response!.body.data[0].id as string;
+          expect(firstId > cursor!).to.equal(true);
+          cy.get(
+            `[data-cy="organization-card"][data-organization-id="${firstId}"]`,
+          ).should('exist');
+          return seek(page + 1, cursor);
+        });
+      });
+  }
+  return seek();
 }
 function dialog() {
   return cy.get('[role="dialog"]').should('be.visible');
@@ -66,8 +122,8 @@ describe('IMP-01 · Gobierno institucional integrado', () => {
         cy.contains('button', /^Crear organización$/).click();
       });
       cy.get('[role="dialog"]').should('not.exist');
-      cy.contains('[data-cy="organization-card"]', `NEW-${org.code}`).within(
-        () => cy.contains('button', /^Editar$/).click(),
+      organizationCard({ code: `NEW-${org.code}` }).within(() =>
+        cy.contains('button', /^Editar$/).click(),
       );
       dialog().within(() => {
         cy.get('[name="name"]').clear().type('Institución actualizada');
@@ -75,24 +131,20 @@ describe('IMP-01 · Gobierno institucional integrado', () => {
       });
       cy.get('[role="dialog"]').should('not.exist');
       cy.reload();
-      cy.contains('[data-cy="organization-card"]', `NEW-${org.code}`).within(
-        () => {
-          cy.contains('Institución actualizada').should('be.visible');
-          cy.contains('button', /^Archivar$/).click();
-        },
-      );
+      organizationCard({ code: `NEW-${org.code}` }).within(() => {
+        cy.contains('Institución actualizada').should('be.visible');
+        cy.contains('button', /^Archivar$/).click();
+      });
       dialog().within(() => {
         cy.get('[name="reason"]').type('Cierre de institución de prueba');
         cy.contains('button', /^Confirmar archivo$/).click();
       });
       cy.get('[role="dialog"]').should('not.exist');
-      cy.contains('[data-cy="organization-card"]', `NEW-${org.code}`).within(
-        () => {
-          cy.contains('Archivada · Solo lectura').should('be.visible');
-          cy.contains('button', /^Editar$/).should('not.exist');
-          cy.contains('a', /^Consultar usuarios e invitaciones$/).click();
-        },
-      );
+      organizationCard({ code: `NEW-${org.code}` }).within(() => {
+        cy.contains('Archivada · Solo lectura').should('be.visible');
+        cy.contains('button', /^Editar$/).should('not.exist');
+        cy.contains('a', /^Consultar usuarios e invitaciones$/).click();
+      });
       cy.get('[data-cy="member-row"]').should('have.length', 1);
       cy.contains('h2', /^Invitaciones$/).should('be.visible');
       cy.contains('button', /^Invitar usuario$/).should('not.exist');
@@ -215,11 +267,25 @@ describe('IMP-01 · Gobierno institucional integrado', () => {
       cy.get('[data-cy="member-row"]').first().should('contain.text', 'Activo');
     });
   });
+  // Updated by Cypress Author on 2026-09-23: synchronize real outbox delivery.
   it('IMP01-07 · Invitación pendiente → reenvío y revocación tienen estado real', () => {
     prepare().then((org) => {
+      cy.intercept(
+        'POST',
+        `/api/v1/organizations/${org.id}/invitations/*/resend`,
+      ).as('resendInvitation');
+      cy.intercept(
+        'POST',
+        `/api/v1/organizations/${org.id}/invitations/*/revoke`,
+      ).as('revokeInvitation');
       openAsAdmin(`/administracion/organizaciones/${org.id}/usuarios`);
       invite(org.email);
       cy.task('identity:mail', { email: org.email }, { log: false });
+      cy.task(
+        'identity:delivered',
+        { organizationId: org.id, email: org.email, kind: 'INITIAL' },
+        { log: false },
+      );
       cy.reload();
       cy.contains('[data-cy="invitation-row"]', org.email).within(() =>
         cy.contains('button', /^Reenviar$/).click(),
@@ -227,7 +293,17 @@ describe('IMP-01 · Gobierno institucional integrado', () => {
       dialog().within(() =>
         cy.contains('button', /^Confirmar reenvío$/).click(),
       );
+      cy.wait('@resendInvitation', { log: false })
+        .its('response.statusCode')
+        .should('eq', 202);
       cy.get('[role="dialog"]').should('not.exist');
+      // The worker changes the ETag while preparing the new credential. Confirm
+      // completion before refreshing; 412 conflicts remain a separate scenario.
+      cy.task(
+        'identity:delivered',
+        { organizationId: org.id, email: org.email, kind: 'RESEND' },
+        { log: false },
+      );
       cy.contains('button', /^Actualizar estados$/).click();
       cy.contains('[data-cy="invitation-row"]', org.email).within(() =>
         cy.contains('button', /^Revocar$/).click(),
@@ -235,6 +311,9 @@ describe('IMP-01 · Gobierno institucional integrado', () => {
       dialog().within(() =>
         cy.contains('button', /^Confirmar revocación$/).click(),
       );
+      cy.wait('@revokeInvitation', { log: false })
+        .its('response.statusCode')
+        .should('eq', 200);
       cy.get('[role="dialog"]').should('not.exist');
       cy.contains('[data-cy="invitation-row"]', org.email).should(
         'contain.text',
@@ -247,7 +326,7 @@ describe('IMP-01 · Gobierno institucional integrado', () => {
       openAsAdmin(`/administracion/organizaciones/${org.id}/usuarios`);
       invite(org.email);
       cy.visit('/administracion/organizaciones');
-      cy.contains('[data-cy="organization-card"]', org.code).within(() =>
+      organizationCard({ id: org.id }).within(() =>
         cy.contains('button', /^Archivar$/).click(),
       );
       dialog().within(() => {
@@ -256,10 +335,7 @@ describe('IMP-01 · Gobierno institucional integrado', () => {
         cy.get('[role="alert"]').should('be.visible');
       });
       cy.reload();
-      cy.contains('[data-cy="organization-card"]', org.code).should(
-        'contain.text',
-        'Activa',
-      );
+      organizationCard({ id: org.id }).should('contain.text', 'Activa');
     });
   });
 });

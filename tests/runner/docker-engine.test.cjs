@@ -333,6 +333,21 @@ test('Engine enforces absolute deadlines and cancellation including a preaborted
   );
 });
 
+test('a spent supervisor deadline stops the capsule before touching the Docker socket', async () => {
+  const { runCapsule } = await import('../../infra/runner/capsule.mjs');
+  const observeTiming = jest.fn();
+  await expect(
+    runCapsule(
+      { executionId: randomUUID() },
+      {
+        deadlineMs: Date.now() - 1,
+        observeTiming,
+      },
+    ),
+  ).rejects.toMatchObject({ name: 'TimeoutError' });
+  expect(observeTiming).not.toHaveBeenCalled();
+});
+
 test('Engine capsule configuration retains explicit isolation and lifecycle controls', () => {
   const value = engine.capsuleConfiguration('sha256:' + 'a'.repeat(64), {
     execution: 'fixture',
@@ -347,10 +362,11 @@ test('Engine capsule configuration retains explicit isolation and lifecycle cont
       NanoCpus: 1000000000,
       PidsLimit: 32,
       NetworkMode: 'none',
+      PidMode: '',
       ReadonlyRootfs: true,
       Privileged: false,
       CapDrop: ['ALL'],
-      CapAdd: ['SETUID', 'SETGID', 'SETPCAP'],
+      CapAdd: ['SETUID', 'SETGID', 'SETPCAP', 'KILL'],
       SecurityOpt: ['no-new-privileges:true'],
       AutoRemove: false,
       Ulimits: [{ Name: 'nofile', Soft: 64, Hard: 64 }],
@@ -361,26 +377,6 @@ test('Engine capsule configuration retains explicit isolation and lifecycle cont
     },
   });
   expect(() => engine.capsuleConfiguration('mutable:tag', {})).toThrow();
-});
-
-test('Engine config enforces a lower published cap without enabling swap', () => {
-  const value = engine.capsuleConfiguration(
-    'sha256:' + 'a'.repeat(64),
-    {},
-    undefined,
-    67108865,
-  );
-  expect(value.HostConfig.Memory).toBe(67108864);
-  expect(value.HostConfig.MemorySwap).toBe(67108864);
-  for (const invalid of [1, 6291455, 134217729, NaN, Infinity])
-    expect(() =>
-      engine.capsuleConfiguration(
-        'sha256:' + 'a'.repeat(64),
-        {},
-        undefined,
-        invalid,
-      ),
-    ).toThrow();
 });
 
 test('Cleanup requires an accepted delete and an explicit 404 absence observation', async () => {
@@ -496,6 +492,73 @@ test('A controlled orphan clock rejects missing, invalid, or unbounded fixture s
     );
 });
 
+test.each(['ENGINE_RESOLVE', 'IMAGE_RESOLVE', 'PRE_INSPECT'])(
+  'a capsule reports %s on a local Engine 1.41 protocol fixture',
+  async (phase) => {
+    const image = 'sha256:' + 'a'.repeat(64);
+    const methods = [];
+    await withServer(
+      (req, res) => {
+        const path = new URL(req.url, 'http://local').pathname;
+        methods.push(req.method);
+        if (path === '/version') {
+          res.writeHead(phase === 'ENGINE_RESOLVE' ? 500 : 200);
+          res.end(
+            JSON.stringify({ ApiVersion: '1.41', MinAPIVersion: '1.12' }),
+          );
+        } else if (path.startsWith('/v1.41/images/')) {
+          res.writeHead(phase === 'IMAGE_RESOLVE' ? 404 : 200);
+          res.end(JSON.stringify({ Id: image }));
+        } else if (path === '/v1.41/containers/create') {
+          res.writeHead(201);
+          res.end('{}');
+        } else if (req.method === 'DELETE') {
+          res.writeHead(204);
+          res.end();
+        } else {
+          const removed = methods.includes('DELETE');
+          res.writeHead(removed ? 404 : 200);
+          res.end(JSON.stringify({ HostConfig: {}, Config: {} }));
+        }
+      },
+      async (socket) => {
+        const oldHost = process.env.DOCKER_HOST;
+        const oldContext = process.env.DOCKER_CONTEXT;
+        process.env.DOCKER_HOST =
+          process.platform === 'win32'
+            ? 'npipe://' + socket.replaceAll('\\', '/')
+            : 'unix://' + socket;
+        delete process.env.DOCKER_CONTEXT;
+        try {
+          // Each adapter process starts with its own endpoint cache.
+          await jest.isolateModulesAsync(async () => {
+            const { runCapsule } =
+              await import('../../infra/runner/capsule.mjs');
+            const failures = [];
+            await expect(
+              runCapsule(
+                { executionId: randomUUID() },
+                {
+                  observeFailure: (label) => failures.push(label),
+                },
+              ),
+            ).rejects.toThrow();
+            expect(failures).toEqual([phase]);
+            if (phase === 'PRE_INSPECT')
+              expect(methods.slice(-2)).toEqual(['DELETE', 'GET']);
+            else expect(methods).not.toContain('POST');
+          });
+        } finally {
+          if (oldHost === undefined) delete process.env.DOCKER_HOST;
+          else process.env.DOCKER_HOST = oldHost;
+          if (oldContext === undefined) delete process.env.DOCKER_CONTEXT;
+          else process.env.DOCKER_CONTEXT = oldContext;
+        }
+      },
+    );
+  },
+);
+
 test('Lost and cancelled create responses retain cleanup uncertainty; a late expired capsule is swept', async () => {
   const {
     runCapsule,
@@ -557,6 +620,7 @@ test('Lost and cancelled create responses retain cleanup uncertainty; a late exp
         for (mode of ['lost', 'cancelled']) {
           const executionId = randomUUID();
           const timings = [];
+          const failedPhases = [];
           await expect(
             runCapsule(
               {
@@ -568,6 +632,10 @@ test('Lost and cancelled create responses retain cleanup uncertainty; a late exp
               },
               {
                 image: 'sha256:' + 'b'.repeat(64),
+                observeFailure(phase) {
+                  failedPhases.push(phase);
+                  throw new Error('private observer failure');
+                },
                 observeTiming(event) {
                   timings.push(event);
                   if (mode === 'lost')
@@ -580,6 +648,7 @@ test('Lost and cancelled create responses retain cleanup uncertainty; a late exp
               },
             ),
           ).rejects.toThrow('cleanup failed');
+          expect(failedPhases).toEqual(['CREATE', 'CONTAINER_CLEANUP']);
           expect(timings.map((event) => event.phase)).toEqual([
             'engineResolve',
             'create',

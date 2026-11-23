@@ -37,7 +37,6 @@ const response: RunExecution = {
   technicalResult: technical,
 };
 const context = {
-  limits: { memoryBytes: 67108864, runtimeMs: 1500, outputBytes: 4096 },
   organizationId: reservation.organizationId,
   suiteHash: 'a'.repeat(64),
   tests: [{ id: 'visible', visibility: 'visible', args: [2], expected: 4 }],
@@ -59,6 +58,7 @@ function setup(enabled = true) {
     }),
   };
   const execution = {
+    requestClosed: jest.fn(),
     inspect: jest.fn(async () => ({ available: true, runnerVersion: 'unit' })),
     execute: jest.fn(async () => {
       events.push('execute');
@@ -84,6 +84,21 @@ function setup(enabled = true) {
   return { repository, execution, service, events };
 }
 describe('RUN orchestration', () => {
+  it('propagates pre-admission capacity rejection without execution, cleanup or a false UNKNOWN result', async () => {
+    const { service, execution, repository } = setup();
+    repository.admit.mockRejectedValue(
+      new ApiError('RUNNER_BUSY', 'Ocupado.', 503, true),
+    );
+    await expect(
+      service.run(who, activity, assignment, input, 'run-key-busy'),
+    ).rejects.toMatchObject({
+      code: 'RUNNER_BUSY',
+      retryable: true,
+    });
+    expect(execution.execute).not.toHaveBeenCalled();
+    expect(execution.cleanup).not.toHaveBeenCalled();
+    expect(repository.finish).not.toHaveBeenCalled();
+  });
   it('commits admission before external execution and reauthorizes only after terminal commit', async () => {
     const { service, execution, events } = setup();
     await expect(
@@ -102,7 +117,6 @@ describe('RUN orchestration', () => {
         entrypoint: 'solve',
         code: input.code,
         tests: context.tests,
-        limits: context.limits,
       }),
     );
   });
@@ -130,6 +144,7 @@ describe('RUN orchestration', () => {
     expect(execution.inspect).not.toHaveBeenCalled();
     expect(execution.execute).not.toHaveBeenCalled();
     expect(execution.cleanup).not.toHaveBeenCalled();
+    expect(repository.authorize).toHaveBeenCalledTimes(2);
   });
   it('conserves an operational UNKNOWN after an exception and verified cleanup', async () => {
     const { service, execution, repository } = setup();
@@ -207,5 +222,87 @@ describe('RUN orchestration', () => {
       service.run(who, activity, assignment, input, 'run-key-1'),
     ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     expect(repository.finish).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('RUN configured Docker request closure', () => {
+  const admitted = {
+    provider: 'docker' as const,
+    image: `sha256:${'a'.repeat(64)}`,
+    runnerVersion: 'unit',
+    engineId: 'engine-unit',
+    runtimeName: 'alunza-crun',
+    runtimeVersion: '1.31',
+    runtimeSha256: 'b'.repeat(64),
+    strategy: 'prepared-pair-v1' as const,
+  };
+  function configured() {
+    const f = setup();
+    f.execution.inspect.mockResolvedValue({
+      available: true,
+      runnerVersion: 'unit',
+      context: admitted,
+    } as never);
+    f.repository.admit.mockResolvedValue({
+      admission: { ...reservation, executionContext: admitted },
+      context,
+    } as never);
+    return f;
+  }
+  it('passes admitted deadlines and notifies closure after persistence and final authorization', async () => {
+    const f = configured();
+    const responseClosed = new Promise<boolean>(() => undefined);
+    const now = Date.now();
+    jest.spyOn(Date, 'now').mockReturnValue(now);
+    f.execution.requestClosed.mockImplementation(() => {
+      expect(f.events.at(-1)).toBe('authorize');
+      expect(f.repository.finish).toHaveBeenCalledTimes(1);
+    });
+    await expect(
+      f.service.run(
+        who,
+        activity,
+        assignment,
+        input,
+        'configured',
+        responseClosed,
+      ),
+    ).resolves.toEqual(response);
+    expect(f.execution.execute).toHaveBeenCalledWith(
+      expect.anything(),
+      admitted,
+      {
+        leaseToken: reservation.leaseToken,
+        normalDeadlineMs: now + 30_000,
+        cleanupDeadlineMs: now + 40_000,
+      },
+    );
+    expect(f.execution.requestClosed).toHaveBeenCalledWith(
+      reservation.executionId,
+      admitted,
+      { committed: true, cleanupVerified: true, responseClosed },
+    );
+  });
+  it('uses the durable context for cleanup after execution failure', async () => {
+    const f = configured();
+    f.execution.execute.mockRejectedValueOnce(new Error('execution refused'));
+    await f.service.run(who, activity, assignment, input, 'configured');
+    expect(f.execution.cleanup).toHaveBeenCalledWith(
+      reservation.executionId,
+      expect.any(Number),
+      admitted,
+    );
+  });
+  it('does not permit replenishment after a failed commit', async () => {
+    const f = configured();
+    f.repository.finish.mockRejectedValueOnce(new Error('commit lost'));
+    await expect(
+      f.service.run(who, activity, assignment, input, 'configured'),
+    ).rejects.toThrow('commit lost');
+    expect(f.execution.requestClosed).toHaveBeenCalledWith(
+      reservation.executionId,
+      admitted,
+      expect.objectContaining({ committed: false, cleanupVerified: true }),
+    );
   });
 });

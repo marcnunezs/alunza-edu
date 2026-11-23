@@ -89,14 +89,60 @@ function ignoreRejectedObservation(result: unknown) {
     void Promise.resolve(result).catch(() => undefined);
 }
 
+function emitSubmitClockAnchor(
+  requestId: string,
+  boundary: 'start' | 'end',
+  output: (line: string) => void,
+) {
+  try {
+    const before = performance.now();
+    const utcMs = Date.now();
+    const after = performance.now();
+    const uncertaintyMs = after - before;
+    const monotonicMs = before + uncertaintyMs / 2;
+    if (
+      !Number.isFinite(before) ||
+      before < 0 ||
+      !Number.isFinite(after) ||
+      after < 0 ||
+      !Number.isFinite(monotonicMs) ||
+      monotonicMs < 0 ||
+      !Number.isSafeInteger(utcMs) ||
+      utcMs < 0 ||
+      !Number.isFinite(uncertaintyMs) ||
+      uncertaintyMs < 0 ||
+      uncertaintyMs > 10
+    )
+      return;
+    ignoreRejectedObservation(
+      output(
+        JSON.stringify({
+          event: 'TEST_SUBMIT_CLOCK',
+          version: 1,
+          requestId,
+          boundary,
+          monotonicMs,
+          utcMs,
+          uncertaintyMs,
+        }),
+      ),
+    );
+  } catch {
+    // Clock alignment is optional and cannot suppress the timing observation.
+  }
+}
+
 /** Private TEST diagnostics: no DTO, persisted evidence or arbitrary log payload. */
 export function createSubmitTimingObserver(
   environment: string,
   context: SubmitTimingContext,
   flag = process.env.ALUNZA_TEST_SUBMIT_TIMINGS,
   output: (line: string) => void = (line) => console.log(line),
+  continuousFlag = process.env.ALUNZA_TEST_SUBMIT_CONTINUOUS_DIAGNOSTICS,
 ): SubmitTimingObserver | undefined {
   if (environment !== 'test' || flag !== '1') return undefined;
+  let clockStarted = false;
+  let clockEnded = false;
   return (timing) => {
     // Diagnostics are optional even when the observer or stdout is unavailable.
     try {
@@ -115,6 +161,16 @@ export function createSubmitTimingObserver(
         (context.executionId !== undefined && !isUuid(context.executionId))
       )
         return;
+      if (continuousFlag === '1' && timing.source === 'submission') {
+        if (!clockStarted) {
+          clockStarted = true;
+          emitSubmitClockAnchor(context.requestId, 'start', output);
+        }
+        if (timing.phase === 'total' && !clockEnded) {
+          clockEnded = true;
+          emitSubmitClockAnchor(context.requestId, 'end', output);
+        }
+      }
       const observed = observedAtMs();
       if (observed === undefined) return;
       ignoreRejectedObservation(

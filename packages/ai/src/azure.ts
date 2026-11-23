@@ -1,9 +1,5 @@
-import OpenAI from 'openai';
-import {
-  AzureCliCredential,
-  ManagedIdentityCredential,
-  getBearerTokenProvider,
-} from '@azure/identity';
+import type OpenAI from 'openai';
+import { createAzureClient } from './azure-client';
 import { z } from 'zod';
 import { AiBoundaryError, validateVectors } from './ports';
 import type {
@@ -152,26 +148,7 @@ export class AzureAiAdapter implements EmbeddingsPort, GenerationPort {
       model: config.embeddingModel,
       dimensions: config.dimensions,
     };
-    this.client = new OpenAI({
-      baseURL: config.baseURL,
-      apiKey:
-        config.authMode === 'api-key'
-          ? config.apiKey
-          : getBearerTokenProvider(
-              config.authMode === 'managed-identity'
-                ? new ManagedIdentityCredential(
-                    config.managedIdentityClientId
-                      ? { clientId: config.managedIdentityClientId }
-                      : {},
-                  )
-                : new AzureCliCredential(),
-              'https://ai.azure.com/.default',
-            ),
-      maxRetries: 0,
-      timeout: 15000,
-      logLevel: 'off',
-      ...(transport ? { fetch: transport } : {}),
-    });
+    this.client = createAzureClient(config, transport);
   }
   async embed(
     texts: readonly string[],

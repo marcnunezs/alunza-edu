@@ -1,0 +1,7 @@
+{
+  "recordedAt": "2026-10-23T05:31:24.814Z",
+  "status": "passed",
+  "environment": "isolated-local",
+  "source": "IMP-02 canonical academic dataset",
+  "preservation": "all institutional, academic, published-version and test rows unchanged"
+}

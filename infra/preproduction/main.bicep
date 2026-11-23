@@ -11,6 +11,10 @@ param authOrigin string
 @minLength(40)
 @maxLength(40)
 param releaseId string
+// Renderer validates lower-case alphanumeric; change for a configuration-only
+// rollout of the same immutable image. No deployment is triggered by this value.
+@maxLength(8)
+param rolloutId string = ''
 param approvedUntil string
 @minValue(1)
 @maxValue(265000)
@@ -41,6 +45,14 @@ param sandboxImage string = ''
 param sandboxRegion string = ''
 param sandboxTeamId string = ''
 param sandboxProjectId string = ''
+// Admission and recovery are independently switchable during a rollback.
+// Recovery keeps one API replica alive even after new work is disabled.
+param practiceRunnerEnabled bool = false
+@allowed(['docker', 'vercel'])
+param practiceRunnerProvider string = 'docker'
+param sandboxRecoveryEnabled bool = false
+@secure()
+param sandboxCampaign string = ''
 @allowed(['probe:ai', 'probe:sandbox'])
 param jobOperation string = 'probe:ai'
 @minValue(60)
@@ -139,16 +151,31 @@ resource api 'Microsoft.App/containerApps@2025-07-01' = if (deployWorkloads) {
       maxInactiveRevisions: 2
       ingress: { external: true, targetPort: 4000, transport: 'http', allowInsecure: false }
       registries: [{ server: registry.properties.loginServer, identity: identity.id }]
-      secrets: [{ name: 'database-url', value: databaseUrl }, { name: 'database-ca', value: databaseSslCa }]
+      secrets: concat(
+        [{ name: 'database-url', value: databaseUrl }, { name: 'database-ca', value: databaseSslCa }],
+        practiceRunnerProvider == 'vercel' ? [
+          { name: 'vercel-token', value: vercelToken }
+          { name: 'sandbox-campaign', value: sandboxCampaign }
+        ] : []
+      )
     }
     template: {
-      revisionSuffix: 'r-${take(releaseId, 12)}'
-      terminationGracePeriodSeconds: 15
+      revisionSuffix: empty(rolloutId) ? 'r-${take(releaseId, 12)}' : 'r-${take(releaseId, 12)}-${rolloutId}'
+      terminationGracePeriodSeconds: 60
+      volumes: practiceRunnerProvider == 'vercel' ? [{
+        name: 'sandbox-configuration'
+        storageType: 'Secret'
+        secrets: [{ secretRef: 'sandbox-campaign', path: 'campaign.json' }]
+      }] : []
       containers: [{
         name: 'api'
         image: apiImage
         resources: { cpu: json('0.5'), memory: '1Gi' }
-        env: [
+        volumeMounts: practiceRunnerProvider == 'vercel' ? [{
+          volumeName: 'sandbox-configuration'
+          mountPath: '/var/run/alunza-sandbox'
+        }] : []
+        env: concat([
           { name: 'HOST', value: '0.0.0.0' }
           { name: 'PORT', value: '4000' }
           { name: 'ENVIRONMENT', value: 'preproduction' }
@@ -160,14 +187,23 @@ resource api 'Microsoft.App/containerApps@2025-07-01' = if (deployWorkloads) {
           { name: 'SUPABASE_JWT_AUDIENCE', value: 'authenticated' }
           { name: 'DATABASE_URL', secretRef: 'database-url' }
           { name: 'DATABASE_SSL_CA', secretRef: 'database-ca' }
-        ]
+          { name: 'PRACTICE_RUNNER_ENABLED', value: practiceRunnerEnabled ? 'true' : 'false' }
+          { name: 'PRACTICE_RUNNER_PROVIDER', value: practiceRunnerProvider }
+        ], practiceRunnerProvider == 'vercel' ? [
+          { name: 'VERCEL_TOKEN', secretRef: 'vercel-token' }
+          { name: 'SANDBOX_TEAM_ID', value: sandboxTeamId }
+          { name: 'SANDBOX_PROJECT_ID', value: sandboxProjectId }
+          { name: 'SANDBOX_REGION', value: sandboxRegion }
+          { name: 'SANDBOX_IMAGE', value: sandboxImage }
+          { name: 'SANDBOX_CAMPAIGN_FILE', value: '/var/run/alunza-sandbox/campaign.json' }
+        ] : [])
         probes: [
           { type: 'Startup', httpGet: { path: '/health/live', port: 4000, scheme: 'HTTP' }, periodSeconds: 2, timeoutSeconds: 2, failureThreshold: 30 }
           { type: 'Liveness', httpGet: { path: '/health/live', port: 4000, scheme: 'HTTP' }, periodSeconds: 15, timeoutSeconds: 3, failureThreshold: 3 }
           { type: 'Readiness', httpGet: { path: '/health/ready', port: 4000, scheme: 'HTTP' }, periodSeconds: 10, timeoutSeconds: 5, failureThreshold: 3 }
         ]
       }]
-      scale: { minReplicas: 0, maxReplicas: 1 }
+      scale: { minReplicas: practiceRunnerEnabled || sandboxRecoveryEnabled || (practiceRunnerProvider == 'vercel' && !empty(sandboxCampaign)) ? 1 : 0, maxReplicas: 1 }
     }
   }
   dependsOn: [pullPermission]

@@ -1,17 +1,24 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { root, run, doctor, redactDiagnostics } from './local.mjs';
-import { publicTestEnvironment, report } from './test-environment.mjs';
-import { sourceFingerprint } from './source-fingerprint.mjs';
+import { summarizeUnitFailures } from './ci-unit-failures.mjs';
+import { captureSignalCandidate } from './signals-candidate.mjs';
+import {
+  publicTestEnvironment,
+  report,
+  testContext,
+} from './test-environment.mjs';
 
 const npm = process.env.npm_execpath;
 if (!npm) throw new Error('Ejecuta npm run ci:verify desde la raíz Git.');
 const staticEnvironment = publicTestEnvironment({
-  authUrl: 'http://127.0.0.1:16421',
+  authUrl: testContext.authUrl,
   publishableKey: 'sb_publishable_static_configuration_only',
 });
 const steps = [];
+let candidate;
 try {
+  candidate = await captureSignalCandidate('ci-start');
   await doctor();
   for (const args of [
     ['run', 'format:check'],
@@ -21,13 +28,18 @@ try {
     ['run', 'runner:prepare'],
     ['run', 'runner:doctor'],
     ['run', 'runner:probe', '--', '--adapter', 'docker'],
-    ['run', 'test:migration:practice'],
+    ['run', 'test:academic:fixtures'],
     ['run', 'cypress:install'],
     ['run', 'test:integration'],
     ['run', 'test:practice:performance'],
     ['run', 'test:practice:performance', '--', '--submit'],
+    // Three consecutive identical profiles retain every sample and the same
+    // p95 gate; a failure stops CI instead of selecting a favorable rerun.
+    ['run', 'test:practice:performance', '--', '--submit'],
+    ['run', 'test:practice:performance', '--', '--submit'],
     ['run', 'test:ai:integration'],
     ['run', 'test:e2e'],
+    ['run', 'test:help:evaluation'],
   ]) {
     const command = `npm ${args.join(' ')}`;
     console.log(`Verificando: ${command}`);
@@ -54,13 +66,24 @@ try {
     } catch (error) {
       entry.status = 'failed';
       let diagnostic = error.output ?? error.message;
-      try {
-        const state = JSON.parse(
-          await readFile(
-            join(root, '.local/integration-workspace/.local/runtime.json'),
-            'utf8',
-          ),
+      if (args.length === 1 && args[0] === 'test') {
+        try {
+          const tracked = await run('git', ['ls-files', '-z']);
+          entry.unitFailures = summarizeUnitFailures(
+            diagnostic,
+            tracked.stdout.split('\0').filter(Boolean),
+          );
+        } catch {
+          entry.unitFailures = { failedTestFiles: [] };
+        }
+        // Only source paths from the tracked test inventory may be public.
+        // Assertions, test data and the complete log remain private.
+        console.error(
+          JSON.stringify({ event: 'CI_UNIT_FAILURES', ...entry.unitFailures }),
         );
+      }
+      try {
+        const state = JSON.parse(await readFile(testContext.statePath, 'utf8'));
         for (const field of [
           'fixturePassword',
           'applicationPassword',
@@ -73,11 +96,11 @@ try {
       } catch {
         /* State may not exist before infrastructure starts. */
       }
-      await mkdir(join(root, '.local/evidence/imp-03'), {
+      await mkdir(join(root, '.local/evidence/imp-03-submissions'), {
         recursive: true,
       });
       await writeFile(
-        join(root, '.local/evidence/imp-03/ci-error.log'),
+        join(root, '.local/evidence/imp-03-submissions/ci-error.log'),
         redactDiagnostics(diagnostic),
         { mode: 0o600 },
       );
@@ -90,6 +113,9 @@ try {
     }
     console.log(`Aprobado: ${command}`);
   }
+  const verifiedCandidate = await captureSignalCandidate('ci-end');
+  if (verifiedCandidate.sourceDigest !== candidate.sourceDigest)
+    throw new Error('Las fuentes del candidato cambiaron durante la CI.');
   await report(
     'ci',
     {
@@ -97,9 +123,8 @@ try {
       execution:
         process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
       steps,
-      source: await sourceFingerprint(),
     },
-    'imp-03',
+    'imp-03-submissions',
   );
 } catch (error) {
   await report(
@@ -110,8 +135,50 @@ try {
         process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
       steps,
     },
-    'imp-03',
+    'imp-03-submissions',
   );
   console.error(error.message);
   process.exitCode = 1;
 }
+await report(
+  'ci',
+  {
+    status: process.exitCode === 1 ? 'failed' : 'passed',
+    execution:
+      process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
+    embeddings: 'explicit-test-double',
+    azureRemote: 'not-tested',
+    academicAcceptance: 'pending',
+    steps,
+  },
+  'imp-04',
+);
+await report(
+  'ci',
+  {
+    status: process.exitCode === 1 ? 'failed' : 'passed',
+    execution:
+      process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
+    azureRemote: 'not-tested',
+    sandboxRemote: 'not-tested',
+    academicAcceptance: 'pending',
+    candidate,
+    steps,
+  },
+  'imp-05',
+);
+await report(
+  'ci',
+  {
+    status: process.exitCode === 1 ? 'failed' : 'passed',
+    execution:
+      process.env.GITHUB_ACTIONS === 'true' ? 'github-actions' : 'local',
+    increment: 'IMP-06.07',
+    azureRemote: 'not-tested',
+    sandboxRemote: 'not-tested',
+    academicAcceptance: 'pending',
+    candidate,
+    steps,
+  },
+  'imp-06',
+);

@@ -1,6 +1,6 @@
 import type { SubmitTechnicalResult } from '@alunza/contracts';
 import { failedRun } from './execution.port';
-import type { ExecutionPreparation } from './execution.port';
+import type { ExecutionContext, ExecutionAuthority } from './execution.port';
 
 export interface SubmissionTest {
   id: string;
@@ -9,7 +9,6 @@ export interface SubmissionTest {
   expected: unknown;
 }
 export interface SubmissionExecutionInput {
-  limits: { memoryBytes: number; runtimeMs: number; outputBytes: number };
   executionId: string;
   requestId: string;
   exerciseVersionId: string;
@@ -27,7 +26,8 @@ export interface CanonicalSubmissionResult {
 export abstract class SubmissionExecutionPort {
   abstract execute(
     input: SubmissionExecutionInput,
-    preparation?: ExecutionPreparation,
+    context?: ExecutionContext,
+    authority?: ExecutionAuthority,
   ): Promise<CanonicalSubmissionResult & { cleanupVerified: boolean }>;
 }
 export function failedSubmission(

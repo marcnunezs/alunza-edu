@@ -4,44 +4,115 @@ import {
   type AttemptSummary,
   type SubmitAttemptInput,
 } from '@alunza/contracts';
-import { draftKey, type DraftScope } from './academic-local';
+import type { DraftScope } from './exercise-draft';
 
 export type PendingAttempt = {
   key: string;
   input: SubmitAttemptInput;
   createdAt: number;
+  recovery?: {
+    kind: 'uncertain' | 'not-admitted';
+    retryAt?: number;
+  };
 };
-const pendingSchema = z.strictObject({
+export const PENDING_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const pendingOperationSchema = z.strictObject({
   key: z.uuid(),
   input: submitAttemptInputSchema,
   createdAt: z.number().int().nonnegative(),
-  scope: z.strictObject({
-    accountId: z.string().min(1),
-    organizationId: z.string().min(1),
-    classId: z.string().min(1),
-    assignmentId: z.string().min(1),
-    versionId: z.string().min(1),
-  }),
 });
+const legacyPendingSchema = z.array(pendingOperationSchema).max(2);
+const currentPendingOperationSchema = pendingOperationSchema.extend({
+  schemaVersion: z.literal(2),
+  recovery: z
+    .strictObject({
+      kind: z.enum(['uncertain', 'not-admitted']),
+      retryAt: z.number().int().nonnegative().optional(),
+    })
+    .optional(),
+});
+const storedPendingOperationSchema = z.union([
+  currentPendingOperationSchema.transform(
+    ({ schemaVersion: _version, ...item }) => item,
+  ),
+  pendingOperationSchema,
+]);
 
-// Session-only recovery records share the draft prefix and its logout cleanup.
 export function pendingAttemptsKey(scope: DraftScope) {
-  return `${draftKey(scope)}:pending:`;
+  return (
+    'alunza.pending-attempts.v1:' +
+    [
+      scope.userId,
+      scope.organizationId,
+      scope.classId,
+      scope.assignmentId,
+      scope.exerciseVersionId,
+    ]
+      .map(encodeURIComponent)
+      .join(':')
+  );
 }
+
+function operationStorageKey(scope: DraftScope, key: string) {
+  return `${pendingAttemptsKey(scope)}:${key}`;
+}
+
+// The earlier browser format stored one array per scope. Preserve every entry
+// before removing that array; all subsequent writes affect individual keys.
+function migratePendingAttempts(storage: Storage, scope: DraftScope): boolean {
+  const legacyKey = pendingAttemptsKey(scope);
+  const raw = storage.getItem(legacyKey);
+  if (!raw) return false;
+  let parsed;
+  try {
+    parsed = legacyPendingSchema.safeParse(JSON.parse(raw));
+  } catch {
+    storage.removeItem(legacyKey);
+    return true;
+  }
+  if (
+    !parsed.success ||
+    parsed.data.some(
+      (item) => item.input.exerciseVersionId !== scope.exerciseVersionId,
+    ) ||
+    new Set(parsed.data.map((item) => item.key)).size !== parsed.data.length
+  ) {
+    storage.removeItem(legacyKey);
+    return true;
+  }
+  for (const item of parsed.data) {
+    const key = operationStorageKey(scope, item.key);
+    if (storage.getItem(key) === null)
+      storage.setItem(key, JSON.stringify(item));
+  }
+  storage.removeItem(legacyKey);
+  return false;
+}
+
+// Access is checked by the editor before reading. Local storage is never proof
+// of admission: recovery always submits the original operation to the API.
 export function readPendingAttempts(
   storage: Storage,
   scope: DraftScope,
-): { operations: PendingAttempt[]; unavailable: boolean } {
+  now = Date.now(),
+): {
+  operations: PendingAttempt[];
+  unavailable: boolean;
+} {
   try {
-    const operations: PendingAttempt[] = [];
-    let unavailable = false;
-    const prefix = pendingAttemptsKey(scope);
+    let unavailable = migratePendingAttempts(storage, scope);
+    const prefix = `${pendingAttemptsKey(scope)}:`;
+    const keys: string[] = [];
+    // Snapshot keys before expiration removes any entries and shifts indexes.
     for (let index = 0; index < storage.length; index++) {
       const key = storage.key(index);
-      if (!key?.startsWith(prefix)) continue;
+      if (key?.startsWith(prefix)) keys.push(key);
+    }
+    const operations: PendingAttempt[] = [];
+    for (const key of keys) {
       let parsed;
       try {
-        parsed = pendingSchema.safeParse(
+        parsed = storedPendingOperationSchema.safeParse(
           JSON.parse(storage.getItem(key) ?? 'null'),
         );
       } catch {
@@ -49,18 +120,14 @@ export function readPendingAttempts(
       }
       if (
         !parsed?.success ||
-        `${prefix}${parsed.data.key}` !== key ||
-        parsed.data.input.exerciseVersionId !== scope.versionId
-      )
+        operationStorageKey(scope, parsed.data.key) !== key ||
+        parsed.data.input.exerciseVersionId !== scope.exerciseVersionId ||
+        parsed.data.createdAt > now ||
+        now - parsed.data.createdAt >= PENDING_RETENTION_MS
+      ) {
+        storage.removeItem(key);
         unavailable = true;
-      else if (pendingAttemptsKey(parsed.data.scope) !== prefix)
-        unavailable = true;
-      else
-        operations.push({
-          key: parsed.data.key,
-          input: parsed.data.input,
-          createdAt: parsed.data.createdAt,
-        });
+      } else operations.push(parsed.data);
     }
     operations.sort(
       (a, b) => a.createdAt - b.createdAt || a.key.localeCompare(b.key),
@@ -70,6 +137,7 @@ export function readPendingAttempts(
     return { operations: [], unavailable: true };
   }
 }
+
 export function savePendingAttempts(
   storage: Storage,
   scope: DraftScope,
@@ -77,54 +145,22 @@ export function savePendingAttempts(
   removedKeys: string[] = [],
 ) {
   try {
+    migratePendingAttempts(storage, scope);
+    // Keep the existing scoped keys and read v1 entries; the value is versioned
+    // so older pending requests do not lose their key or captured input.
     for (const operation of operations)
       storage.setItem(
-        `${pendingAttemptsKey(scope)}${operation.key}`,
-        JSON.stringify({ ...operation, scope }),
+        operationStorageKey(scope, operation.key),
+        JSON.stringify({ schemaVersion: 2, ...operation }),
       );
     for (const key of removedKeys)
-      storage.removeItem(`${pendingAttemptsKey(scope)}${key}`);
+      storage.removeItem(operationStorageKey(scope, key));
     return true;
   } catch {
     return false;
   }
 }
 
-// A closed exercise no longer provides its template or class/version projection.
-// Recover only records already captured for this account and route; the POST
-// still performs current server authorization before returning any result.
-export function pendingScopesForAssignment(
-  storage: Storage,
-  accountId: string,
-  organizationId: string,
-  assignmentId: string,
-): DraftScope[] {
-  const scopes = new Map<string, DraftScope>();
-  for (let index = 0; index < storage.length; index++) {
-    const key = storage.key(index);
-    if (!key?.includes(':pending:')) continue;
-    let parsed;
-    try {
-      parsed = pendingSchema.safeParse(
-        JSON.parse(storage.getItem(key) ?? 'null'),
-      );
-    } catch {
-      continue;
-    }
-    if (!parsed.success) continue;
-    const { scope, input, key: operationKey } = parsed.data;
-    if (
-      scope.accountId !== accountId ||
-      scope.organizationId !== organizationId ||
-      scope.assignmentId !== assignmentId ||
-      scope.versionId !== input.exerciseVersionId ||
-      key !== `${pendingAttemptsKey(scope)}${operationKey}`
-    )
-      continue;
-    scopes.set(pendingAttemptsKey(scope), scope);
-  }
-  return [...scopes.values()];
-}
 export function compareAttempts(first: AttemptSummary, second: AttemptSummary) {
   if (
     first.attemptId === second.attemptId ||

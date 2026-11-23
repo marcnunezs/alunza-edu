@@ -1,341 +1,423 @@
 import { z } from 'zod';
 
-const name = z.string().trim().min(1).max(160);
-const description = z.string().trim().max(10000);
-const code = z
+// PostgreSQL UTF-8 text and JSON equality cannot represent NUL or lone UTF-16
+// surrogates. Reject them at the field boundary instead of failing persistence.
+function persistableText(value: string): boolean {
+  for (const character of value) {
+    const point = character.codePointAt(0)!;
+    if (point === 0 || (point >= 0xd800 && point <= 0xdfff)) return false;
+  }
+  return true;
+}
+const text = z
   .string()
-  .trim()
-  .toUpperCase()
-  .min(1)
-  .max(40)
-  .regex(/^[A-Z0-9_-]+$/);
-const date = z.iso.date().nullable();
-const instant = z.iso.datetime({ offset: true });
+  .refine(
+    persistableText,
+    'El texto contiene caracteres Unicode no admitidos.',
+  );
+function persistableJson(value: z.infer<ReturnType<typeof z.json>>): boolean {
+  if (typeof value === 'string') return persistableText(value);
+  if (Array.isArray(value)) return value.every(persistableJson);
+  if (value !== null && typeof value === 'object')
+    return Object.entries(value).every(
+      ([key, item]) => persistableText(key) && persistableJson(item),
+    );
+  return true;
+}
+
+const id = z.uuid();
+const timestamp = z.iso.datetime({ offset: true });
+const date = z.iso.date();
+const name = text.trim().min(1).max(160);
+const description = text.trim().max(4000);
+const code = text.trim().toUpperCase().min(1).max(40);
 const revision = z.number().int().positive();
+const state = z.enum(['ACTIVE', 'ARCHIVED']);
 const page = z.strictObject({
   nextCursor: z.string().nullable(),
   hasMore: z.boolean(),
 });
-export const academicPageQuerySchema = z.strictObject({
-  cursor: z.uuid().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  search: z.string().trim().max(160).optional(),
-  state: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
+const envelope = <T extends z.ZodType>(schema: T) =>
+  z.strictObject({ data: schema, requestId: id });
+const list = <T extends z.ZodType>(schema: T) =>
+  z.strictObject({ data: z.array(schema), page, requestId: id });
+const dates = { startDate: date.nullable(), endDate: date.nullable() };
+const dateOrder = (value: {
+  startDate?: string | null;
+  endDate?: string | null;
+}) => !value.startDate || !value.endDate || value.startDate <= value.endDate;
+const nonempty = (value: object) => Object.keys(value).length > 0;
+
+export const courseSchema = z.strictObject({
+  id,
+  organizationId: id,
+  code,
+  name,
+  description,
+  academicPeriod: text.min(1).max(80),
+  ...dates,
+  revision,
+  state,
 });
-export const academicArchiveSchema = z.strictObject({});
-const academicFields = {
+const courseFields = {
   code,
   name,
   description: description.default(''),
-  startDate: date.default(null),
-  endDate: date.default(null),
+  academicPeriod: text.trim().min(1).max(80),
+  startDate: date.nullable().default(null),
+  endDate: date.nullable().default(null),
 };
-export const courseCreateSchema = z.strictObject({
-  ...academicFields,
-  academicPeriod: z.string().trim().min(1).max(80),
-});
-const academicUpdateFields = {
-  code: code.optional(),
-  name: name.optional(),
-  description: description.optional(),
-  startDate: date.optional(),
-  endDate: date.optional(),
-};
+export const courseCreateSchema = z
+  .strictObject(courseFields)
+  .refine(dateOrder, {
+    message: 'La fecha final no puede preceder al inicio.',
+    path: ['endDate'],
+  });
 export const courseUpdateSchema = z
-  .strictObject({
-    ...academicUpdateFields,
-    academicPeriod: z.string().trim().min(1).max(80).optional(),
-  })
-  .refine((v) => Object.keys(v).length > 0, 'Indica al menos un cambio.');
-export const classCreateSchema = z.strictObject({
-  ...academicFields,
-  courseId: z.uuid(),
-  teacherId: z.uuid().optional(),
+  .strictObject(courseFields)
+  .partial()
+  .refine(nonempty, 'Indica al menos un cambio.')
+  .refine(dateOrder, { message: 'Fechas incoherentes.', path: ['endDate'] });
+export const courseTeacherGrantSchema = z.strictObject({
+  enabled: z.boolean(),
 });
-export const classUpdateSchema = z
-  .strictObject(academicUpdateFields)
-  .refine((v) => Object.keys(v).length > 0, 'Indica al menos un cambio.');
-export const classTeacherSchema = z.strictObject({ teacherId: z.uuid() });
-const entityFields = {
-  id: z.uuid(),
-  organizationId: z.uuid(),
-  revision,
-  state: z.enum(['ACTIVE', 'ARCHIVED']),
-  archivedAt: instant.nullable(),
-};
-export const courseSchema = z.strictObject({
-  ...entityFields,
-  ...academicFields,
-  academicPeriod: z.string(),
+export const courseTeacherSchema = z.strictObject({
+  courseId: id,
+  teacherId: id,
+  teacherName: name,
+  enabled: z.boolean(),
 });
-export const academicClassSchema = z.strictObject({
-  ...entityFields,
-  ...academicFields,
-  courseId: z.uuid(),
-  teacherId: z.uuid(),
-});
-export const joinCodeCreateSchema = z.strictObject({
-  expiresAt: instant.optional(),
-});
-export const joinCodeSchema = z.strictObject({
-  id: z.uuid(),
-  classId: z.uuid(),
-  expiresAt: instant,
-  revokedAt: instant.nullable(),
-  usesCount: z.number().int().nonnegative(),
-  revision,
-});
-export const issuedJoinCodeSchema = joinCodeSchema.extend({ code: z.string() });
-export const classEnrollmentInputSchema = z.strictObject({
-  organizationId: z.uuid(),
-  code: z.string().trim().toUpperCase().min(8).max(80),
-});
-export const classJoinPreviewSchema = z.strictObject({
-  classId: z.uuid(),
-  className: z.string(),
-  courseName: z.string(),
-  expiresAt: instant,
-  alreadyEnrolled: z.boolean(),
-});
-export const classEnrollmentSchema = z.strictObject({
-  id: z.uuid(),
-  organizationId: z.uuid(),
-  classId: z.uuid(),
-  userId: z.uuid(),
-  joinedAt: instant,
-  alreadyEnrolled: z.boolean(),
-});
+export const teacherAssignmentSchema = z.strictObject({ teacherId: id });
+export const courseResponseSchema = envelope(courseSchema);
+export const courseListResponseSchema = list(courseSchema);
+export const courseTeacherListResponseSchema = list(courseTeacherSchema);
 
-export const conceptInputSchema = z.strictObject({
+export const classSchema = z.strictObject({
+  id,
+  organizationId: id,
+  courseId: id,
+  code,
+  name,
+  description,
+  ...dates,
+  teacherId: id,
+  teacherName: name,
+  revision,
+  state,
+});
+const classFields = {
+  code,
   name,
   description: description.default(''),
-  parentId: z.uuid().nullable().default(null),
+  startDate: date.nullable().default(null),
+  endDate: date.nullable().default(null),
+};
+export const classCreateSchema = z
+  .strictObject({ ...classFields, courseId: id, teacherId: id.optional() })
+  .refine(dateOrder, { message: 'Fechas incoherentes.', path: ['endDate'] });
+export const classUpdateSchema = z
+  .strictObject(classFields)
+  .partial()
+  .refine(nonempty, 'Indica al menos un cambio.')
+  .refine(dateOrder, { message: 'Fechas incoherentes.', path: ['endDate'] });
+export const classResponseSchema = envelope(classSchema);
+export const classListResponseSchema = list(classSchema);
+export const classStudentSchema = z.strictObject({
+  userId: id,
+  displayName: name,
+  enrolledAt: timestamp,
 });
-export const conceptUpdateSchema = z
-  .strictObject({
-    name: name.optional(),
-    description: description.optional(),
-    parentId: z.uuid().nullable().optional(),
-  })
-  .refine((v) => Object.keys(v).length > 0, 'Indica al menos un cambio.');
-export const conceptVersionSchema = z.strictObject({
-  id: z.uuid(),
-  conceptId: z.uuid(),
-  version: z.number().int().positive(),
-  name: z.string(),
-  description: z.string(),
-  parentId: z.uuid().nullable(),
-  createdAt: instant,
+export const classStudentListResponseSchema = list(classStudentSchema);
+export const academicArchiveSchema = z.strictObject({
+  reason: text.trim().min(1).max(500),
 });
+export const joinCodeCreateSchema = z.strictObject({
+  expiresAt: timestamp.optional(),
+});
+export const joinCodeSchema = z.strictObject({
+  id,
+  classId: id,
+  expiresAt: timestamp,
+  revokedAt: timestamp.nullable(),
+  revision,
+  code: z.string().min(16).max(128).optional(),
+});
+export const joinCodeResponseSchema = envelope(joinCodeSchema);
+export const joinCodeListResponseSchema = list(
+  joinCodeSchema.omit({ code: true }),
+);
+export const enrollmentInputSchema = z.strictObject({
+  code: z.string().trim().min(1).max(128),
+});
+export const enrollmentSchema = z.strictObject({
+  organizationId: id,
+  classId: id,
+  className: name,
+  alreadyEnrolled: z.boolean(),
+});
+export const enrollmentResponseSchema = envelope(enrollmentSchema);
+
 export const conceptSchema = z.strictObject({
-  ...entityFields,
-  currentVersionId: z.uuid(),
-  name: z.string(),
-  description: z.string(),
-  parentId: z.uuid().nullable(),
-  version: z.number().int().positive(),
-  usesCount: z.number().int().nonnegative(),
+  id,
+  organizationId: id,
+  currentVersionId: id,
+  name,
+  description,
+  parentId: id.nullable(),
+  revision,
+  state,
+  references: z.number().int().nonnegative(),
 });
-export const exerciseDifficultySchema = z.enum([
-  'BASIC',
+export const conceptCreateSchema = z.strictObject({
+  name,
+  description: description.default(''),
+  parentId: id.nullable().default(null),
+});
+export const conceptUpdateSchema = conceptCreateSchema
+  .partial()
+  .refine(nonempty, 'Indica al menos un cambio.');
+export const conceptResponseSchema = envelope(conceptSchema);
+export const conceptListResponseSchema = list(conceptSchema);
+export function normalizeConceptName(value: string): string {
+  return value
+    .normalize('NFKC')
+    .trim()
+    .replace(/\s+/gu, ' ')
+    .toLocaleLowerCase('es');
+}
+
+export const academicExecutionLimits = Object.freeze({
+  memoryBytes: 134217728,
+  runtimeMs: 3000,
+  outputBytes: 65536,
+});
+export const executionLimitsSchema = z.strictObject({
+  memoryBytes: z.literal(134217728),
+  runtimeMs: z.literal(3000),
+  outputBytes: z.literal(65536),
+});
+export const difficultySchema = z.enum([
+  'BEGINNER',
   'INTERMEDIATE',
   'ADVANCED',
 ]);
-export const exerciseTestInputSchema = z.strictObject({
-  visibility: z.enum(['VISIBLE', 'HIDDEN']),
-  args: z.array(z.json()).max(20),
-  expected: z.json(),
-  comparator: z.literal('EXACT_DEEP').default('EXACT_DEEP'),
-});
-export const exerciseTestSchema = exerciseTestInputSchema.extend({
-  id: z.uuid(),
-});
-export const executionLimitsSchema = z.strictObject({
-  memoryBytes: z.number().int().min(1).max(134217728).default(134217728),
-  timeoutMs: z.number().int().min(1).max(3000).default(3000),
-  outputBytes: z.number().int().min(1).max(65536).default(65536),
-});
-export const exerciseVersionInputSchema = z.strictObject({
-  title: name,
-  statement: z.string().trim().min(1).max(10000),
-  starterCode: z
-    .string()
-    .max(65536)
+export const byteLength = (value: string) =>
+  new TextEncoder().encode(value).byteLength;
+const sourceCode = text
+  .max(65536)
+  .refine((value) => byteLength(value) <= 65536, 'El código supera 64 KiB.');
+const jsonValue = z
+  .json()
+  .refine(persistableJson, 'El JSON contiene caracteres Unicode no admitidos.')
+  .refine(
+    (value) => byteLength(JSON.stringify(value)) <= 65536,
+    'El valor JSON supera 64 KiB.',
+  );
+export const exerciseTestSchema = z.strictObject({
+  id: text.trim().min(1).max(100),
+  visibility: z.enum(['visible', 'hidden']),
+  args: z
+    .array(z.json())
     .refine(
-      (value) => new TextEncoder().encode(value).byteLength <= 65536,
-      'La plantilla supera 64 KiB UTF-8.',
-    ),
-  language: z.literal('javascript').default('javascript'),
-  difficulty: exerciseDifficultySchema,
-  entrypoint: z.literal('solve').default('solve'),
-  conceptVersionIds: z
-    .array(z.uuid())
-    .min(1)
-    .max(30)
-    .refine((v) => new Set(v).size === v.length, 'No repitas conceptos.'),
-  tests: z
-    .array(exerciseTestInputSchema)
-    .min(1)
-    .max(8)
-    .refine(
-      (v) => v.some((t) => t.visibility === 'VISIBLE'),
-      'Incluye al menos una prueba visible.',
+      persistableJson,
+      'Los argumentos contienen caracteres Unicode no admitidos.',
     )
     .refine(
-      (value) =>
-        new TextEncoder().encode(JSON.stringify(value)).byteLength <= 65536,
-      'Las pruebas superan 64 KiB UTF-8.',
+      (value) => byteLength(JSON.stringify(value)) <= 65536,
+      'Los argumentos superan 64 KiB.',
     ),
-  executionLimits: executionLimitsSchema.default({
-    memoryBytes: 134217728,
-    timeoutMs: 3000,
-    outputBytes: 65536,
-  }),
+  expected: jsonValue,
 });
-export const exerciseCreateSchema = exerciseVersionInputSchema.extend({
-  visibility: z.enum(['PRIVATE', 'ORGANIZATION']).default('PRIVATE'),
-});
-export const exerciseSummarySchema = z.strictObject({
-  ...entityFields,
-  ownerId: z.uuid(),
+function canonicalJson(value: z.infer<ReturnType<typeof z.json>>): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value !== null && typeof value === 'object') {
+    return `{${Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key]!)}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+const exerciseFields = {
+  title: name,
+  statement: text.trim().min(1).max(16000),
+  starterCode: sourceCode,
+  language: z.literal('javascript'),
+  entrypoint: z.literal('solve'),
+  difficulty: difficultySchema,
+  conceptVersionIds: z.array(id).min(1).max(30),
+  tests: z.array(exerciseTestSchema).min(1).max(8),
+  executionLimits: executionLimitsSchema,
+};
+export const exerciseVersionInputSchema = z
+  .strictObject(exerciseFields)
+  .superRefine((value, ctx) => {
+    if (
+      new Set(value.conceptVersionIds).size !== value.conceptVersionIds.length
+    )
+      ctx.addIssue({
+        code: 'custom',
+        path: ['conceptVersionIds'],
+        message: 'No repitas conceptos.',
+      });
+    if (!value.tests.some((test) => test.visibility === 'visible'))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['tests'],
+        message: 'Incluye al menos una prueba visible.',
+      });
+    const ids = new Set<string>();
+    const expectations = new Map<string, string>();
+    value.tests.forEach((test, index) => {
+      if (ids.has(test.id))
+        ctx.addIssue({
+          code: 'custom',
+          path: ['tests', index, 'id'],
+          message: 'Identificador de prueba duplicado.',
+        });
+      ids.add(test.id);
+      const key = canonicalJson(test.args),
+        expected = canonicalJson(test.expected);
+      if (expectations.has(key) && expectations.get(key) !== expected)
+        ctx.addIssue({
+          code: 'custom',
+          path: ['tests', index],
+          message: 'Las mismas entradas tienen resultados contradictorios.',
+        });
+      expectations.set(key, expected);
+    });
+  });
+export const exerciseSchema = z.strictObject({
+  id,
+  organizationId: id,
+  ownerId: id,
   visibility: z.enum(['PRIVATE', 'ORGANIZATION']),
-  currentVersionId: z.uuid(),
-  title: z.string(),
-  difficulty: exerciseDifficultySchema,
-  version: z.number().int().positive(),
+  state,
+  revision,
+  currentVersionId: id,
+  title: name,
+  difficulty: difficultySchema,
 });
 export const exerciseVersionSchema = z.strictObject({
-  id: z.uuid(),
-  exerciseId: z.uuid(),
-  version: z.number().int().positive(),
-  title: z.string(),
-  statement: z.string(),
-  starterCode: z.string(),
-  language: z.literal('javascript'),
-  difficulty: exerciseDifficultySchema,
-  entrypoint: z.literal('solve'),
-  conceptVersionIds: z.array(z.uuid()),
-  concepts: z.array(
-    z.strictObject({
-      id: z.uuid(),
-      versionId: z.uuid(),
-      name: z.string(),
-      version: z.number().int().positive(),
-    }),
-  ),
-  tests: z.array(exerciseTestSchema),
-  executionLimits: executionLimitsSchema,
-  createdAt: instant,
+  ...exerciseFields,
+  id,
+  exerciseId: id,
+  version: revision,
+  createdAt: timestamp,
 });
-export const exerciseDetailSchema = exerciseSummarySchema.extend({
-  currentVersion: exerciseVersionSchema,
-});
+export const exerciseResponseSchema = envelope(exerciseSchema);
+export const exerciseListResponseSchema = list(exerciseSchema);
+export const exerciseVersionResponseSchema = envelope(exerciseVersionSchema);
+export const exerciseVersionListResponseSchema = list(exerciseVersionSchema);
 
-export const activityExerciseInputSchema = z.strictObject({
-  exerciseVersionId: z.uuid(),
-  position: z.number().int().min(0).max(99),
-  required: z.boolean().default(true),
+export const activityStateSchema = z.enum(['DRAFT', 'PUBLISHED', 'CLOSED']);
+const activityExerciseInputSchema = z.strictObject({
+  exerciseVersionId: id,
+  position: z.number().int().nonnegative().max(99),
+  required: z.boolean(),
 });
-export const activityInputSchema = z.strictObject({
+const activityFields = {
   title: name,
+  instructions: description,
   type: z.enum(['DIAGNOSTIC', 'FORMATIVE']),
-  instructions: description.default(''),
-  opensAt: instant.nullable().default(null),
-  closesAt: instant.nullable().default(null),
-  exercises: z.array(activityExerciseInputSchema).max(100).default([]),
-});
+  opensAt: timestamp.nullable(),
+  closesAt: timestamp.nullable(),
+  exercises: z.array(activityExerciseInputSchema).max(100),
+};
+function activityRules(
+  value: {
+    opensAt?: string | null;
+    closesAt?: string | null;
+    exercises?: z.infer<typeof activityExerciseInputSchema>[];
+  },
+  ctx: z.RefinementCtx,
+) {
+  if (
+    value.opensAt &&
+    value.closesAt &&
+    Date.parse(value.opensAt) >= Date.parse(value.closesAt)
+  )
+    ctx.addIssue({
+      code: 'custom',
+      path: ['closesAt'],
+      message: 'El término debe ser posterior a la apertura.',
+    });
+  if (value.exercises) {
+    if (
+      new Set(value.exercises.map((item) => item.position)).size !==
+      value.exercises.length
+    )
+      ctx.addIssue({
+        code: 'custom',
+        path: ['exercises'],
+        message: 'Hay posiciones repetidas.',
+      });
+    if (
+      new Set(value.exercises.map((item) => item.exerciseVersionId)).size !==
+      value.exercises.length
+    )
+      ctx.addIssue({
+        code: 'custom',
+        path: ['exercises'],
+        message: 'Hay versiones repetidas.',
+      });
+  }
+}
+export const activityInputSchema = z
+  .strictObject(activityFields)
+  .superRefine(activityRules);
 export const activityUpdateSchema = z
-  .strictObject({
-    title: name.optional(),
-    type: z.enum(['DIAGNOSTIC', 'FORMATIVE']).optional(),
-    instructions: description.optional(),
-    opensAt: instant.nullable().optional(),
-    closesAt: instant.nullable().optional(),
-    exercises: z.array(activityExerciseInputSchema).max(100).optional(),
-  })
-  .refine((v) => Object.keys(v).length > 0, 'Indica al menos un cambio.');
-export const activityExerciseSchema = activityExerciseInputSchema.extend({
-  id: z.uuid(),
-  title: z.string(),
-  difficulty: exerciseDifficultySchema,
-});
+  .strictObject(activityFields)
+  .partial()
+  .refine(nonempty, 'Indica al menos un cambio.')
+  .superRefine(activityRules);
 export const activitySchema = z.strictObject({
-  id: z.uuid(),
-  organizationId: z.uuid(),
-  classId: z.uuid(),
+  id,
+  organizationId: id,
+  classId: id,
+  ...activityFields,
+  state: activityStateSchema,
   revision,
-  title: z.string(),
-  type: z.enum(['DIAGNOSTIC', 'FORMATIVE']),
-  instructions: z.string(),
-  state: z.enum(['DRAFT', 'PUBLISHED', 'CLOSED']),
-  opensAt: instant.nullable(),
-  closesAt: instant.nullable(),
-  publishedAt: instant.nullable(),
-  closedAt: instant.nullable(),
-  availability: z.enum([
-    'DRAFT',
-    'AVAILABLE',
-    'NOT_OPEN',
-    'EXPIRED',
-    'CLOSED',
-    'CLASS_ARCHIVED',
-  ]),
-  exercises: z.array(activityExerciseSchema),
-});
-export const studentExerciseSchema = z.strictObject({
-  activityId: z.uuid(),
-  activityExerciseId: z.uuid(),
-  organizationId: z.uuid(),
-  classId: z.uuid(),
-  exerciseVersionId: z.uuid(),
-  title: z.string(),
-  statement: z.string(),
-  starterCode: z.string(),
-  language: z.literal('javascript'),
-  difficulty: exerciseDifficultySchema,
-  entrypoint: z.literal('solve'),
-  concepts: z.array(
-    z.strictObject({ id: z.uuid(), versionId: z.uuid(), name: z.string() }),
+  publishedAt: timestamp.nullable(),
+  closedAt: timestamp.nullable(),
+  exercises: z.array(
+    activityExerciseInputSchema.extend({ id, exerciseId: id, title: name }),
   ),
+});
+export const activityResponseSchema = envelope(activitySchema);
+export const activityListResponseSchema = list(activitySchema);
+export const studentExerciseSchema = z.strictObject({
+  organizationId: id,
+  classId: id,
+  activityId: id,
+  activityExerciseId: id,
+  exerciseVersionId: id,
+  activityState: activityStateSchema,
+  canEdit: z.boolean(),
+  opensAt: timestamp.nullable(),
+  closesAt: timestamp.nullable(),
+  serverNow: timestamp,
+  title: name,
+  statement: exerciseFields.statement,
+  starterCode: sourceCode,
+  difficulty: difficultySchema,
+  concepts: z.array(z.strictObject({ id, versionId: id, name, description })),
   tests: z.array(
-    exerciseTestSchema.extend({ visibility: z.literal('VISIBLE') }),
+    exerciseTestSchema.extend({ visibility: z.literal('visible') }),
   ),
   executionLimits: executionLimitsSchema,
 });
+export const studentExerciseResponseSchema = envelope(studentExerciseSchema);
 
-const response = <T extends z.ZodType>(schema: T) =>
-  z.strictObject({ data: schema, requestId: z.uuid() });
-const listResponse = <T extends z.ZodType>(schema: T) =>
-  z.strictObject({ data: z.array(schema), page, requestId: z.uuid() });
-export const courseResponseSchema = response(courseSchema);
-export const courseListResponseSchema = listResponse(courseSchema);
-export const academicClassResponseSchema = response(academicClassSchema);
-export const academicClassListResponseSchema =
-  listResponse(academicClassSchema);
-export const joinCodeResponseSchema = response(joinCodeSchema);
-export const issuedJoinCodeResponseSchema = response(issuedJoinCodeSchema);
-export const joinCodeListResponseSchema = listResponse(joinCodeSchema);
-export const classJoinPreviewResponseSchema = response(classJoinPreviewSchema);
-export const classEnrollmentResponseSchema = response(classEnrollmentSchema);
-export const conceptResponseSchema = response(conceptSchema);
-export const conceptListResponseSchema = listResponse(conceptSchema);
-export const conceptVersionListResponseSchema =
-  listResponse(conceptVersionSchema);
-export const exerciseResponseSchema = response(exerciseDetailSchema);
-export const exerciseListResponseSchema = listResponse(exerciseSummarySchema);
-export const exerciseVersionListResponseSchema = listResponse(
-  exerciseVersionSchema,
-);
-export const exerciseArchiveResponseSchema = response(exerciseSummarySchema);
-export const activityResponseSchema = response(activitySchema);
-export const activityListResponseSchema = listResponse(activitySchema);
-export const studentExerciseResponseSchema = response(studentExerciseSchema);
 export type Course = z.infer<typeof courseSchema>;
-export type AcademicClass = z.infer<typeof academicClassSchema>;
+export type CourseTeacher = z.infer<typeof courseTeacherSchema>;
+export type AcademicClass = z.infer<typeof classSchema>;
 export type JoinCode = z.infer<typeof joinCodeSchema>;
+export type Enrollment = z.infer<typeof enrollmentSchema>;
 export type Concept = z.infer<typeof conceptSchema>;
-export type Exercise = z.infer<typeof exerciseDetailSchema>;
-export type ExerciseSummary = z.infer<typeof exerciseSummarySchema>;
+export type Exercise = z.infer<typeof exerciseSchema>;
 export type ExerciseVersion = z.infer<typeof exerciseVersionSchema>;
+export type ExerciseVersionInput = z.infer<typeof exerciseVersionInputSchema>;
 export type Activity = z.infer<typeof activitySchema>;
+export type ActivityInput = z.infer<typeof activityInputSchema>;
 export type StudentExercise = z.infer<typeof studentExerciseSchema>;

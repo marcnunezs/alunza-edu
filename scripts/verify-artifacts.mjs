@@ -1,14 +1,21 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  developmentTarget,
+  testTarget,
+  testWorkspaceDirectory,
+  assertRuntimeTarget,
+} from './local-target.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const isolated = process.env.ALUNZA_E2E_BUILD === '1';
-const stateRoot = isolated ? join(root, '.local/integration-workspace') : root;
+const stateRoot = isolated ? join(root, testWorkspaceDirectory) : root;
 const buildDirectory = join(root, 'apps/web', isolated ? '.next-e2e' : '.next');
 const privateState = JSON.parse(
   await readFile(join(stateRoot, '.local/runtime.json'), 'utf8'),
 );
+assertRuntimeTarget(privateState, isolated ? testTarget : developmentTarget);
 const signingKeys = JSON.parse(
   await readFile(join(stateRoot, 'supabase/signing_keys.json'), 'utf8'),
 );
@@ -21,6 +28,12 @@ const secrets = [
 ].filter((value) => typeof value === 'string' && value.length > 15);
 if (secrets.length < 5)
   throw new Error('Falta estado local para comprobar los secretos reales.');
+// Private test canaries belong only to the Node acceptance fixtures.
+secrets.push(
+  'hidden-sentinel-e2e',
+  'IMP02_PRIVATE_EXPECTATION_DO_NOT_EXPOSE',
+  'hidden-run-sentinel',
+);
 if (process.env.ALUNZA_ARTIFACT_CANARIES) {
   const canaries = JSON.parse(process.env.ALUNZA_ARTIFACT_CANARIES);
   if (

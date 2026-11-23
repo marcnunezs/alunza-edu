@@ -1,5 +1,8 @@
 import { fileURLToPath } from 'node:url';
-import { validatePublicEnvironment } from './config/public-environment.mjs';
+import {
+  dashboardTimingEnvironment,
+  validatePublicEnvironment,
+} from './config/public-environment.mjs';
 
 validatePublicEnvironment(process.env);
 
@@ -9,6 +12,7 @@ const nextConfig = {
   agentRules: false,
   // E2E builds are isolated from the developer's normal .next output.
   distDir: process.env.ALUNZA_E2E_BUILD === '1' ? '.next-e2e' : '.next',
+  env: dashboardTimingEnvironment(process.env),
   output: 'standalone',
   outputFileTracingRoot: fileURLToPath(new URL('../..', import.meta.url)),
   transpilePackages: ['@alunza/contracts'],

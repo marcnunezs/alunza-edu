@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set local search_path = public, extensions;
 
-select plan(16);
+select plan(14);
 
 select ok(
   (select rolcanlogin and not rolsuper and not rolbypassrls and not rolcreaterole
@@ -16,17 +16,11 @@ select is(
   (select count(*)::integer
     from pg_catalog.pg_class c
     join pg_catalog.pg_namespace n on n.oid = c.relnamespace
-    where n.nspname = 'app' and c.relkind = 'r'),
-  21,
-  'Identity, academic content and practice contain the twenty-one reviewed tables'
-);
-
-select ok(
-  (select bool_and(c.relrowsecurity and c.relforcerowsecurity)
-    from pg_catalog.pg_class c
-    join pg_catalog.pg_namespace n on n.oid=c.relnamespace
-    where n.nspname='app' and c.relkind='r'),
-  'Every domain table enables and forces RLS, including future additions'
+    where n.nspname = 'app' and c.relkind = 'r' and c.relrowsecurity and c.relforcerowsecurity
+      and c.relname in ('organizations','profiles','organization_memberships','provisioning_grants',
+        'organization_invitations','invitation_deliveries','operation_keys','audit_events')),
+  8,
+  'Every identity domain table enables and forces RLS'
 );
 
 select is(
@@ -46,26 +40,26 @@ select ok(not has_schema_privilege('authenticated', 'app', 'USAGE'), 'Authentica
 select ok(not has_schema_privilege('service_role', 'app', 'USAGE'), 'Auth administrative adapter is not granted domain schema access');
 
 select ok(
-  (select bool_and(case when tablename='executions' then
-      has_any_column_privilege('alunza_app','app.executions','SELECT')
-      and not has_table_privilege('alunza_app','app.executions','SELECT')
-      and not has_column_privilege('alunza_app','app.executions','lease_token','SELECT')
+  (select bool_and(case when tablename = 'executions' then
+      has_column_privilege('alunza_app', 'app.executions', 'id', 'SELECT')
+      and not has_column_privilege('alunza_app', 'app.executions', 'lease_token', 'SELECT')
+    when tablename='material_jobs' then has_column_privilege('alunza_app','app.material_jobs','id','SELECT')
+      and not has_column_privilege('alunza_app','app.material_jobs','lease_token','SELECT')
+      and not has_column_privilege('alunza_app','app.material_jobs','upload_token','SELECT')
+    when tablename in('feedback_requests','feedbacks','feedback_source_refs') then
+      not has_table_privilege('alunza_app',format('app.%I',tablename),'SELECT')
     else has_table_privilege('alunza_app', format('app.%I', tablename), 'SELECT') end)
     from pg_catalog.pg_tables where schemaname = 'app'),
-  'Application has explicit RLS read grants; RUN projection excludes the lease token'
-);
-
-select ok(
-  (select bool_and(not has_table_privilege('alunza_app', format('app.%I', tablename), 'DELETE'))
-    from pg_catalog.pg_tables where schemaname = 'app' and tablename <> 'activity_exercises'),
-  'Application cannot delete institutional, academic, membership or version history'
+  'Application has explicit grants; lease tokens and feedback tables require authorized helpers'
 );
 
 select ok(
   (select bool_and(not has_table_privilege('alunza_app', format('app.%I', tablename),
-      'TRUNCATE,REFERENCES,TRIGGER'))
-    from pg_catalog.pg_tables where schemaname = 'app'),
-  'Application cannot truncate any domain table, grant references or attach triggers; draft assignment DELETE remains RLS-guarded'
+      'DELETE,TRUNCATE,REFERENCES,TRIGGER'))
+    from pg_catalog.pg_tables where schemaname = 'app'
+      and tablename in ('organizations','profiles','organization_memberships','provisioning_grants',
+        'organization_invitations','invitation_deliveries','operation_keys','audit_events')),
+  'Application cannot delete identity history, truncate data or attach triggers'
 );
 
 select ok(

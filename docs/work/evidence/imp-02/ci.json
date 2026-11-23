@@ -1,0 +1,70 @@
+{
+  "recordedAt": "2026-09-28T23:00:32.280Z",
+  "status": "passed",
+  "execution": "local",
+  "steps": [
+    {
+      "command": "npm run format:check",
+      "status": "passed",
+      "durationMs": 3065
+    },
+    {
+      "command": "npm run lint",
+      "status": "passed",
+      "durationMs": 4700
+    },
+    {
+      "command": "npm run typecheck",
+      "status": "passed",
+      "durationMs": 14198
+    },
+    {
+      "command": "npm test",
+      "status": "passed",
+      "durationMs": 25399,
+      "passedTests": 249,
+      "testGroups": 6
+    },
+    {
+      "command": "npm run runner:prepare",
+      "status": "passed",
+      "durationMs": 1811
+    },
+    {
+      "command": "npm run runner:doctor",
+      "status": "passed",
+      "durationMs": 3175
+    },
+    {
+      "command": "npm run runner:probe -- --adapter docker",
+      "status": "passed",
+      "durationMs": 78514
+    },
+    {
+      "command": "npm run cypress:install",
+      "status": "passed",
+      "durationMs": 3947
+    },
+    {
+      "command": "npm run test:integration",
+      "status": "passed",
+      "durationMs": 111212
+    },
+    {
+      "command": "npm run test:ai:integration",
+      "status": "passed",
+      "durationMs": 63138
+    },
+    {
+      "command": "npm run test:e2e",
+      "status": "passed",
+      "durationMs": 163256
+    }
+  ],
+  "source": {
+    "algorithm": "sha256",
+    "value": "921b1796725680bde964fe7d16abf755cc4853156550bb1caf1d1d3e75abf94a",
+    "files": 230,
+    "scope": "source-contracts-migrations-tests-fixtures-tooling-infra; excludes docs and private/ignored files"
+  }
+}

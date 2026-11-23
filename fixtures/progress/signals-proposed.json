@@ -1,0 +1,2005 @@
+[
+  {
+    "id": "SIG-01",
+    "status": "PROPOSED",
+    "input": {
+      "type": "INACTIVITY",
+      "coverage": {
+        "status": "CONTINUOUS",
+        "epoch": "synthetic-all-capturers-1",
+        "restartReason": null,
+        "sources": [
+          {
+            "source": "ACTIVITY_OPEN",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-ACTIVITY_OPEN"
+          },
+          {
+            "source": "RUN",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-RUN"
+          },
+          {
+            "source": "ATTEMPT",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-ATTEMPT"
+          },
+          {
+            "source": "HELP",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-HELP"
+          }
+        ]
+      },
+      "evaluationTime": "2026-10-02T12:00:00Z",
+      "activity": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "studentId": "student-a",
+        "activityId": "activity-a",
+        "state": "PUBLISHED",
+        "enrolledAt": "2026-09-20T12:00:00Z",
+        "publishedAt": "2026-09-20T12:00:00Z",
+        "opensAt": null,
+        "closesAt": null,
+        "active": true
+      },
+      "lastEvent": {
+        "id": "event-last",
+        "at": "2026-09-25T12:00:01Z"
+      }
+    },
+    "expected": {
+      "verifiable": true,
+      "createSignal": false
+    }
+  },
+  {
+    "id": "SIG-02",
+    "status": "PROPOSED",
+    "input": {
+      "type": "INACTIVITY",
+      "coverage": {
+        "status": "CONTINUOUS",
+        "epoch": "synthetic-all-capturers-1",
+        "restartReason": null,
+        "sources": [
+          {
+            "source": "ACTIVITY_OPEN",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-ACTIVITY_OPEN"
+          },
+          {
+            "source": "RUN",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-RUN"
+          },
+          {
+            "source": "ATTEMPT",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-ATTEMPT"
+          },
+          {
+            "source": "HELP",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-HELP"
+          }
+        ]
+      },
+      "evaluationTime": "2026-10-02T12:00:00Z",
+      "activity": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "studentId": "student-a",
+        "activityId": "activity-a",
+        "state": "PUBLISHED",
+        "enrolledAt": "2026-09-20T12:00:00Z",
+        "publishedAt": "2026-09-20T12:00:00Z",
+        "opensAt": null,
+        "closesAt": null,
+        "active": true
+      },
+      "lastEvent": {
+        "id": "event-last",
+        "at": "2026-09-25T12:00:00Z"
+      }
+    },
+    "expected": {
+      "verifiable": true,
+      "createSignal": true,
+      "referenceEventId": "event-last"
+    }
+  },
+  {
+    "id": "SIG-03",
+    "status": "PROPOSED",
+    "input": {
+      "type": "INACTIVITY",
+      "coverage": {
+        "status": "CONTINUOUS",
+        "epoch": "synthetic-all-capturers-1",
+        "restartReason": null,
+        "sources": [
+          {
+            "source": "ACTIVITY_OPEN",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-ACTIVITY_OPEN"
+          },
+          {
+            "source": "RUN",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-RUN"
+          },
+          {
+            "source": "ATTEMPT",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-ATTEMPT"
+          },
+          {
+            "source": "HELP",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-HELP"
+          }
+        ]
+      },
+      "evaluationTime": "2026-10-02T12:00:00Z",
+      "activity": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "studentId": "student-a",
+        "activityId": "activity-a",
+        "state": "PUBLISHED",
+        "enrolledAt": "2026-09-22T12:00:00Z",
+        "publishedAt": "2026-09-30T12:00:00Z",
+        "opensAt": null,
+        "closesAt": null,
+        "active": true
+      },
+      "lastEvent": null
+    },
+    "expected": {
+      "verifiable": true,
+      "createSignal": false,
+      "baselineAt": "2026-09-30T12:00:00Z"
+    }
+  },
+  {
+    "id": "SIG-04",
+    "status": "PROPOSED",
+    "input": {
+      "type": "INACTIVITY",
+      "coverage": {
+        "status": "CONTINUOUS",
+        "epoch": "synthetic-all-capturers-1",
+        "restartReason": null,
+        "sources": [
+          {
+            "source": "ACTIVITY_OPEN",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-ACTIVITY_OPEN"
+          },
+          {
+            "source": "RUN",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-RUN"
+          },
+          {
+            "source": "ATTEMPT",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-ATTEMPT"
+          },
+          {
+            "source": "HELP",
+            "since": "2026-09-20T12:00:00Z",
+            "through": "2026-10-02T12:00:00Z",
+            "referenceId": "synthetic-coverage-HELP"
+          }
+        ]
+      },
+      "evaluationTime": "2026-10-02T12:00:00Z",
+      "activity": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "studentId": "student-a",
+        "activityId": "activity-a",
+        "state": "CLOSED",
+        "enrolledAt": "2026-09-20T12:00:00Z",
+        "publishedAt": "2026-09-20T12:00:00Z",
+        "opensAt": null,
+        "closesAt": "2026-10-01T12:00:00Z",
+        "active": true
+      },
+      "lastEvent": {
+        "id": "event-last",
+        "at": "2026-09-25T12:00:00Z"
+      },
+      "existingSignal": {
+        "id": "signal-old",
+        "state": "ACTIVE"
+      }
+    },
+    "expected": {
+      "verifiable": true,
+      "createSignal": false,
+      "preservedSignalId": "signal-old"
+    }
+  },
+  {
+    "id": "SIG-05",
+    "status": "PROPOSED",
+    "input": {
+      "type": "REPEATED_ERROR",
+      "evaluationTime": "2026-10-02T12:00:00Z",
+      "attempts": [
+        {
+          "id": "attempt-1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-18T12:00:00Z",
+          "eventSequence": "1",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-2",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-25T12:00:00Z",
+          "eventSequence": "2",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-3",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-10-02T12:00:00Z",
+          "eventSequence": "3",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        }
+      ],
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "studentId": "student-a",
+        "activityId": "activity-a",
+        "assignmentId": "assignment-a"
+      }
+    },
+    "expected": {
+      "verifiable": true,
+      "createSignal": true
+    }
+  },
+  {
+    "id": "SIG-06",
+    "status": "PROPOSED",
+    "input": {
+      "type": "REPEATED_ERROR",
+      "evaluationTime": "2026-10-02T12:00:00Z",
+      "attempts": [
+        {
+          "id": "attempt-1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-18T11:59:59Z",
+          "eventSequence": "1",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-2",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-25T12:00:00Z",
+          "eventSequence": "2",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-3",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-10-02T12:00:00Z",
+          "eventSequence": "3",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        }
+      ],
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "studentId": "student-a",
+        "activityId": "activity-a",
+        "assignmentId": "assignment-a"
+      }
+    },
+    "expected": {
+      "verifiable": true,
+      "createSignal": false
+    }
+  },
+  {
+    "id": "SIG-07",
+    "status": "PROPOSED",
+    "input": {
+      "type": "REPEATED_ERROR",
+      "evaluationTime": "2026-10-02T12:00:00Z",
+      "attempts": [
+        {
+          "id": "attempt-1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-18T12:00:00Z",
+          "eventSequence": "1",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-2",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-25T12:00:00Z",
+          "eventSequence": "2",
+          "confirmed": true,
+          "diagnosisCode": "SUCCESS",
+          "visiblePassed": 3,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": true,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "SUCCESS",
+            "terminationReason": "COMPLETED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 3,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": true,
+            "allRequiredPassed": true,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-3",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-10-02T12:00:00Z",
+          "eventSequence": "3",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        }
+      ],
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "studentId": "student-a",
+        "activityId": "activity-a",
+        "assignmentId": "assignment-a"
+      }
+    },
+    "expected": {
+      "verifiable": true,
+      "createSignal": false
+    }
+  },
+  {
+    "id": "SIG-08",
+    "status": "PROPOSED",
+    "input": {
+      "type": "REPEATED_ERROR",
+      "evaluationTime": "2026-10-02T12:00:00Z",
+      "attempts": [
+        {
+          "id": "attempt-1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-18T12:00:00Z",
+          "eventSequence": "1",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-2",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-25T12:00:00Z",
+          "eventSequence": "2",
+          "confirmed": true,
+          "diagnosisCode": "UNKNOWN",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "UNKNOWN",
+            "terminationReason": "RUNNER_FAILURE",
+            "infrastructureStatus": "FAILED",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": null,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-3",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-10-02T12:00:00Z",
+          "eventSequence": "3",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        }
+      ],
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "studentId": "student-a",
+        "activityId": "activity-a",
+        "assignmentId": "assignment-a"
+      }
+    },
+    "expected": {
+      "verifiable": true,
+      "createSignal": false
+    }
+  },
+  {
+    "id": "SIG-09",
+    "status": "PROPOSED",
+    "input": {
+      "type": "STAGNATION",
+      "evaluationTime": "2026-10-02T12:00:00Z",
+      "attempts": [
+        {
+          "id": "attempt-1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-18T12:00:00Z",
+          "eventSequence": "1",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-2",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-25T12:00:00Z",
+          "eventSequence": "2",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-3",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-10-02T12:00:00Z",
+          "eventSequence": "3",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        }
+      ],
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "studentId": "student-a",
+        "activityId": "activity-a",
+        "assignmentId": "assignment-a"
+      }
+    },
+    "expected": {
+      "verifiable": true,
+      "createSignal": true
+    }
+  },
+  {
+    "id": "SIG-10",
+    "status": "PROPOSED",
+    "input": {
+      "type": "STAGNATION",
+      "evaluationTime": "2026-10-02T12:00:00Z",
+      "attempts": [
+        {
+          "id": "attempt-1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-18T12:00:00Z",
+          "eventSequence": "1",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-2",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-25T12:00:00Z",
+          "eventSequence": "2",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 2,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 2,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-3",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-10-02T12:00:00Z",
+          "eventSequence": "3",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 2,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 2,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        }
+      ],
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "studentId": "student-a",
+        "activityId": "activity-a",
+        "assignmentId": "assignment-a"
+      }
+    },
+    "expected": {
+      "verifiable": true,
+      "createSignal": false
+    }
+  },
+  {
+    "id": "SIG-11",
+    "status": "PROPOSED",
+    "input": {
+      "type": "STAGNATION",
+      "evaluationTime": "2026-10-02T12:00:00Z",
+      "attempts": [
+        {
+          "id": "attempt-1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-18T12:00:00Z",
+          "eventSequence": "1",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 2,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 2,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-2",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-25T12:00:00Z",
+          "eventSequence": "2",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-3",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-10-02T12:00:00Z",
+          "eventSequence": "3",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        }
+      ],
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "studentId": "student-a",
+        "activityId": "activity-a",
+        "assignmentId": "assignment-a"
+      }
+    },
+    "expected": {
+      "verifiable": true,
+      "createSignal": true
+    }
+  },
+  {
+    "id": "SIG-12",
+    "status": "PROPOSED",
+    "input": {
+      "type": "STAGNATION",
+      "evaluationTime": "2026-10-02T12:00:00Z",
+      "attempts": [
+        {
+          "id": "attempt-1",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "submittedAt": "2026-09-18T12:00:00Z",
+          "eventSequence": "1",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-2",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "submittedAt": "2026-09-25T12:00:00Z",
+          "eventSequence": "2",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        },
+        {
+          "id": "attempt-3",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "studentId": "student-a",
+          "assignmentId": "assignment-a",
+          "exerciseVersionId": "exercise-v1",
+          "testsVersion": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "submittedAt": "2026-10-02T12:00:00Z",
+          "eventSequence": "3",
+          "confirmed": true,
+          "diagnosisCode": "FAILED_TEST",
+          "visiblePassed": 1,
+          "visibleRequired": 3,
+          "visibleCountsComplete": true,
+          "complete": false,
+          "mode": "SUBMIT",
+          "activityId": "activity-a",
+          "profile": {
+            "testsVersion": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+            "visibleTestIds": ["visible-1", "visible-2", "visible-3"],
+            "runnerVersion": "runner.v1",
+            "resultSchemaVersion": "submission.v1",
+            "limits": {
+              "memoryBytes": 134217728,
+              "runtimeMs": 3000,
+              "outputBytes": 65536
+            }
+          },
+          "technicalResult": {
+            "runnerVersion": "runner.v1",
+            "diagnosisCode": "FAILED_TEST",
+            "terminationReason": "ASSERTION_FAILED",
+            "infrastructureStatus": "OK",
+            "visibleTestResults": [
+              {
+                "id": "visible-1",
+                "passed": true,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-2",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              },
+              {
+                "id": "visible-3",
+                "passed": false,
+                "stdout": "",
+                "stderr": ""
+              }
+            ],
+            "visiblePassed": 1,
+            "visibleTotal": 3,
+            "hiddenChecksPassed": false,
+            "allRequiredPassed": false,
+            "outputTruncated": false,
+            "outputBytes": 0,
+            "runtimeMs": 1,
+            "lifecycleMs": 2
+          }
+        }
+      ],
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "studentId": "student-a",
+        "activityId": "activity-a",
+        "assignmentId": "assignment-a"
+      }
+    },
+    "expected": {
+      "verifiable": false,
+      "createSignal": false
+    },
+    "provenance": "SYNTHETIC_INCOMPATIBLE_SUITES"
+  },
+  {
+    "id": "SIG-13",
+    "status": "PROPOSED",
+    "input": {
+      "type": "EPISODE_DEDUPLICATION",
+      "ruleVersion": "rule-v1",
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "studentId": "student-a",
+        "assignmentId": "assignment-a"
+      },
+      "signalType": "REPEATED_ERROR",
+      "orderedEvidenceIds": ["attempt-1", "attempt-2", "attempt-3"],
+      "existingSignal": {
+        "id": "signal-existing",
+        "state": "REVIEWED"
+      },
+      "evaluations": ["2026-10-02T12:00:00Z", "2026-10-02T13:00:00Z"]
+    },
+    "expected": {
+      "recordCount": 1,
+      "signalId": "signal-existing",
+      "state": "REVIEWED",
+      "reactivated": false
+    }
+  },
+  {
+    "id": "SIG-14",
+    "status": "PROPOSED",
+    "input": {
+      "type": "CONCURRENT_REVIEW",
+      "signal": {
+        "id": "signal-active",
+        "state": "ACTIVE"
+      },
+      "requests": [
+        {
+          "requestId": "review-a",
+          "teacherId": "teacher-a"
+        },
+        {
+          "requestId": "review-b",
+          "teacherId": "teacher-b"
+        }
+      ],
+      "linearizationOrder": ["review-b", "review-a"],
+      "firstServerAt": "2026-10-02T12:00:00Z",
+      "secondServerAt": "2026-10-02T12:00:01Z"
+    },
+    "expected": {
+      "state": "REVIEWED",
+      "transitions": 1,
+      "reviewerId": "teacher-b",
+      "reviewedAt": "2026-10-02T12:00:00Z",
+      "bothResponsesState": "REVIEWED"
+    }
+  }
+]

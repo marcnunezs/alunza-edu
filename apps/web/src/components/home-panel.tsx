@@ -9,7 +9,6 @@ import { RequestError } from '@/components/request-error';
 import { roleLabels, SelectField } from '@/components/identity-forms';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { StudentHomeClasses } from '@/components/academic-panel';
 
 function OrganizationDetails({ id }: { id: string }) {
   const { state, reload } = useApiResource(
@@ -115,6 +114,13 @@ export function HomePanel() {
                           Gestionar organización
                         </Link>
                       </Button>
+                      <Button asChild variant="outline">
+                        <Link
+                          href={`/administracion/organizaciones/${membership.organizationId}/reglas`}
+                        >
+                          Reglas de señales
+                        </Link>
+                      </Button>
                       {membership.accessMode === 'OPERATE' ? (
                         <Button asChild variant="outline">
                           <Link
@@ -126,31 +132,13 @@ export function HomePanel() {
                       ) : null}
                     </div>
                   ) : null}
-                  <Button asChild variant="outline">
-                    <Link href={`/academia/${membership.organizationId}`}>
-                      {membership.role === 'STUDENT'
-                        ? 'Mis clases e incorporación'
-                        : 'Cursos y clases'}
-                    </Link>
-                  </Button>
-                  {membership.role === 'ADMIN' && (
+                  {membership.accessMode === 'OPERATE' ? (
                     <Button asChild variant="outline">
-                      <Link
-                        href={`/academia/${membership.organizationId}/conceptos`}
-                      >
-                        Conceptos
+                      <Link href={`/academia?org=${membership.organizationId}`}>
+                        Abrir clases y contenido
                       </Link>
                     </Button>
-                  )}
-                  {membership.role !== 'STUDENT' && (
-                    <Button asChild variant="outline">
-                      <Link
-                        href={`/academia/${membership.organizationId}/ejercicios`}
-                      >
-                        Ejercicios
-                      </Link>
-                    </Button>
-                  )}
+                  ) : null}
                 </div>
               </>
             ) : (
@@ -185,12 +173,6 @@ export function HomePanel() {
           </CardContent>
         </Card>
       </div>
-      {membership?.role === 'STUDENT' && (
-        <StudentHomeClasses
-          key={membership.organizationId}
-          orgId={membership.organizationId}
-        />
-      )}
     </div>
   );
 }

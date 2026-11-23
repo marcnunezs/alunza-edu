@@ -99,23 +99,6 @@ export const activityProgressResponseSchema = z.strictObject({
   requestId: z.uuid(),
 });
 
-export const attemptedActivitiesResponseSchema = z.strictObject({
-  data: z.array(
-    z.strictObject({
-      activityId: z.uuid(),
-      title: z.string().min(1).max(160),
-      activityState: z.enum(['PUBLISHED', 'CLOSED']),
-      exercises: z.array(
-        z.strictObject({
-          assignmentId: z.uuid(),
-          title: z.string().min(1).max(160),
-        }),
-      ),
-    }),
-  ),
-  requestId: z.uuid(),
-});
-
 export type SubmitAttemptInput = z.infer<typeof submitAttemptInputSchema>;
 export type SubmitTechnicalResult = z.infer<typeof submitTechnicalResultSchema>;
 export type Attempt = z.infer<typeof attemptSchema>;

@@ -19,6 +19,17 @@ const accessCases = [
   { id: 'FND-04', role: 'STUDENT' },
 ] as const;
 
+function selectOrganizationA() {
+  // Other integrated specs add independent memberships to these actors.
+  // Exercise the selector instead of relying on alphabetical default order.
+  cy.get('body').then(($body) => {
+    if ($body.find('select[name="organization"]').length)
+      cy.get('select[name="organization"]')
+        .select(organizationA.id)
+        .should('have.value', organizationA.id);
+  });
+}
+
 function login(account: Account) {
   cy.visit('/acceso');
   cy.get('#email').should('be.visible').type(account.email, { log: false });
@@ -36,6 +47,7 @@ function login(account: Account) {
   });
   cy.contains('button', /^Iniciar sesión$/).click();
   cy.contains('h2', account.displayName).should('be.visible');
+  selectOrganizationA();
   cy.contains('h3', organizationA.name).should('be.visible');
 }
 
@@ -85,6 +97,7 @@ describe('Fundación local integrada', () => {
       cy.contains('dd', roleNames[account.role]!).should('be.visible');
       cy.reload();
       cy.contains('h2', account.displayName).should('be.visible');
+      selectOrganizationA();
       cy.contains('h3', organizationA.name).should('be.visible');
       logout(account);
       cy.reload();
@@ -114,7 +127,7 @@ describe('Fundación local integrada', () => {
     cy.env(['apiBaseUrl'], { log: false }).then(({ apiBaseUrl }) => {
       cy.window({ log: false }).then((window) => {
         const session = JSON.parse(
-          window.localStorage.getItem('alunza.auth.127.0.0.1:16421') || '{}',
+          window.localStorage.getItem('alunza.auth.127.0.0.1:18421') || '{}',
         );
         const accessToken: unknown = session.access_token;
         expect(
@@ -169,6 +182,7 @@ describe('Fundación local integrada', () => {
     cy.task('foundation:apiStart', null, { log: false });
     cy.contains('button', /^Reintentar acceso$/).click();
     cy.contains('h2', student.displayName).should('be.visible');
+    selectOrganizationA();
     cy.contains('h3', organizationA.name).should('be.visible');
     logout(student);
   });

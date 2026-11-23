@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "virginBase": false,
+  "nodePath": "/usr/local/bin/node",
+  "capsuleImageId": null,
+  "bundleManifestSha256": null,
+  "bundleSha256": null,
+  "runtime": {
+    "runtime": "crun",
+    "runtimeName": "alunza-crun",
+    "runtimeVersion": "1.31",
+    "runtimeSha256": null,
+    "runtimePath": "/usr/local/bin/crun",
+    "strategy": "cold"
+  },
+  "files": {
+    "kernel": { "path": null, "sha256": null, "bytes": null },
+    "root.img": { "path": null, "sha256": null, "bytes": null },
+    "docker-store.img": { "path": null, "sha256": null, "bytes": null }
+  }
+}

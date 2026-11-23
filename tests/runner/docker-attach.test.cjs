@@ -9,6 +9,87 @@ beforeAll(async () => {
   engine = await import('../../infra/runner/docker-engine.mjs');
 });
 
+test('prepared channels start without input and require fresh authority before their only consumption', async () => {
+  const id = 'a'.repeat(64);
+  await withDaemon(
+    {
+      handleRequest(req, res) {
+        if (!req.url.endsWith('/json')) return false;
+        res.end(JSON.stringify({ Id: id, State: { Running: true, Pid: 123 } }));
+        return true;
+      },
+    },
+    async (state) => {
+      const prepared = await engine.enginePrepareAttach(
+        state.socketPath,
+        '1.45',
+        'prepared-fixture',
+        { containerId: id, expiresAtMs: Date.now() + 60000 },
+      );
+      expect(prepared.usable()).toBe(true);
+      expect(state.input).toEqual([]);
+      const authority = deferred();
+      const requested = deferred();
+      const result = prepared.consume('synthetic-input', {
+        deadlineMs: Date.now() + 2000,
+        beforeSend: () => {
+          requested.resolve();
+          return authority.promise;
+        },
+      });
+      await requested.promise;
+      expect(state.input).toEqual([]);
+      authority.resolve();
+      await expect(result).resolves.toMatchObject({
+        stdout: 'result',
+        exitCode: 0,
+      });
+      expect(Buffer.concat(state.input).toString()).toBe('synthetic-input');
+      await expect(
+        prepared.consume('again', {
+          deadlineMs: Date.now() + 1000,
+          beforeSend: async () => {},
+        }),
+      ).rejects.toThrow();
+      expect(
+        state.requests.filter((r) => r.url.endsWith('/start')),
+      ).toHaveLength(1);
+    },
+  );
+});
+
+test('late authorization cannot send input after a prepared capsule deadline', async () => {
+  const id = 'b'.repeat(64);
+  await withDaemon(
+    {
+      handleRequest(req, res) {
+        if (!req.url.endsWith('/json')) return false;
+        res.end(JSON.stringify({ Id: id, State: { Running: true, Pid: 123 } }));
+        return true;
+      },
+    },
+    async (state) => {
+      const prepared = await engine.enginePrepareAttach(
+        state.socketPath,
+        '1.45',
+        'prepared-fixture',
+        { containerId: id, expiresAtMs: Date.now() + 60000 },
+      );
+      const authority = deferred();
+      await expect(
+        prepared.consume('never-dispatched', {
+          deadlineMs: Date.now() + 35,
+          beforeSend: () => authority.promise,
+        }),
+      ).rejects.toThrow();
+      authority.resolve();
+      await new Promise((resolve) => setImmediate(resolve));
+      expect(state.input).toEqual([]);
+      expect(prepared.usable()).toBe(false);
+    },
+  );
+});
+
 function frame(type, value = Buffer.alloc(0)) {
   const body = Buffer.isBuffer(value) ? value : Buffer.from(value);
   const header = Buffer.alloc(8);
@@ -42,7 +123,6 @@ async function withDaemon(options, action) {
     events: [],
     requests: [],
     input: [],
-    handshakes: {},
     output: null,
     stdin: null,
     errors: [],
@@ -65,6 +145,7 @@ async function withDaemon(options, action) {
   };
   const server = http.createServer({ allowHalfOpen: true }, (req, res) => {
     state.requests.push({ method: req.method, url: req.url });
+    if (options.handleRequest?.(req, res)) return;
     if (req.url.endsWith('/wait?condition=not-running')) {
       state.mark('wait');
       state.replyWait = (body = { StatusCode: 0 }) => {
@@ -86,6 +167,10 @@ async function withDaemon(options, action) {
     if (options.hold === 'start') return;
     if (options.dropStart) {
       res.destroy();
+      return;
+    }
+    if (options.replyStart) {
+      options.replyStart(res);
       return;
     }
     res.writeHead(options.startStatus ?? 204);
@@ -110,42 +195,35 @@ async function withDaemon(options, action) {
     socket.resume();
     state.mark(`${role}-attach`);
     if (head.length) state.errors.push('Unexpected bytes before HTTP upgrade');
-    state.handshakes[role] = () => {
-      if (options.rejectRole === role || options.rejectRoles?.includes(role)) {
-        socket.end(options.rejection);
-        return;
-      }
-      const headers = Buffer.from(
-        'HTTP/1.1 101 Switching Protocols\r\n' +
-          'Connection: Upgrade\r\nUpgrade: tcp\r\n' +
-          'Content-Type: application/vnd.docker.raw-stream\r\n\r\n',
-      );
-      socket.write(
-        Buffer.concat([
-          headers,
-          output ? (options.outputHead ?? Buffer.alloc(0)) : Buffer.alloc(0),
-        ]),
-      );
-      if (output) return;
-      socket.on('data', (chunk) => {
-        state.input.push(chunk);
-        state.mark('stdin-data');
-      });
-      socket.on('end', () => {
-        state.mark('stdin-eof');
-        socket.end();
-        if (options.hold === 'stream') return;
-        if (options.afterInput) options.afterInput(state);
-        else state.output.end(frame(1, 'result'));
-      });
-      socket.resume();
-    };
-    if (
-      options.hold === `${role}-handshake` ||
-      options.holdHandshakes?.includes(role)
-    )
+    if (options.hold === `${role}-handshake`) return;
+    if (options.rejectRole === role) {
+      socket.end(options.rejection);
       return;
-    state.handshakes[role]();
+    }
+    const headers = Buffer.from(
+      'HTTP/1.1 101 Switching Protocols\r\n' +
+        'Connection: Upgrade\r\nUpgrade: tcp\r\n' +
+        'Content-Type: application/vnd.docker.raw-stream\r\n\r\n',
+    );
+    socket.write(
+      Buffer.concat([
+        headers,
+        output ? (options.outputHead ?? Buffer.alloc(0)) : Buffer.alloc(0),
+      ]),
+    );
+    if (output) return;
+    socket.on('data', (chunk) => {
+      state.input.push(chunk);
+      state.mark('stdin-data');
+    });
+    socket.on('end', () => {
+      state.mark('stdin-eof');
+      socket.end();
+      if (options.hold === 'stream') return;
+      if (options.afterInput) options.afterInput(state);
+      else state.output.end(frame(1, 'result'));
+    });
+    socket.resume();
   });
   await new Promise((resolve, reject) => {
     server.once('error', reject);
@@ -208,18 +286,13 @@ function expectTiming(events, phases) {
   }
 }
 
-function expectAttachmentTiming(events, remainingPhases = []) {
-  expectTiming(
-    [...events.slice(0, 2)].sort((left, right) =>
-      left.phase.localeCompare(right.phase),
-    ),
-    ['attachInput', 'attachOutput'],
-  );
-  expectTiming(events.slice(2), remainingPhases);
-}
-
 function expectSuccessfulTiming(events) {
-  expectAttachmentTiming(events.slice(0, 4), ['start', 'send']);
+  expectTiming(events.slice(0, 4), [
+    'attachOutput',
+    'attachInput',
+    'start',
+    'send',
+  ]);
   expectTiming(
     [...events.slice(4)].sort((left, right) =>
       left.phase.localeCompare(right.phase),
@@ -243,65 +316,38 @@ async function within(promise, message) {
   }
 }
 
-test.each(['output', 'stdin'])(
-  'Handshakes proceed independently but start waits for both, with %s ready first',
-  async (first) => {
-    await withDaemon({ holdHandshakes: ['output', 'stdin'] }, async (state) => {
-      const controller = new AbortController();
-      const timings = [];
-      const pending = execute(state, {
-        signal: controller.signal,
-        observeTiming(event) {
-          timings.push(event);
-          state.mark(`observed-${event.phase}`);
-        },
-      });
-      void pending.catch(() => {});
-      try {
-        await within(
-          Promise.all([
-            state.stage('output-attach'),
-            state.stage('stdin-attach'),
-          ]),
-          'A handshake remained serialized behind its sibling',
-        );
-        expect(state.events).not.toContain('start');
-        expect(state.input).toEqual([]);
-        state.handshakes[first]();
-        const firstPhase = first === 'output' ? 'attachOutput' : 'attachInput';
-        await within(
-          state.stage(`observed-${firstPhase}`),
-          'The first handshake did not complete independently',
-        );
-        expect(timings).toHaveLength(1);
-        expect(timings[0]).toMatchObject({
-          phase: firstPhase,
-          completed: true,
-        });
-        expect(state.events).not.toContain('start');
-        expect(state.input).toEqual([]);
-        state.handshakes[first === 'output' ? 'stdin' : 'output']();
-        await expect(pending).resolves.toEqual({
-          stdout: 'result',
-          stderr: '',
-          exitCode: 0,
-        });
-        expectSuccessfulTiming(timings);
-        for (const phase of ['attachOutput', 'attachInput'])
-          expect(state.events.indexOf(`observed-${phase}`)).toBeLessThan(
-            state.events.indexOf('start'),
-          );
-        expect(state.events.filter((event) => event === 'start')).toHaveLength(
-          1,
-        );
-        expect(
-          state.events.filter((event) => event === 'stdin-eof'),
-        ).toHaveLength(1);
-        expect(state.requests).toHaveLength(4);
-      } finally {
-        controller.abort();
-        await Promise.allSettled([pending]);
-      }
+test.each([
+  [
+    'ATTACH_OUTPUT',
+    {
+      rejectRole: 'output',
+      rejection: 'HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n',
+    },
+  ],
+  [
+    'ATTACH_INPUT',
+    {
+      rejectRole: 'stdin',
+      rejection: 'HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n',
+    },
+  ],
+  ['START', { startStatus: 500 }],
+  ['STREAMS', { afterInput: ({ output }) => output.end(Buffer.from([1])) }],
+  ['WAIT', { waitStatus: 500 }],
+])(
+  'the first reported driver failure is %s without leaking engine data',
+  async (expected, options) => {
+    await withDaemon(options, async (state) => {
+      let first;
+      await expect(
+        execute(state, {
+          observeFailure(label) {
+            first ??= label;
+            return Promise.reject(new Error('private observation failure'));
+          },
+        }),
+      ).rejects.toThrow();
+      expect(first).toBe(expected);
     });
   },
 );
@@ -445,124 +491,29 @@ test.each([
     await expect(execute(state)).rejects.toThrow(
       'Local Docker attachment failed',
     );
-    expect(state.events).toContain('output-attach');
-    expect(state.events).not.toContain('start');
-    expect(state.requests.length).toBeLessThanOrEqual(2);
+    expect(state.events).toEqual(['output-attach']);
     expect(state.input).toEqual([]);
   });
 });
 
-test.each(
-  ['output', 'stdin'].flatMap((failedRole) =>
-    ['held', 'ready', 'resolving'].map((peerState) => [failedRole, peerState]),
-  ),
-)(
-  'Rejecting %s releases a %s peer without starting or waiting for the deadline',
-  async (failedRole, peerState) => {
-    await withDaemon(
-      {
-        holdHandshakes: ['output', 'stdin'],
-        rejectRole: failedRole,
-        rejection: 'HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n',
-      },
-      async (state) => {
-        const controller = new AbortController();
-        const timings = [];
-        const pending = execute(state, {
-          signal: controller.signal,
-          observeTiming(event) {
-            timings.push(event);
-            state.mark(`observed-${event.phase}`);
-          },
-        });
-        void pending.catch(() => {});
-        try {
-          await within(
-            Promise.all([
-              state.stage('output-attach'),
-              state.stage('stdin-attach'),
-            ]),
-            'A handshake remained serialized behind its sibling',
-          );
-          const peer = failedRole === 'output' ? 'stdin' : 'output';
-          const peerPhase = peer === 'output' ? 'attachOutput' : 'attachInput';
-          if (peerState === 'ready') {
-            state.handshakes[peer]();
-            await within(
-              state.stage(`observed-${peerPhase}`),
-              'Peer handshake was not ready before failure',
-            );
-          }
-          state.handshakes[failedRole]();
-          if (peerState === 'resolving') state.handshakes[peer]();
-          await within(
-            expect(pending).rejects.toThrow('Local Docker attachment failed'),
-            'Handshake failure did not release its peer',
-          );
-          expectAttachmentTiming(timings);
-          expect(
-            timings.find((event) => event.phase !== peerPhase).completed,
-          ).toBe(false);
-          if (peerState !== 'resolving')
-            expect(
-              timings.find((event) => event.phase === peerPhase).completed,
-            ).toBe(peerState === 'ready');
-          expect(state.events).not.toContain('start');
-          expect(state.input).toEqual([]);
-          expect(state.requests).toHaveLength(2);
-        } finally {
-          controller.abort();
-          await Promise.allSettled([pending]);
-        }
-      },
-    );
-  },
-);
-
-test.each(['output', 'stdin'])(
-  'Simultaneous upgrade rejections are both settled with %s released first',
-  async (first) => {
-    await withDaemon(
-      {
-        holdHandshakes: ['output', 'stdin'],
-        rejectRoles: ['output', 'stdin'],
-        rejection: 'HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n',
-      },
-      async (state) => {
-        const controller = new AbortController();
-        const timings = [];
-        const pending = execute(state, {
-          signal: controller.signal,
-          observeTiming: (event) => timings.push(event),
-        });
-        void pending.catch(() => {});
-        try {
-          await within(
-            Promise.all([
-              state.stage('output-attach'),
-              state.stage('stdin-attach'),
-            ]),
-            'A handshake remained serialized behind its sibling',
-          );
-          state.handshakes[first]();
-          state.handshakes[first === 'output' ? 'stdin' : 'output']();
-          await within(
-            expect(pending).rejects.toThrow('Local Docker attachment failed'),
-            'Concurrent rejections were not settled',
-          );
-          expectAttachmentTiming(timings);
-          expect(timings.every((event) => !event.completed)).toBe(true);
-          expect(state.events).not.toContain('start');
-          expect(state.input).toEqual([]);
-          expect(state.requests).toHaveLength(2);
-        } finally {
-          controller.abort();
-          await Promise.allSettled([pending]);
-        }
-      },
-    );
-  },
-);
+test('Rejecting the stdin upgrade releases the already attached output without starting', async () => {
+  await withDaemon(
+    {
+      rejectRole: 'stdin',
+      rejection: 'HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n',
+    },
+    async (state) => {
+      const timings = [];
+      await expect(
+        execute(state, { observeTiming: (event) => timings.push(event) }),
+      ).rejects.toThrow('Local Docker attachment failed');
+      expectTiming(timings, ['attachOutput', 'attachInput']);
+      expect(timings.map((event) => event.completed)).toEqual([true, false]);
+      expect(state.events).toEqual(['output-attach', 'stdin-attach']);
+      expect(state.input).toEqual([]);
+    },
+  );
+});
 
 test.each(['output-handshake', 'stdin-handshake', 'start', 'stream', 'wait'])(
   'Cancellation during %s stops the exchange without retries',
@@ -613,51 +564,17 @@ test.each(['output-handshake', 'stdin-handshake', 'start', 'stream', 'wait'])(
   },
 );
 
-test.each(['cancellation', 'deadline'])(
-  'Both pending handshakes settle on %s before any start or input',
-  async (termination) => {
-    await withDaemon({ holdHandshakes: ['output', 'stdin'] }, async (state) => {
-      const controller = new AbortController();
-      const timings = [];
-      const pending = execute(state, {
-        signal: controller.signal,
-        timeoutMs: termination === 'deadline' ? 200 : 2000,
-        observeTiming: (event) => timings.push(event),
-      });
-      void pending.catch(() => {});
-      try {
-        await within(
-          Promise.all([
-            state.stage('output-attach'),
-            state.stage('stdin-attach'),
-          ]),
-          'Both handshakes did not begin before termination',
-        );
-        if (termination === 'cancellation') controller.abort();
-        await within(
-          expect(pending).rejects.toThrow(),
-          'Termination did not settle both pending handshakes',
-        );
-        expectAttachmentTiming(timings);
-        expect(timings.every((event) => !event.completed)).toBe(true);
-        expect(state.events).not.toContain('start');
-        expect(state.input).toEqual([]);
-        expect(state.requests).toHaveLength(2);
-      } finally {
-        controller.abort();
-        await Promise.allSettled([pending]);
-      }
-    });
-  },
-);
-
 test('A lost POST start response never retries start or delivers input', async () => {
   await withDaemon({ dropStart: true }, async (state) => {
     const timings = [];
+    const observeStartFailure = jest.fn();
     await expect(
-      execute(state, { observeTiming: (event) => timings.push(event) }),
+      execute(state, {
+        observeTiming: (event) => timings.push(event),
+        observeStartFailure,
+      }),
     ).rejects.toThrow('Local Docker request failed');
-    expectAttachmentTiming(timings, ['start']);
+    expectTiming(timings, ['attachOutput', 'attachInput', 'start']);
     expect(timings.map((event) => event.completed)).toEqual([
       true,
       true,
@@ -665,6 +582,18 @@ test('A lost POST start response never retries start or delivers input', async (
     ]);
     expect(state.events).toEqual(['output-attach', 'stdin-attach', 'start']);
     expect(state.input).toEqual([]);
+    expect(observeStartFailure.mock.calls).toEqual([
+      [
+        {
+          httpStatus: null,
+          outcome: 'SOCKET_ERROR',
+          runtimeCause: null,
+          containerState: 'unknown',
+          hasStarted: null,
+          oomKilled: null,
+        },
+      ],
+    ]);
   });
 });
 
@@ -672,12 +601,232 @@ test.each([304, 404, 500])(
   'A start status %i fails without delivering input',
   async (startStatus) => {
     await withDaemon({ startStatus }, async (state) => {
-      await expect(execute(state)).rejects.toThrow('Docker start failed');
+      const observeStartFailure = jest.fn();
+      await expect(execute(state, { observeStartFailure })).rejects.toThrow(
+        'Docker start failed',
+      );
+      expect(observeStartFailure.mock.calls).toEqual([
+        [
+          {
+            httpStatus: startStatus,
+            outcome: 'HTTP_RESPONSE',
+            runtimeCause: null,
+            containerState: 'unknown',
+            hasStarted: null,
+            oomKilled: null,
+          },
+        ],
+      ]);
       expect(state.events.filter((event) => event === 'start')).toHaveLength(1);
       expect(state.input).toEqual([]);
     });
   },
 );
+
+test.each([
+  [
+    400,
+    'OCI runtime create failed: exec /PRIVATE_FILE: permission denied',
+    'PERMISSION',
+  ],
+  [400, 'invalid runtime option PRIVATE_OPTION', null],
+  [403, 'OCI runtime create failed: operation not permitted', 'PERMISSION'],
+  [304, 'permission denied', null],
+  [302, 'permission denied', null],
+])(
+  'HTTP %i start errors expose only known runtime symptoms (%s)',
+  async (status, message, cause) => {
+    await withDaemon(
+      {
+        replyStart(res) {
+          res.writeHead(status);
+          res.end(JSON.stringify({ message }));
+        },
+      },
+      async (state) => {
+        const observeStartFailure = jest.fn();
+        await expect(execute(state, { observeStartFailure })).rejects.toThrow(
+          'Docker start failed',
+        );
+        expect(observeStartFailure.mock.calls).toEqual([
+          [
+            {
+              httpStatus: status,
+              outcome: 'HTTP_RESPONSE',
+              runtimeCause: cause,
+              containerState: 'unknown',
+              hasStarted: null,
+              oomKilled: null,
+            },
+          ],
+        ]);
+        expect(state.events.filter((e) => e === 'start')).toHaveLength(1);
+        expect(state.input).toEqual([]);
+      },
+    );
+  },
+);
+
+test.each([
+  ['truncated', 'INCOMPLETE_RESPONSE'],
+  ['invalid-json', 'INVALID_RESPONSE'],
+  ['oversized', 'RESPONSE_LIMIT'],
+])(
+  'start with 500 headers and %s reply preserves both facts',
+  async (mode, outcome) => {
+    await withDaemon(
+      {
+        replyStart(res) {
+          if (mode === 'truncated') {
+            res.writeHead(500, { 'Content-Length': '100' });
+            res.write('{');
+            res.socket.end();
+          } else {
+            res.writeHead(500);
+            res.end(
+              mode === 'invalid-json' ? '{PRIVATE_INVALID' : 'x'.repeat(524289),
+            );
+          }
+        },
+      },
+      async (state) => {
+        const observeStartFailure = jest.fn();
+        await expect(execute(state, { observeStartFailure })).rejects.toThrow(
+          'Local Docker request failed',
+        );
+        expect(observeStartFailure.mock.calls).toEqual([
+          [
+            {
+              httpStatus: 500,
+              outcome,
+              runtimeCause: null,
+              containerState: 'unknown',
+              hasStarted: null,
+              oomKilled: null,
+            },
+          ],
+        ]);
+        expect(state.events.filter((e) => e === 'start')).toHaveLength(1);
+        expect(state.input).toEqual([]);
+      },
+    );
+  },
+);
+
+test.each(['cancelled', 'deadline'])(
+  'a %s START never spends time observing or resending',
+  async (mode) => {
+    await withDaemon({ hold: 'start' }, async (state) => {
+      const controller = new AbortController();
+      const observeStartFailure = jest.fn();
+      const outcome = execute(state, {
+        signal: controller.signal,
+        timeoutMs: mode === 'deadline' ? 300 : 2000,
+        observeStartFailure,
+        ownedContainerId: 'b'.repeat(64),
+      });
+      const checked = expect(outcome).rejects.toThrow();
+      await state.stage('start');
+      if (mode === 'cancelled') controller.abort();
+      await checked;
+      expect(observeStartFailure.mock.calls).toEqual([
+        [
+          {
+            httpStatus: null,
+            outcome: mode === 'deadline' ? 'DEADLINE' : 'CANCELLED',
+            runtimeCause: null,
+            containerState: 'unknown',
+            hasStarted: null,
+            oomKilled: null,
+          },
+        ],
+      ]);
+      expect(state.requests.filter((r) => r.method === 'GET')).toEqual([]);
+      expect(state.events.filter((e) => e === 'start')).toHaveLength(1);
+      expect(state.input).toEqual([]);
+    });
+  },
+);
+
+test.each(['malformed status line', 'invalid status number'])(
+  '%s is an invalid response without a usable HTTP status',
+  async (kind) => {
+    await withDaemon(
+      {
+        replyStart(res) {
+          res.socket.end(
+            kind === 'malformed status line'
+              ? 'INVALID_PRIVATE_STATUS\r\n\r\n'
+              : 'HTTP/1.1 999 UNKNOWN\r\nContent-Length: 0\r\n\r\n',
+          );
+        },
+      },
+      async (state) => {
+        const observeStartFailure = jest.fn();
+        await expect(execute(state, { observeStartFailure })).rejects.toThrow();
+        expect(observeStartFailure.mock.calls).toEqual([
+          [
+            {
+              httpStatus: null,
+              outcome: 'INVALID_RESPONSE',
+              runtimeCause: null,
+              containerState: 'unknown',
+              hasStarted: null,
+              oomKilled: null,
+            },
+          ],
+        ]);
+        expect(state.input).toEqual([]);
+      },
+    );
+  },
+);
+
+test('an attachment failure racing the start reply remains the first phase', async () => {
+  await withDaemon({ hold: 'start' }, async (state) => {
+    const phases = [];
+    const failed = execute(state, {
+      ownedContainerId: 'b'.repeat(64),
+      observeFailure: (phase) => phases.push(phase),
+      observeStartFailure: jest.fn(),
+    });
+    const checked = expect(failed).rejects.toThrow();
+    await state.stage('start');
+    state.output.end(frame(9, 'invalid private data'));
+    await checked;
+    expect(phases[0]).toBe('STREAMS');
+    expect(state.requests.filter((r) => r.method === 'GET')).toEqual([]);
+    expect(state.events.filter((e) => e === 'start')).toHaveLength(1);
+    expect(state.input).toEqual([]);
+  });
+});
+
+test('a failed HTTP start near the shared deadline preserves time for cleanup', async () => {
+  await withDaemon({ startStatus: 500 }, async (state) => {
+    const observeStartFailure = jest.fn();
+    await expect(
+      execute(state, {
+        deadlineMs: Date.now() + 350,
+        ownedContainerId: 'b'.repeat(64),
+        observeStartFailure,
+      }),
+    ).rejects.toThrow('Docker start failed');
+    expect(observeStartFailure.mock.calls).toEqual([
+      [
+        {
+          httpStatus: 500,
+          outcome: 'HTTP_RESPONSE',
+          runtimeCause: null,
+          containerState: 'unknown',
+          hasStarted: null,
+          oomKilled: null,
+        },
+      ],
+    ]);
+    expect(state.requests.filter((r) => r.method === 'GET')).toEqual([]);
+    expect(state.input).toEqual([]);
+  });
+});
 
 test('Input byte limit is inclusive and rejects oversized UTF-8 or prior cancellation before any IPC', async () => {
   await withDaemon({}, async (state) => {
@@ -697,6 +846,166 @@ test('Input byte limit is inclusive and rejects oversized UTF-8 or prior cancell
     expect(Buffer.concat(state.input).toString()).toBe('é'.repeat(131072));
   });
 });
+
+test.each([
+  ['running after lost response', 'running', true, null],
+  ['missing after 404', 'absent', null, null],
+  ['cgroup failure and failed cleanup', 'created', false, 'CGROUP'],
+  ['unknown state after mount failure', 'unknown', null, 'MOUNT'],
+  ['unrecognized start permission', 'created', false, 'PERMISSION'],
+  ['identity mismatch', 'unknown', null, null],
+  ['own observation fails', 'unknown', null, null],
+])(
+  'the capsule observes its own failed start: %s',
+  async (mode, containerState, hasStarted, runtimeCause) => {
+    const id = 'b'.repeat(64);
+    const executionId = randomUUID();
+    let config,
+      removed = false,
+      observations = 0;
+    const startStatus = mode === 'missing after 404' ? 404 : 500;
+    const messages = {
+      CGROUP:
+        'runc create failed: unable to apply cgroup configuration: private-cgroup',
+      MOUNT: 'error mounting private-source on private-target',
+      PERMISSION: 'exec private-file: permission denied',
+    };
+    await withDaemon(
+      {
+        dropStart: mode === 'running after lost response',
+        replyStart(res) {
+          res.writeHead(startStatus);
+          res.end(
+            JSON.stringify({
+              message: messages[runtimeCause] ?? 'UNKNOWN_PRIVATE_ERROR',
+            }),
+          );
+        },
+        handleRequest(req, res) {
+          const path = new URL(req.url, 'http://local').pathname;
+          if (path === '/version') {
+            res.end(
+              JSON.stringify({ ApiVersion: '1.41', MinAPIVersion: '1.12' }),
+            );
+          } else if (path === '/v1.41/containers/create') {
+            let body = '';
+            req.on('data', (chunk) => {
+              body += chunk;
+            });
+            req.on('end', () => {
+              config = JSON.parse(body);
+              res.writeHead(201);
+              res.end(JSON.stringify({ Id: id }));
+            });
+          } else if (req.method === 'DELETE') {
+            removed = true;
+            res.writeHead(
+              mode === 'cgroup failure and failed cleanup' ? 500 : 204,
+            );
+            res.end();
+          } else if (path === '/v1.41/containers/' + id + '/json') {
+            observations++;
+            if (mode === 'own observation fails') res.destroy();
+            else if (mode === 'missing after 404') {
+              res.writeHead(404);
+              res.end();
+            } else
+              res.end(
+                JSON.stringify({
+                  Id: id,
+                  State: {
+                    Status:
+                      mode === 'unknown state after mount failure'
+                        ? 'PRIVATE_STATUS'
+                        : containerState,
+                    StartedAt: hasStarted
+                      ? '2026-01-01T00:00:01.000000000Z'
+                      : '0001-01-01T00:00:00Z',
+                    OOMKilled: false,
+                    Error: 'PRIVATE_ERROR',
+                  },
+                  PRIVATE_GLOBAL_CONFIGURATION: 'PRIVATE_VALUE',
+                }),
+              );
+          } else if (path.endsWith('/json')) {
+            if (removed) {
+              res.writeHead(404);
+              res.end();
+            } else
+              res.end(
+                JSON.stringify({
+                  Id: mode === 'identity mismatch' ? 'f'.repeat(64) : id,
+                  Config: config,
+                  HostConfig: config.HostConfig,
+                }),
+              );
+          } else return false;
+          return true;
+        },
+      },
+      async (state) => {
+        const oldHost = process.env.DOCKER_HOST,
+          oldContext = process.env.DOCKER_CONTEXT;
+        process.env.DOCKER_HOST =
+          process.platform === 'win32'
+            ? 'npipe://' + state.socketPath.replaceAll('\\', '/')
+            : 'unix://' + state.socketPath;
+        delete process.env.DOCKER_CONTEXT;
+        try {
+          await jest.isolateModulesAsync(async () => {
+            const { runCapsule } =
+              await import('../../infra/runner/capsule.mjs');
+            const failures = [],
+              details = [];
+            await expect(
+              runCapsule(
+                { executionId, code: 'PRIVATE_STUDENT' },
+                {
+                  image: 'sha256:' + 'a'.repeat(64),
+                  observeFailure: (phase) => failures.push(phase),
+                  observeStartFailure(detail) {
+                    details.push(detail);
+                    return Promise.reject(new Error('PRIVATE_OBSERVER'));
+                  },
+                },
+              ),
+            ).rejects.toThrow();
+            expect(failures[0]).toBe('START');
+            if (mode === 'cgroup failure and failed cleanup')
+              expect(failures).toContain('CONTAINER_CLEANUP');
+            expect(details).toEqual([
+              {
+                httpStatus:
+                  mode === 'running after lost response' ? null : startStatus,
+                outcome:
+                  mode === 'running after lost response'
+                    ? 'SOCKET_ERROR'
+                    : 'HTTP_RESPONSE',
+                runtimeCause,
+                containerState,
+                hasStarted,
+                oomKilled: hasStarted === null ? null : false,
+              },
+            ]);
+          });
+        } finally {
+          if (oldHost === undefined) delete process.env.DOCKER_HOST;
+          else process.env.DOCKER_HOST = oldHost;
+          if (oldContext === undefined) delete process.env.DOCKER_CONTEXT;
+          else process.env.DOCKER_CONTEXT = oldContext;
+        }
+        expect(observations).toBe(mode === 'identity mismatch' ? 0 : 1);
+        expect(removed).toBe(true);
+        expect(state.requests.slice(-2).map((r) => r.method)).toEqual([
+          'DELETE',
+          'GET',
+        ]);
+        expect(state.events.filter((e) => e === 'start')).toHaveLength(1);
+        expect(state.input).toEqual([]);
+      },
+    );
+  },
+);
 
 test.each([
   { maxBytes: 0 },
@@ -749,52 +1058,6 @@ test('A malformed output frame aborts a sibling handshake without waiting for th
     expect(state.input).toEqual([]);
   });
 });
-
-test.each(['unexpected output', 'premature EOF'])(
-  'Stdin %s aborts a pending output handshake before start',
-  async (failure) => {
-    await withDaemon({ hold: 'output-handshake' }, async (state) => {
-      const controller = new AbortController();
-      const timings = [];
-      const pending = execute(state, {
-        signal: controller.signal,
-        observeTiming(event) {
-          timings.push(event);
-          state.mark(`observed-${event.phase}`);
-        },
-      });
-      void pending.catch(() => {});
-      try {
-        await within(
-          Promise.all([
-            state.stage('output-attach'),
-            state.stage('observed-attachInput'),
-          ]),
-          'Stdin handshake remained blocked behind output',
-        );
-        if (failure === 'premature EOF') state.stdin.end();
-        else state.stdin.write(frame(1, 'unexpected'));
-        await within(
-          expect(pending).rejects.toThrow('Local Docker attachment failed'),
-          'Stdin failure did not abort the output handshake',
-        );
-        expectAttachmentTiming(timings);
-        expect(
-          timings.find((event) => event.phase === 'attachInput'),
-        ).toMatchObject({ completed: true });
-        expect(
-          timings.find((event) => event.phase === 'attachOutput'),
-        ).toMatchObject({ completed: false });
-        expect(state.events).not.toContain('start');
-        expect(state.input).toEqual([]);
-        expect(state.requests).toHaveLength(2);
-      } finally {
-        controller.abort();
-        await Promise.allSettled([pending]);
-      }
-    });
-  },
-);
 
 test('Output EOF does not confirm completion until wait returns the independent exit code', async () => {
   await withDaemon(
@@ -1018,9 +1281,9 @@ test('An asynchronously rejected observer cannot mask a transport failure or ret
       'Local Docker request failed',
     );
     await new Promise((resolve) => setImmediate(resolve));
-    expectAttachmentTiming(
+    expectTiming(
       observeTiming.mock.calls.map(([event]) => event),
-      ['start'],
+      ['attachOutput', 'attachInput', 'start'],
     );
     expect(observeTiming.mock.calls.at(-1)[0].completed).toBe(false);
     expect(state.events).toEqual(['output-attach', 'stdin-attach', 'start']);

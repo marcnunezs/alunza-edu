@@ -1,0 +1,12 @@
+{
+  "recordedAt": "2026-10-23T04:49:00.111Z",
+  "status": "passed",
+  "infrastructure": "real-local-supabase-mailpit",
+  "scenarios": [
+    "auth-success-database-audit-failure",
+    "uncertain-delivery-api-restart",
+    "obsolete-generation-rejected",
+    "one-membership-one-acceptance",
+    "expired-lease-after-acceptance-no-redelivery"
+  ]
+}

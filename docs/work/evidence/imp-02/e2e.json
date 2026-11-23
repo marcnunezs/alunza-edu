@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "increment": "IMP-02",
+  "recordedAt": "2026-09-28T23:00:26.303Z",
+  "browser": "chrome",
+  "browserVersion": "153.0.8010.50",
+  "cypressVersion": "16.0.0",
+  "spec": "tests/e2e/*.cy.ts",
+  "status": "passed",
+  "total": 25,
+  "passed": 25,
+  "failed": 0,
+  "pending": 0,
+  "skipped": 0,
+  "durationMs": 67611,
+  "tests": [
+    {
+      "id": "FND-01",
+      "state": "passed"
+    },
+    {
+      "id": "FND-02",
+      "state": "passed"
+    },
+    {
+      "id": "FND-03",
+      "state": "passed"
+    },
+    {
+      "id": "FND-04",
+      "state": "passed"
+    },
+    {
+      "id": "FND-05",
+      "state": "passed"
+    },
+    {
+      "id": "FND-06",
+      "state": "passed"
+    },
+    {
+      "id": "FND-07",
+      "state": "passed"
+    },
+    {
+      "id": "FND-08",
+      "state": "passed"
+    },
+    {
+      "id": "IMP01-01",
+      "state": "passed"
+    },
+    {
+      "id": "IMP01-02",
+      "state": "passed"
+    },
+    {
+      "id": "IMP01-03",
+      "state": "passed"
+    },
+    {
+      "id": "IMP01-04",
+      "state": "passed"
+    },
+    {
+      "id": "IMP01-05",
+      "state": "passed"
+    },
+    {
+      "id": "IMP01-06",
+      "state": "passed"
+    },
+    {
+      "id": "IMP01-07",
+      "state": "passed"
+    },
+    {
+      "id": "IMP01-08",
+      "state": "passed"
+    },
+    {
+      "id": "IMP02-01",
+      "state": "passed"
+    },
+    {
+      "id": "IMP02-02",
+      "state": "passed"
+    },
+    {
+      "id": "IMP02-03",
+      "state": "passed"
+    },
+    {
+      "id": "IMP02-04",
+      "state": "passed"
+    },
+    {
+      "id": "IMP02-05",
+      "state": "passed"
+    },
+    {
+      "id": "IMP02-06",
+      "state": "passed"
+    },
+    {
+      "id": "IMP02-07",
+      "state": "passed"
+    },
+    {
+      "id": "IMP02-08",
+      "state": "passed"
+    },
+    {
+      "id": "IMP02-09",
+      "state": "passed"
+    }
+  ]
+}

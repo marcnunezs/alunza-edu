@@ -1,0 +1,69 @@
+{
+  "recordedAt": "2026-10-23T04:54:40.167Z",
+  "status": "failed",
+  "execution": "local",
+  "steps": [
+    {
+      "command": "npm run format:check",
+      "status": "passed",
+      "durationMs": 3109
+    },
+    {
+      "command": "npm run lint",
+      "status": "passed",
+      "durationMs": 5787
+    },
+    {
+      "command": "npm run typecheck",
+      "status": "passed",
+      "durationMs": 14638
+    },
+    {
+      "command": "npm test",
+      "status": "passed",
+      "durationMs": 31718,
+      "passedTests": 619,
+      "testGroups": 6
+    },
+    {
+      "command": "npm run runner:prepare",
+      "status": "passed",
+      "durationMs": 1914
+    },
+    {
+      "command": "npm run runner:doctor",
+      "status": "passed",
+      "durationMs": 2380
+    },
+    {
+      "command": "npm run runner:probe -- --adapter docker",
+      "status": "passed",
+      "durationMs": 78910
+    },
+    {
+      "command": "npm run test:migration:practice",
+      "status": "passed",
+      "durationMs": 53835
+    },
+    {
+      "command": "npm run cypress:install",
+      "status": "passed",
+      "durationMs": 3562
+    },
+    {
+      "command": "npm run test:integration",
+      "status": "passed",
+      "durationMs": 220315
+    },
+    {
+      "command": "npm run test:practice:performance",
+      "status": "passed",
+      "durationMs": 134377
+    },
+    {
+      "command": "npm run test:practice:performance -- --submit",
+      "status": "failed",
+      "durationMs": 193225
+    }
+  ]
+}

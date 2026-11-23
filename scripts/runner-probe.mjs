@@ -12,6 +12,14 @@ import {
   RUNNER_VERSION,
 } from '../packages/runner/dist/index.js';
 import { runnerFixtures, osProbeNames } from '../tests/runner/fixtures.mjs';
+import {
+  selectSandboxSmokeFixture,
+  sandboxSmokeScope,
+} from '../tests/runner/sandbox-acceptance.mjs';
+import {
+  reserveSandboxCorrelation,
+  sandboxCorrelationPath,
+} from '../tests/runner/sandbox-correlation.mjs';
 import { probeExecutionCleanup } from '../tests/runner/cleanup-probe.mjs';
 import { localDockerEngine } from '../infra/runner/docker-engine.mjs';
 import {
@@ -61,6 +69,8 @@ class HeapObservationAdapter extends DockerAdapter {
 }
 let pendingProvider = 'docker';
 let remoteRequests = 0;
+let remoteScope = null;
+let remoteCorrelationPath = null;
 function observation(kind, result) {
   if (!kind) return undefined;
   let data;
@@ -276,6 +286,11 @@ async function main() {
       deadline,
     );
     const { teamId, projectId, region } = manifest.targets.sandbox;
+    remoteScope = sandboxSmokeScope({
+      region,
+      authorizationWindowSeconds: manifest.budget.maxDurationSeconds,
+      maxHttpRequests: manifest.budget.maxHttpRequests,
+    });
     remoteOptions = {
       authorized: true,
       expiresAtMs: deadline,
@@ -284,6 +299,26 @@ async function main() {
       projectId,
       region,
       image: process.env.RUNNER_SANDBOX_IMAGE,
+      async recordCorrelation(correlation) {
+        const directory = resolve(root, '.local/reports/imp-00-06-08');
+        const approvalRef = manifest.remote.approvalRef;
+        const operation = 'probe:sandbox';
+        // Preserve the original journal path even when this approval is already
+        // reserved. A new resource UUID or target must not bypass that lock.
+        remoteCorrelationPath = sandboxCorrelationPath(
+          directory,
+          approvalRef,
+          operation,
+        );
+        await reserveSandboxCorrelation({
+          directory,
+          approvalRef,
+          operation,
+          approved: true,
+          releaseSha: manifest.release.sha,
+          correlation,
+        });
+      },
       allowRequest(cleanup) {
         requestBudget.consume(cleanup);
         remoteRequests = requestBudget.requests;
@@ -326,20 +361,21 @@ async function main() {
     limits: LIMITS,
     remote: provider === 'vercel' ? 'AUTHORIZED_ATTEMPT' : 'NOT_RUN',
     acceptance: 'EXPERIMENTAL_ONLY',
+    ...(provider === 'vercel' ? { scope: remoteScope } : {}),
     knownLimits: [
       'Guest uses QuickJS WASM; host owns return emission after normal synchronous invocation',
-      'Trusted bridge UID0 retains SETUID/SETGID/SETPCAP; student must have zero capabilities',
+      'Trusted bridge UID0 retains KILL/SETUID/SETGID/SETPCAP; student must have zero capabilities',
       'Bridge memory counts within128MiB',
       'Kernel transient memory overshoot and kill scheduling latency',
       'No full-flow p95 or business RF acceptance',
     ],
     cases: [],
   };
-  const maxRuns =
-    provider === 'vercel'
-      ? manifest.budget.maxSandboxRuns
-      : runnerFixtures.length;
-  const selected = acceptanceOnly ? [] : runnerFixtures.slice(0, maxRuns);
+  const selected = acceptanceOnly
+    ? []
+    : provider === 'vercel'
+      ? [selectSandboxSmokeFixture(runnerFixtures)]
+      : runnerFixtures;
   let failures = 0;
   const runFixture = async (fixture, adapter, signal) =>
     execute(
@@ -352,7 +388,6 @@ async function main() {
         entrypoint: 'solve',
         code: fixture.code,
         tests: fixture.tests,
-        ...(fixture.limits ? { limits: fixture.limits } : {}),
       },
       adapter,
       signal,
@@ -588,6 +623,7 @@ async function main() {
     .filter((item) => !report.cases.some((result) => result.id === item.id))
     .map((item) => item.id);
   report.remoteCalls = remoteRequests;
+  if (provider === 'vercel') report.correlationPath = remoteCorrelationPath;
   report.failures = failures;
   report.authorizationChecked =
     provider === 'vercel' ? Boolean(authorization !== false) : false;
@@ -614,6 +650,9 @@ try {
     reason: pending ? error.message : 'RUNNER_FAILURE',
     remoteCalls: remoteRequests,
     acceptance: 'NOT_ACCEPTED',
+    ...(pendingProvider === 'vercel'
+      ? { scope: remoteScope, correlationPath: remoteCorrelationPath }
+      : {}),
   };
   const directory = resolve(root, '.local/reports/imp-00-06-08');
   await mkdir(directory, { recursive: true });

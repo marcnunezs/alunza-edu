@@ -1,13 +1,27 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { runTechnicalResultSchema } from '@alunza/contracts';
-import { ExecutionPort, failedRun } from './execution.port';
+import type { ExecutionResult } from '@alunza/runner';
+import {
+  ExecutionPort,
+  executionContextSchema,
+  failedRun,
+} from './execution.port';
 import type {
   PracticeExecutionInput,
   RunnerInspection,
+  ExecutionContext,
+  ExecutionAuthority,
+  ExecutionRequestClosure,
 } from './execution.port';
+import { DockerRunnerService } from './docker-runner.service';
 
 @Injectable()
 export class DockerExecutionAdapter extends ExecutionPort {
+  constructor(
+    @Optional() private readonly configuredRunner?: DockerRunnerService,
+  ) {
+    super();
+  }
   private inspection: Promise<RunnerInspection> | undefined;
   private sweeping:
     Promise<{ cleanupVerified: boolean; removed: number }> | undefined;
@@ -23,72 +37,83 @@ export class DockerExecutionAdapter extends ExecutionPort {
 
   protected async inspectDocker(): Promise<RunnerInspection> {
     try {
+      if (this.configuredRunner?.configured)
+        return await this.configuredRunner.inspect();
       const runner = await import('@alunza/runner');
       const { available, image } = await runner.getDockerAvailability();
-      if (
-        !available ||
-        typeof image !== 'string' ||
-        image.length !== 71 ||
-        !/^sha256:[a-f0-9]{64}$/.test(image)
-      )
-        return { available: false, runnerVersion: runner.RUNNER_VERSION };
-      return {
-        available: true,
-        runnerVersion: runner.RUNNER_VERSION,
-        preparation: Object.freeze({ provider: 'docker', image }),
-      };
+      return available && image
+        ? {
+            available: true,
+            runnerVersion: runner.RUNNER_VERSION,
+            context: Object.freeze({
+              provider: 'docker' as const,
+              image,
+              runnerVersion: runner.RUNNER_VERSION,
+            }),
+          }
+        : { available: false, runnerVersion: runner.RUNNER_VERSION };
     } catch {
       return { available: false, runnerVersion: 'unavailable' };
     }
   }
 
-  async execute(input: PracticeExecutionInput) {
+  async execute(
+    input: PracticeExecutionInput,
+    context?: ExecutionContext,
+    authority?: ExecutionAuthority,
+  ) {
+    if (context && !executionContextSchema.safeParse(context).success)
+      throw new Error('Runner inspection context invalid');
+    if (
+      this.configuredRunner?.configured ||
+      (context?.provider === 'docker' && context.engineId)
+    ) {
+      if (!this.configuredRunner)
+        throw new Error('Docker candidate unavailable');
+      const { result, cleanupVerified } = await this.configuredRunner.execute(
+        input,
+        context,
+        authority,
+      );
+      return {
+        technicalResult: projectRun(input, result, context!.runnerVersion),
+        cleanupVerified,
+      };
+    }
     const runner = await import('@alunza/runner');
+    if (
+      context &&
+      (context.provider !== 'docker' ||
+        context.runnerVersion !== runner.RUNNER_VERSION ||
+        !/^sha256:[a-f0-9]{64}$/.test(context.image))
+    )
+      throw new Error('Runner inspection context invalid');
     const result = await runner.execute(
       input,
-      new runner.DockerAdapter(),
+      new runner.DockerAdapter(context ? { image: context.image } : {}),
       AbortSignal.timeout(30_000),
     );
-    const tests = result.visibleTestResults;
-    const knownIds = new Set(input.tests.map((test) => test.id));
-    // Explicit projection: no object spread from a private runner response.
-    const projected = runTechnicalResultSchema.safeParse({
-      runnerVersion: result.runnerVersion,
-      diagnosisCode: result.diagnosisCode,
-      terminationReason: result.terminationReason,
-      infrastructureStatus: result.infrastructureStatus,
-      visibleTestResults: tests.map((test) => ({
-        id: test.id,
-        passed: test.passed,
-        // JSONB cannot store U+0000. ASCII replacement preserves byte budget.
-        stdout: test.stdout.replaceAll('\0', '?'),
-        stderr: test.stderr.replaceAll('\0', '?'),
-      })),
-      visiblePassed: tests.filter((test) => test.passed).length,
-      visibleTotal: input.tests.length,
-      outputTruncated: result.outputTruncated,
-      outputBytes: result.outputBytes,
-      runtimeMs: result.runtimeMs,
-      lifecycleMs: result.lifecycleMs,
-    });
-    const coherent =
-      result.executionId === input.executionId &&
-      result.runnerVersion === runner.RUNNER_VERSION &&
-      result.privateTestResults.length === 0 &&
-      result.hiddenRequiredCount === 0 &&
-      tests.every((test) => knownIds.has(test.id)) &&
-      result.outputBytes <= input.limits.outputBytes &&
-      (result.diagnosisCode !== 'SUCCESS' || result.allRequiredPassed);
     return {
-      technicalResult:
-        coherent && projected.success
-          ? projected.data
-          : failedRun(runner.RUNNER_VERSION, input.tests.length),
+      technicalResult: projectRun(input, result, runner.RUNNER_VERSION),
       cleanupVerified: result.evidence.cleanupVerified,
     };
   }
 
-  async cleanup(executionId: string, timeoutMs = 10_000): Promise<boolean> {
+  async cleanup(
+    executionId: string,
+    timeoutMs = 10_000,
+    context?: ExecutionContext,
+  ): Promise<boolean> {
+    if (
+      context &&
+      (context.provider !== 'docker' ||
+        !executionContextSchema.safeParse(context).success)
+    )
+      return false;
+    if (context?.provider === 'docker' && context.engineId)
+      return (
+        this.configuredRunner?.cleanup(executionId, context, timeoutMs) ?? false
+      );
     try {
       const runner = await import('@alunza/runner');
       return (
@@ -103,9 +128,6 @@ export class DockerExecutionAdapter extends ExecutionPort {
   }
 
   sweepExpired() {
-    // RUN and SUBMIT reconcilers share this adapter and can sweep together.
-    // Share only that in-flight sweep, including its existing 10s deadline.
-    // No result is cached: success or failure releases the next fresh sweep.
     return (this.sweeping ??= this.sweepDocker().finally(() => {
       this.sweeping = undefined;
     }));
@@ -114,11 +136,64 @@ export class DockerExecutionAdapter extends ExecutionPort {
   protected async sweepDocker() {
     try {
       const runner = await import('@alunza/runner');
-      return await runner.sweepExpiredDockerExecutions(
+      const legacy = await runner.sweepExpiredDockerExecutions(
         AbortSignal.timeout(10_000),
       );
+      if (!this.configuredRunner) return legacy;
+      const prepared = await this.configuredRunner.sweepExpired();
+      return {
+        cleanupVerified: legacy.cleanupVerified && prepared.cleanupVerified,
+        removed: legacy.removed + prepared.removed,
+      };
     } catch {
       return { cleanupVerified: false, removed: 0 };
     }
   }
+  override requestClosed(
+    executionId: string,
+    context: ExecutionContext,
+    closure: ExecutionRequestClosure,
+  ) {
+    this.configuredRunner?.requestClosed(executionId, context, closure);
+  }
+}
+
+/** Explicit public projection shared by both providers. */
+export function projectRun(
+  input: PracticeExecutionInput,
+  result: ExecutionResult,
+  runnerVersion: string,
+) {
+  const tests = result.visibleTestResults;
+  const knownIds = new Set(input.tests.map((test) => test.id));
+  // Explicit projection: no object spread from a private runner response.
+  const projected = runTechnicalResultSchema.safeParse({
+    runnerVersion: result.runnerVersion,
+    diagnosisCode: result.diagnosisCode,
+    terminationReason: result.terminationReason,
+    infrastructureStatus: result.infrastructureStatus,
+    visibleTestResults: tests.map((test) => ({
+      id: test.id,
+      passed: test.passed,
+      // JSONB cannot store U+0000. ASCII replacement preserves byte budget.
+      stdout: test.stdout.replaceAll('\0', '?'),
+      stderr: test.stderr.replaceAll('\0', '?'),
+    })),
+    visiblePassed: tests.filter((test) => test.passed).length,
+    visibleTotal: input.tests.length,
+    outputTruncated: result.outputTruncated,
+    outputBytes: result.outputBytes,
+    runtimeMs: result.runtimeMs,
+    lifecycleMs: result.lifecycleMs,
+  });
+  const coherent =
+    result.executionId === input.executionId &&
+    result.runnerVersion === runnerVersion &&
+    result.privateTestResults.length === 0 &&
+    result.hiddenRequiredCount === 0 &&
+    tests.every((test) => knownIds.has(test.id)) &&
+    (result.diagnosisCode !== 'SUCCESS' || result.allRequiredPassed);
+  return coherent && projected.success
+    ? projected.data
+    : failedRun(runnerVersion, input.tests.length);
 }

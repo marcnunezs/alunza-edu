@@ -1,0 +1,520 @@
+[
+  {
+    "id": "EVT-01",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "actorId": "student-a",
+        "activityId": "activity-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "deliveries": [
+        {
+          "id": "poll",
+          "type": "POLL",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T11:00:00Z",
+          "dedupKey": "poll",
+          "confirmed": true,
+          "explicit": false,
+          "acknowledged": true
+        },
+        {
+          "id": "refresh",
+          "type": "DASHBOARD_REFRESH",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T11:30:00Z",
+          "dedupKey": "refresh",
+          "confirmed": true,
+          "explicit": false,
+          "acknowledged": true
+        },
+        {
+          "id": "automatic-open",
+          "type": "ACTIVITY_OPENED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T11:45:00Z",
+          "dedupKey": "automatic-open",
+          "confirmed": true,
+          "explicit": false,
+          "acknowledged": true
+        }
+      ]
+    },
+    "expected": {
+      "canonicalEventIds": [],
+      "eligibleActivityEventIds": [],
+      "latestActivityAt": null
+    }
+  },
+  {
+    "id": "EVT-02",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "actorId": "student-a",
+        "activityId": "activity-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "deliveries": [
+        {
+          "id": "explicit-open",
+          "type": "ACTIVITY_OPENED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T10:00:00Z",
+          "dedupKey": "explicit-open",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true,
+          "clientAt": "2099-01-01T00:00:00Z"
+        }
+      ]
+    },
+    "expected": {
+      "canonicalEventIds": ["explicit-open"],
+      "eligibleActivityEventIds": ["explicit-open"],
+      "latestActivityAt": "2026-10-02T10:00:00Z"
+    }
+  },
+  {
+    "id": "EVT-03",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "actorId": "student-a",
+        "activityId": "activity-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "deliveries": [
+        {
+          "id": "view-original",
+          "type": "FEEDBACK_VIEWED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T09:00:00Z",
+          "dedupKey": "view-key",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true,
+          "ragStatus": "SUPPORTED"
+        },
+        {
+          "id": "view-transport-replay",
+          "type": "FEEDBACK_VIEWED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T11:00:00Z",
+          "dedupKey": "view-key",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true,
+          "ragStatus": "SUPPORTED"
+        },
+        {
+          "id": "new-explicit-view",
+          "type": "FEEDBACK_VIEWED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T11:30:00Z",
+          "dedupKey": "new-explicit-view",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true,
+          "ragStatus": "SUPPORTED"
+        }
+      ]
+    },
+    "expected": {
+      "canonicalEventIds": ["view-original", "new-explicit-view"],
+      "eligibleActivityEventIds": ["view-original", "new-explicit-view"],
+      "latestActivityAt": "2026-10-02T11:30:00Z"
+    }
+  },
+  {
+    "id": "EVT-04",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "actorId": "student-a",
+        "activityId": "activity-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "deliveries": [
+        {
+          "id": "view-no-evidence",
+          "type": "FEEDBACK_VIEWED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T10:00:00Z",
+          "dedupKey": "view-no-evidence",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true,
+          "ragStatus": "NO_EVIDENCE"
+        },
+        {
+          "id": "view-unavailable",
+          "type": "FEEDBACK_VIEWED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T11:00:00Z",
+          "dedupKey": "view-unavailable",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true,
+          "ragStatus": "PROVIDER_UNAVAILABLE"
+        }
+      ]
+    },
+    "expected": {
+      "canonicalEventIds": ["view-no-evidence", "view-unavailable"],
+      "eligibleActivityEventIds": ["view-no-evidence", "view-unavailable"],
+      "latestActivityAt": "2026-10-02T11:00:00Z"
+    }
+  },
+  {
+    "id": "EVT-05",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "actorId": "student-a",
+        "activityId": "activity-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "deliveries": [
+        {
+          "id": "request-only",
+          "type": "HELP_REQUESTED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T09:00:00Z",
+          "dedupKey": "request-only",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": false
+        },
+        {
+          "id": "failed-hint",
+          "type": "HINT_DELIVERED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T10:00:00Z",
+          "dedupKey": "failed-hint",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": false,
+          "ragStatus": "PROVIDER_UNAVAILABLE"
+        },
+        {
+          "id": "hint-without-ack",
+          "type": "HINT_DELIVERED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T10:30:00Z",
+          "dedupKey": "hint-without-ack",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": false,
+          "ragStatus": "SUPPORTED"
+        },
+        {
+          "id": "acknowledged-hint",
+          "type": "HINT_DELIVERED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T11:00:00Z",
+          "dedupKey": "acknowledged-hint",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true,
+          "ragStatus": "SUPPORTED"
+        }
+      ]
+    },
+    "expected": {
+      "canonicalEventIds": ["acknowledged-hint"],
+      "eligibleActivityEventIds": ["acknowledged-hint"],
+      "latestActivityAt": "2026-10-02T11:00:00Z"
+    }
+  },
+  {
+    "id": "EVT-06",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "actorId": "student-a",
+        "activityId": "activity-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "deliveries": [
+        {
+          "id": "foreign-org",
+          "type": "ACTIVITY_OPENED",
+          "organizationId": "org-b",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T10:00:00Z",
+          "dedupKey": "foreign-org",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true
+        },
+        {
+          "id": "foreign-class",
+          "type": "ACTIVITY_OPENED",
+          "organizationId": "org-a",
+          "classId": "class-b",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T10:15:00Z",
+          "dedupKey": "foreign-class",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true
+        },
+        {
+          "id": "foreign-activity",
+          "type": "ACTIVITY_OPENED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-b",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T10:30:00Z",
+          "dedupKey": "foreign-activity",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true
+        },
+        {
+          "id": "admin-operation",
+          "type": "ACTIVITY_OPENED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "admin-a",
+          "activityId": "activity-a",
+          "actorKind": "ADMIN",
+          "serverAt": "2026-10-02T11:00:00Z",
+          "dedupKey": "admin-operation",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true
+        }
+      ]
+    },
+    "expected": {
+      "canonicalEventIds": [],
+      "eligibleActivityEventIds": [],
+      "latestActivityAt": null
+    }
+  },
+  {
+    "id": "EVT-07",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "actorId": "student-a",
+        "activityId": "activity-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "deliveries": [
+        {
+          "id": "joined",
+          "type": "CLASS_JOINED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": null,
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T09:00:00Z",
+          "dedupKey": "joined",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true
+        }
+      ]
+    },
+    "expected": {
+      "canonicalEventIds": ["joined"],
+      "eligibleActivityEventIds": [],
+      "latestActivityAt": null
+    }
+  },
+  {
+    "id": "EVT-08",
+    "status": "AGREED",
+    "input": {
+      "scope": {
+        "organizationId": "org-a",
+        "classId": "class-a",
+        "actorId": "student-a",
+        "activityId": "activity-a"
+      },
+      "asOf": "2026-10-02T12:00:00Z",
+      "deliveries": [
+        {
+          "id": "run-completed",
+          "type": "EXECUTION_COMPLETED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T10:00:00Z",
+          "dedupKey": "run-completed",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true,
+          "mode": "RUN"
+        },
+        {
+          "id": "submitted",
+          "type": "ATTEMPT_SUBMITTED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T11:00:00Z",
+          "dedupKey": "submitted",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true
+        },
+        {
+          "id": "future-event",
+          "type": "ACTIVITY_OPENED",
+          "organizationId": "org-a",
+          "classId": "class-a",
+          "actorId": "student-a",
+          "activityId": "activity-a",
+          "actorKind": "STUDENT",
+          "serverAt": "2026-10-02T12:00:01Z",
+          "dedupKey": "future-event",
+          "confirmed": true,
+          "explicit": true,
+          "acknowledged": true
+        }
+      ]
+    },
+    "expected": {
+      "canonicalEventIds": ["run-completed", "submitted"],
+      "eligibleActivityEventIds": ["run-completed", "submitted"],
+      "latestActivityAt": "2026-10-02T11:00:00Z"
+    }
+  },
+  {
+    "id": "ORD-01",
+    "status": "AGREED",
+    "input": {
+      "attempts": [
+        {
+          "id": "attempt-3",
+          "submittedAt": "2026-10-02T12:00:00Z",
+          "eventSequence": 30,
+          "attemptNumber": 3
+        },
+        {
+          "id": "attempt-1",
+          "submittedAt": "2026-10-02T12:00:00Z",
+          "eventSequence": 10,
+          "attemptNumber": 1
+        },
+        {
+          "id": "attempt-2",
+          "submittedAt": "2026-10-02T12:00:00Z",
+          "eventSequence": 20,
+          "attemptNumber": 2
+        }
+      ]
+    },
+    "expected": {
+      "orderedAttemptIds": ["attempt-1", "attempt-2", "attempt-3"],
+      "preservedAttemptNumbers": [1, 2, 3]
+    }
+  },
+  {
+    "id": "ORD-02",
+    "status": "AGREED",
+    "input": {
+      "attempts": [
+        {
+          "id": "attempt-newer",
+          "submittedAt": "2026-10-02T11:00:00Z",
+          "eventSequence": 10,
+          "attemptNumber": 1
+        },
+        {
+          "id": "attempt-older",
+          "submittedAt": "2026-10-02T10:00:00Z",
+          "eventSequence": 20,
+          "attemptNumber": 2
+        }
+      ]
+    },
+    "expected": {
+      "orderedAttemptIds": ["attempt-older", "attempt-newer"],
+      "preservedAttemptNumbers": [2, 1]
+    }
+  }
+]

@@ -3,43 +3,41 @@ import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import ts from 'typescript';
 
-const require = createRequire(import.meta.url);
-function load(name, dependencies = {}) {
-  const exports = {};
-  vm.runInNewContext(
-    ts.transpileModule(
-      readFileSync(new URL(`../src/lib/${name}.ts`, import.meta.url), 'utf8'),
-      {
-        compilerOptions: {
-          target: ts.ScriptTarget.ES2022,
-          module: ts.ModuleKind.CommonJS,
-        },
-      },
-    ).outputText,
+const exports = {};
+vm.runInNewContext(
+  ts.transpileModule(
+    readFileSync(
+      new URL('../src/lib/attempt-state.ts', import.meta.url),
+      'utf8',
+    ),
     {
-      exports,
-      require: (key) => dependencies[key] ?? require(key),
-      Intl,
-      Date,
-      Error,
+      compilerOptions: {
+        target: ts.ScriptTarget.ES2022,
+        module: ts.ModuleKind.CommonJS,
+      },
     },
-  );
-  return exports;
-}
-const local = load('academic-local');
-const attempts = load('attempt-state', { './academic-local': local });
+  ).outputText,
+  { exports, require: createRequire(import.meta.url) },
+);
+const {
+  readPendingAttempts,
+  savePendingAttempts,
+  pendingAttemptsKey,
+  PENDING_RETENTION_MS,
+  compareAttempts,
+} = exports;
 const scope = {
-  accountId: 'student-a',
-  organizationId: 'org-a',
+  userId: 'student-a',
+  organizationId: 'organization-a',
   classId: 'class-a',
   assignmentId: 'assignment-a',
-  versionId: '10000000-0000-4000-8000-000000000001',
+  exerciseVersionId: '10000000-0000-4000-8000-000000000001',
 };
 const operation = {
   key: '10000000-0000-4000-8000-000000000002',
   input: {
-    code: 'function solve() { return 1; }',
-    exerciseVersionId: scope.versionId,
+    code: 'module.exports.solve=()=>1;',
+    exerciseVersionId: scope.exerciseVersionId,
   },
   createdAt: 1000,
 };
@@ -56,145 +54,208 @@ function storage() {
   };
 }
 
-test('a lost response retains its original snapshot and key only for the same account and assignment', () => {
-  const store = storage();
-  attempts.savePendingAttempts(store, scope, [operation]);
-  expect(attempts.readPendingAttempts(store, scope)).toEqual({
+test('an uncertain submission recovers its original key and snapshot only inside its authorized account and resource scope', () => {
+  const local = storage();
+  expect(savePendingAttempts(local, scope, [operation])).toBe(true);
+  expect(readPendingAttempts(local, scope, 1001)).toEqual({
     operations: [operation],
     unavailable: false,
   });
   for (const field of Object.keys(scope))
     expect(
-      attempts.readPendingAttempts(store, { ...scope, [field]: 'other' })
+      readPendingAttempts(local, { ...scope, [field]: 'other' }, 1001)
         .operations,
     ).toEqual([]);
-  attempts.savePendingAttempts(store, scope, [], [operation.key]);
-  expect(attempts.readPendingAttempts(store, scope).operations).toEqual([]);
+  expect(savePendingAttempts(local, scope, [], [operation.key])).toBe(true);
+  expect(readPendingAttempts(local, scope, 1001).operations).toEqual([]);
 });
-test('finishing one intentional submission preserves the other pending submission', () => {
-  const store = storage();
-  const second = {
-    ...operation,
-    key: '10000000-0000-4000-8000-000000000003',
-    input: { ...operation.input, code: 'function solve() { return 2; }' },
-  };
-  attempts.savePendingAttempts(store, scope, [operation]);
-  attempts.savePendingAttempts(store, scope, [second]);
-  attempts.savePendingAttempts(store, scope, [], [operation.key]);
-  expect(attempts.readPendingAttempts(store, scope).operations).toEqual([
-    second,
-  ]);
-});
-test('closed-route recovery discovers only records for the current account, organization and assignment', () => {
-  const store = storage();
-  attempts.savePendingAttempts(store, scope, [operation]);
-  expect(
-    attempts.pendingScopesForAssignment(
-      store,
-      scope.accountId,
-      scope.organizationId,
-      scope.assignmentId,
-    ),
-  ).toEqual([scope]);
-  expect(
-    attempts.pendingScopesForAssignment(
-      store,
-      'other',
-      scope.organizationId,
-      scope.assignmentId,
-    ),
-  ).toEqual([]);
-  expect(
-    attempts.pendingScopesForAssignment(
-      store,
-      scope.accountId,
-      'other',
-      scope.assignmentId,
-    ),
-  ).toEqual([]);
-  expect(
-    attempts.pendingScopesForAssignment(
-      store,
-      scope.accountId,
-      scope.organizationId,
-      'other',
-    ),
-  ).toEqual([]);
-  attempts.savePendingAttempts(store, scope, [], [operation.key]);
-  expect(
-    attempts.pendingScopesForAssignment(
-      store,
-      scope.accountId,
-      scope.organizationId,
-      scope.assignmentId,
-    ),
-  ).toEqual([]);
-});
-test('logout clears drafts and pending code snapshots while preserving unrelated storage', () => {
-  const store = storage();
-  local.writeDraft(store, scope, 'private draft');
-  attempts.savePendingAttempts(store, scope, [operation]);
-  store.setItem('unrelated', 'preserved');
-  expect(local.clearDrafts(store)).toBe(true);
-  expect(store.length).toBe(1);
-  expect(store.getItem('unrelated')).toBe('preserved');
-});
-test('invalid or cross-version recovery records cannot be replayed and failed storage is explicit', () => {
+
+test('storage denied, corrupt, expired, duplicate or cross-version requests never authorize a replay', () => {
+  const local = storage();
   for (const value of [
-    'bad-json',
-    JSON.stringify({
-      ...operation,
-      input: {
-        ...operation.input,
-        exerciseVersionId: '10000000-0000-4000-8000-000000000009',
+    'broken',
+    '{}',
+    JSON.stringify([
+      {
+        ...operation,
+        input: {
+          ...operation.input,
+          exerciseVersionId: '10000000-0000-4000-8000-000000000003',
+        },
       },
-    }),
+    ]),
+    JSON.stringify([operation, operation]),
+    JSON.stringify([{ ...operation, createdAt: 3000 }]),
   ]) {
-    const store = storage();
-    store.setItem(
-      `${attempts.pendingAttemptsKey(scope)}${operation.key}`,
-      value,
-    );
-    expect(attempts.readPendingAttempts(store, scope)).toEqual({
+    local.setItem(pendingAttemptsKey(scope), value);
+    expect(readPendingAttempts(local, scope, 2000)).toEqual({
       operations: [],
       unavailable: true,
     });
   }
+  savePendingAttempts(local, scope, [operation]);
   expect(
-    attempts.savePendingAttempts(
-      {
-        setItem() {
-          throw new Error('blocked');
-        },
-      },
-      scope,
-      [operation],
-    ),
-  ).toBe(false);
+    readPendingAttempts(local, scope, 1000 + PENDING_RETENTION_MS - 1)
+      .operations,
+  ).toHaveLength(1);
+  expect(
+    readPendingAttempts(local, scope, 1000 + PENDING_RETENTION_MS).unavailable,
+  ).toBe(true);
+  const denied = {
+    getItem() {
+      throw Error('denied');
+    },
+    setItem() {
+      throw Error('denied');
+    },
+    removeItem() {
+      throw Error('denied');
+    },
+  };
+  expect(readPendingAttempts(denied, scope, 1001).unavailable).toBe(true);
+  expect(savePendingAttempts(denied, scope, [operation])).toBe(false);
 });
-test('comparison is scoped to a single assignment and exact test version, in intentional order', () => {
+
+test('two intentional submissions retain independent keys and code without replacing one another', () => {
+  const local = storage();
+  const second = {
+    ...operation,
+    key: '10000000-0000-4000-8000-000000000004',
+    input: { ...operation.input, code: 'module.exports.solve=()=>2;' },
+  };
+  savePendingAttempts(local, scope, [operation, second]);
+  expect(readPendingAttempts(local, scope, 1001).operations).toEqual([
+    operation,
+    second,
+  ]);
+  savePendingAttempts(local, scope, [second], [operation.key]);
+  expect(readPendingAttempts(local, scope, 1001).operations).toEqual([second]);
+});
+
+test('version 2 preserves explicit non-admission and retry deadline without treating legacy entries as admitted', () => {
+  const local = storage();
+  const busy = {
+    ...operation,
+    recovery: { kind: 'not-admitted', retryAt: 2500 },
+  };
+  expect(savePendingAttempts(local, scope, [busy])).toBe(true);
+  const key = `${pendingAttemptsKey(scope)}:${operation.key}`;
+  expect(JSON.parse(local.getItem(key))).toEqual({ schemaVersion: 2, ...busy });
+  expect(readPendingAttempts(local, scope, 1200)).toEqual({
+    operations: [busy],
+    unavailable: false,
+  });
+  // A transport retry may already have been admitted: save the in-flight
+  // snapshot without the earlier rejection before sending it again.
+  expect(savePendingAttempts(local, scope, [operation])).toBe(true);
+  expect(readPendingAttempts(local, scope, 1300).operations).toEqual([
+    operation,
+  ]);
+  local.setItem(key, JSON.stringify(operation));
+  expect(readPendingAttempts(local, scope, 1400).operations).toEqual([
+    operation,
+  ]);
+});
+
+test('unsupported recovery metadata cannot restore a claimed admission or invalid retry deadline', () => {
+  const local = storage();
+  for (const recovery of [
+    { kind: 'admitted' },
+    { kind: 'not-admitted', retryAt: -1 },
+    { kind: 'not-admitted', retryAt: '2500' },
+    { kind: 'not-admitted', secret: 'unrecognized' },
+  ]) {
+    local.setItem(
+      `${pendingAttemptsKey(scope)}:${operation.key}`,
+      JSON.stringify({ schemaVersion: 2, ...operation, recovery }),
+    );
+    expect(readPendingAttempts(local, scope, 1200)).toEqual({
+      operations: [],
+      unavailable: true,
+    });
+  }
+});
+
+test('completing a second browser mount preserves the first mount pending snapshot across reload', () => {
+  const local = storage();
+  const second = {
+    ...operation,
+    key: '10000000-0000-4000-8000-000000000004',
+    input: { ...operation.input, code: 'module.exports.solve=()=>2;' },
+  };
+  // A and B each know only their own in-memory operation.
+  expect(savePendingAttempts(local, scope, [operation])).toBe(true);
+  expect(savePendingAttempts(local, scope, [second])).toBe(true);
+  expect(savePendingAttempts(local, scope, [], [second.key])).toBe(true);
+  expect(readPendingAttempts(local, scope, 1001)).toEqual({
+    operations: [operation],
+    unavailable: false,
+  });
+});
+
+test('legacy array migration preserves recovery and expires only the old operation', () => {
+  const local = storage();
+  const second = {
+    ...operation,
+    key: '10000000-0000-4000-8000-000000000004',
+    createdAt: operation.createdAt + 100,
+  };
+  local.setItem(pendingAttemptsKey(scope), JSON.stringify([operation, second]));
+  expect(readPendingAttempts(local, scope, 1200).operations).toEqual([
+    operation,
+    second,
+  ]);
+  expect(local.getItem(pendingAttemptsKey(scope))).toBe(null);
+  expect(
+    readPendingAttempts(local, scope, 1000 + PENDING_RETENTION_MS),
+  ).toEqual({ operations: [second], unavailable: true });
+});
+
+test('several browser mounts retain more than two saved operations without silently discarding recovery', () => {
+  const local = storage();
+  const saved = [2, 4, 5].map((suffix) => ({
+    ...operation,
+    key: `10000000-0000-4000-8000-00000000000${suffix}`,
+  }));
+  for (const item of saved)
+    expect(savePendingAttempts(local, scope, [item])).toBe(true);
+  expect(readPendingAttempts(local, scope, 1001)).toEqual({
+    operations: saved,
+    unavailable: false,
+  });
+  expect(savePendingAttempts(local, scope, [], [saved[1].key])).toBe(true);
+  expect(readPendingAttempts(local, scope, 1001).operations).toEqual([
+    saved[0],
+    saved[2],
+  ]);
+});
+
+test('comparison follows server attempt order and counts only comparable visible evidence', () => {
   const first = {
-    attemptId: 'a',
+    attemptId: 'first',
     assignmentId: 'assignment',
-    exerciseVersionId: 'v1',
-    testsVersion: 'suite1',
+    exerciseVersionId: 'version',
+    testsVersion: 'a'.repeat(64),
     attemptNumber: 1,
-    technicalResult: { visiblePassed: 1 },
+    technicalResult: { visiblePassed: 1, visibleTotal: 4 },
   };
   const second = {
     ...first,
-    attemptId: 'b',
+    attemptId: 'second',
     attemptNumber: 2,
-    technicalResult: { visiblePassed: 2 },
+    technicalResult: { visiblePassed: 3, visibleTotal: 4 },
   };
-  expect(attempts.compareAttempts(second, first)).toMatchObject({
+  expect(compareAttempts(second, first)).toMatchObject({
     comparable: true,
-    difference: 1,
     earlier: first,
     later: second,
+    difference: 2,
   });
-  for (const field of ['assignmentId', 'exerciseVersionId', 'testsVersion'])
-    expect(
-      attempts.compareAttempts(first, { ...second, [field]: 'different' }),
-    ).toEqual({ comparable: false });
+  for (const changed of [
+    { ...second, testsVersion: 'b'.repeat(64) },
+    { ...second, exerciseVersionId: 'other' },
+    { ...second, assignmentId: 'other' },
+    first,
+  ])
+    expect(compareAttempts(first, changed)).toEqual({ comparable: false });
 });

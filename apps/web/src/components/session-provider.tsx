@@ -11,8 +11,12 @@ import {
 import { usePathname } from 'next/navigation';
 import type { Session, Subscription } from '@supabase/supabase-js';
 import { meResponseSchema, type Me } from '@alunza/contracts';
-import { apiGet, asApiError, type ApiError } from '@/lib/api';
-import { clearDrafts } from '@/lib/academic-local';
+import {
+  apiGet,
+  asApiError,
+  markDashboardTiming,
+  type ApiError,
+} from '@/lib/api';
 
 type Identity =
   | { status: 'loading'; key: string }
@@ -23,12 +27,11 @@ type SessionContextValue = {
   session: Session | null;
   initialized: boolean;
   revision: number;
+  sessionGeneration: number;
   identity: Identity;
   authError: string | null;
   closed: boolean;
   logoutFailed: boolean;
-  draftStorageAvailable: boolean;
-  draftCleanupWarning: string | null;
   pending: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -49,8 +52,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [auth, setAuth] = useState<{
     session: Session | null;
     revision: number;
+    sessionGeneration: number;
     initialized: boolean;
-  }>({ session: null, revision: 0, initialized: false });
+  }>({ session: null, revision: 0, sessionGeneration: 0, initialized: false });
   const [identity, setIdentity] = useState<Identity>({
     status: 'loading',
     key: '',
@@ -59,28 +63,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [pending, setPending] = useState(false);
   const [closed, setClosed] = useState(false);
   const [logoutFailed, setLogoutFailed] = useState(false);
-  const [draftCleanupFailed, setDraftCleanupFailed] = useState(false);
   const [initialization, setInitialization] = useState(0);
   const suppressed = useRef(false);
   const active = useRef<AbortController | null>(null);
   const alive = useRef(false);
-  const draftOwner = useRef<string | null>(null);
-  const draftCleanupPending = useRef(false);
   const token = auth.session?.access_token;
   const identityKey = `${auth.revision}:${pathname}`;
-  const retireDrafts = useCallback(() => {
-    let cleared = false;
-    try {
-      cleared = clearDrafts(window.sessionStorage);
-    } catch {
-      // Storage access itself may be blocked. Auth logout must still work.
-    }
-    draftCleanupPending.current = !cleared;
-    setDraftCleanupFailed(!cleared);
-    return cleared;
-  }, []);
 
   useEffect(() => {
+    markDashboardTiming('session:effect');
     alive.current = true;
     let disposed = false;
     let subscription: Subscription | undefined;
@@ -93,25 +84,29 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     void browserAuth()
       .then((client) => {
         if (disposed) return;
+        markDashboardTiming('session:client-ready');
         subscription = client.auth.onAuthStateChange((event, session) => {
           if (disposed) return;
-          if (
-            (draftOwner.current && draftOwner.current !== session?.user.id) ||
-            (event === 'SIGNED_IN' && draftCleanupPending.current) ||
-            (event === 'INITIAL_SESSION' && !session)
-          )
-            retireDrafts();
-          draftOwner.current = session?.user.id ?? null;
+          markDashboardTiming('session:state');
           window.clearTimeout(timeout);
           setAuth((previous) => {
             const next = suppressed.current ? null : session;
             const changed =
               previous.session?.access_token !== next?.access_token;
+            // A refreshed credential revalidates permissions, but does not
+            // replace the current account's in-memory editor operation.
+            const sameSessionRefresh =
+              event === 'TOKEN_REFRESHED' &&
+              !!next &&
+              previous.session?.user.id === next.user.id;
             if (changed) active.current?.abort();
             return {
               session: next,
               initialized: true,
               revision: previous.revision + (changed ? 1 : 0),
+              sessionGeneration:
+                previous.sessionGeneration +
+                (changed && !sameSessionRefresh ? 1 : 0),
             };
           });
           if (session && !suppressed.current) setAuthError(null);
@@ -131,7 +126,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       subscription?.unsubscribe();
       active.current?.abort();
     };
-  }, [initialization, retireDrafts]);
+  }, [initialization]);
 
   const loadIdentity = useCallback(() => {
     active.current?.abort();
@@ -143,6 +138,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       signal: controller.signal,
     })
       .then((response) => {
+        markDashboardTiming('identity:ready');
         if (!controller.signal.aborted)
           setIdentity({
             status: 'ready',
@@ -200,11 +196,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setAuthError(null);
     suppressed.current = true;
     active.current?.abort();
-    retireDrafts();
     setAuth((previous) => ({
       ...previous,
       session: null,
       revision: previous.revision + 1,
+      sessionGeneration: previous.sessionGeneration + 1,
     }));
     try {
       const { error } = await (
@@ -240,10 +236,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     authError,
     closed,
     logoutFailed,
-    draftStorageAvailable: !draftCleanupFailed,
-    draftCleanupWarning: draftCleanupFailed
-      ? `${closed ? 'Tu sesión se cerró, pero no pudimos eliminar los borradores locales.' : 'No pudimos eliminar los borradores locales.'} Cierra esta pestaña para retirarlos. Mientras tanto, no recuperaremos ni guardaremos borradores locales.`
-      : null,
     pending,
     signIn,
     signOut,

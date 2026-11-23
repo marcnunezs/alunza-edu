@@ -6,7 +6,6 @@ import {
   attemptSchema,
   attemptSummarySchema,
   submitTechnicalResultSchema,
-  attemptedActivitiesResponseSchema,
 } from '@alunza/contracts';
 import type { AttemptListQuery, SubmitAttemptInput } from '@alunza/contracts';
 import type { PoolClient } from 'pg';
@@ -16,10 +15,9 @@ import type { Actor } from '../governance/governance.shared';
 import { ApiError, notFound } from '../http/errors';
 import type { CanonicalSubmissionResult } from './submission-execution.port';
 import type { AppConfig } from '../config';
-import {
-  assignmentContextSchema,
-  practiceLimitsSchema,
-} from './practice-context';
+import { executionContextSchema } from './execution.port';
+import type { RunnerInspection } from './execution.port';
+import { loadReservationExecutionContext } from './sandbox-resource.repository';
 
 const reservationSchema = z.object({
   executionId: z.uuid(),
@@ -33,6 +31,7 @@ const reservationSchema = z.object({
   testsVersion: z.string().regex(/^[a-f0-9]{64}$/),
   attemptNumber: z.number().int().positive(),
   stagedResult: z.boolean().optional(),
+  executionContext: executionContextSchema.optional(),
 });
 export type SubmissionReservation = z.infer<typeof reservationSchema>;
 const admissionSchema = z.discriminatedUnion('kind', [
@@ -40,12 +39,11 @@ const admissionSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('replay'), response: attemptSchema }),
 ]);
 const suiteSchema = z.strictObject({
-  limits: practiceLimitsSchema,
   testsVersion: z.string().regex(/^[a-f0-9]{64}$/),
   tests: z
     .array(
       z.strictObject({
-        id: z.uuid(),
+        id: z.string().min(1).max(100),
         visibility: z.enum(['visible', 'hidden']),
         args: z.array(z.json()),
         expected: z.json(),
@@ -80,19 +78,25 @@ export class SubmissionRepository {
     // RLS on both relations and academic_student validate the current session,
     // active profile, institution role and class membership in one statement.
     // No permission result survives the transaction or is cached across requests.
-    const { rows } = await client.query(
-      'SELECT app_private.practice_assignment_context($1::uuid,$2::uuid) AS context',
+    const { rows } = await client.query<{
+      organization_id: string;
+      exercise_version_id: string;
+    }>(
+      `SELECT a.organization_id,ae.exercise_version_id
+       FROM app.activities a
+       JOIN app.activity_exercises ae ON ae.activity_id=a.id AND ae.organization_id=a.organization_id
+       WHERE a.id=$1 AND ae.id=$2 AND app_private.academic_student(a.class_id)`,
       [activityId, assignmentId],
     );
-    if (!rows[0]?.context) throw notFound();
-    const assigned = assignmentContextSchema.parse(rows[0].context);
-    if (assigned.exerciseVersionId !== versionId)
+    const assigned = rows[0];
+    if (!assigned) throw notFound();
+    if (assigned.exercise_version_id !== versionId)
       throw new ApiError(
         'VERSION_CONFLICT',
         'La versión del ejercicio cambió. Recarga la actividad.',
         409,
       );
-    return assigned.organizationId;
+    return assigned.organization_id;
   }
 
   authorize(
@@ -114,7 +118,7 @@ export class SubmissionRepository {
     assignmentId: string,
     input: SubmitAttemptInput,
     key: string,
-    runner: { available: boolean; runnerVersion: string },
+    runner: RunnerInspection,
     quotas: AppConfig['practiceQuotas'],
   ) {
     return this.database.writeAs(
@@ -132,7 +136,7 @@ export class SubmissionRepository {
           organizationId,
         ]);
         const { rows } = await client.query(
-          'SELECT app_private.admit_practice_submit($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8::uuid,$9,$10::uuid,$11,$12,$13,$14) AS admission',
+          'SELECT app_private.admit_practice_submit($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8::uuid,$9,$10::uuid,$11,$12,$13,$14,$15::jsonb,$16::text) AS admission',
           [
             randomUUID(),
             activityId,
@@ -156,6 +160,10 @@ export class SubmissionRepository {
             quotas.submitActorConcurrency,
             quotas.organizationConcurrency,
             quotas.actorRequestsPerMinute,
+            runner.context
+              ? JSON.stringify(executionContextSchema.parse(runner.context))
+              : null,
+            runner.capacity ?? null,
           ],
         );
         return admissionSchema.parse(rows[0]?.admission);
@@ -223,9 +231,15 @@ export class SubmissionRepository {
       const { rows } = await client.query(
         'SELECT app_private.claim_expired_practice_submit() AS reservation',
       );
-      return rows[0]?.reservation == null
-        ? null
-        : reservationSchema.parse(rows[0].reservation);
+      if (rows[0]?.reservation == null) return null;
+      const reservation = reservationSchema.parse(rows[0].reservation);
+      const executionContext = await loadReservationExecutionContext(
+        client,
+        reservation.executionId,
+      );
+      return executionContext
+        ? { ...reservation, executionContext }
+        : reservation;
     });
   }
 
@@ -245,22 +259,6 @@ export class SubmissionRepository {
         );
         if (rows[0]?.attempt == null) throw notFound();
         return attemptSchema.parse(rows[0].attempt);
-      },
-      who.sessionId,
-    );
-  }
-
-  attemptedActivities(who: Actor, classId: string) {
-    return this.database.readAs(
-      who.actorId,
-      async (client) => {
-        const { rows } = await client.query(
-          'SELECT app_private.practice_attempted_activities($1::uuid) AS activities',
-          [classId],
-        );
-        return attemptedActivitiesResponseSchema.shape.data.parse(
-          rows[0]?.activities,
-        );
       },
       who.sessionId,
     );

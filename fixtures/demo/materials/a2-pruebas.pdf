@@ -1,0 +1,56 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 789 >>
+stream
+BT
+/F1 12 Tf
+50 790 Td
+(Pruebas y entradas) Tj
+0 -22 Td
+(Material ficticio de Programacion I. Clase A2.) Tj
+0 -22 Td
+(Una prueba compara el resultado observado con el esperado.) Tj
+0 -22 Td
+(Elige primero entradas cuyo resultado puedas calcular a mano.) Tj
+0 -22 Td
+(Comprueba el caso habitual y los limites del enunciado.) Tj
+0 -22 Td
+(Para arreglos, distingue vacio, un elemento y varios elementos.) Tj
+0 -22 Td
+(Para condiciones, comprueba ambos lados y el valor del limite.) Tj
+0 -22 Td
+(Mantener pruebas previas permite detectar regresiones.) Tj
+0 -22 Td
+(Una consola sin errores no demuestra que el resultado sea correcto.) Tj
+0 -22 Td
+(Explica la primera diferencia antes de cambiar el programa.) Tj
+0 -22 Td
+(Las pruebas deterministas establecen el resultado del ejercicio.) Tj
+ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000241 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1150
+%%EOF

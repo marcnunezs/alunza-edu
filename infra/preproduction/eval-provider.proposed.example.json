@@ -1,0 +1,14 @@
+{
+  "AI_AZURE_BASE_URL": "REPLACE_WITH_ACTUAL_AZURE_RESOURCE_BASE_URL_ENDING_IN_/openai/v1/",
+  "AI_AUTH_MODE": "azure-cli",
+  "AI_EMBEDDING_DEPLOYMENT": "alunza-lab-embedding",
+  "AI_EMBEDDING_MODEL": "text-embedding-3-small",
+  "AI_EMBEDDING_DIMENSIONS": "1536",
+  "AI_CONFIGURATION_ID": "lab-eval-te3small-standard-1536-20261004",
+  "AI_GENERATION_DEPLOYMENT": "alunza-lab-generation",
+  "AI_GENERATION_MODEL": "gpt-4.1-mini-2025-04-14",
+  "AI_GENERATION_CONFIGURATION_ID": "lab-eval-gpt41mini-globalstandard-20261004",
+  "AI_GENERATION_TOKENIZER": "o200k_base",
+  "AI_VERIFICATION_DEPLOYMENT": "alunza-lab-review",
+  "AI_VERIFICATION_MODEL": "gpt-4.1-mini-2025-04-14"
+}

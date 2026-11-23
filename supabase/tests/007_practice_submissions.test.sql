@@ -24,6 +24,8 @@ insert into app.organization_memberships(organization_id,user_id,role,state,join
 insert into app.courses(id,organization_id,code,name,academic_period) values
 ('93000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','P1','Programming','2026-2'),
 ('93000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000002','P1','Foreign','2026-2');
+insert into app.course_teacher_grants(organization_id,course_id,teacher_id,granted_by) values
+('92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','91000000-0000-4000-8000-000000000001');
 insert into app.classes(id,organization_id,course_id,teacher_id,code,name) values
 ('94000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','A1','Own class'),
 ('94000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000005','A2','Other class'),
@@ -32,24 +34,27 @@ insert into app.class_memberships(organization_id,class_id,user_id) values('9200
 insert into app.class_join_codes(organization_id,class_id,token_digest,expires_at,created_by) values
 ('92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000002',repeat('a',64),now()+interval '1 day','91000000-0000-4000-8000-000000000005'),
 ('92000000-0000-4000-8000-000000000002','94000000-0000-4000-8000-000000000003',repeat('b',64),now()+interval '1 day','91000000-0000-4000-8000-000000000004');
-insert into app.concepts(id,organization_id,normalized_name) values('95000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','addition');
+insert into app.concept_tags(id,organization_id,normalized_name) values('95000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','addition');
 insert into app.concept_versions(id,organization_id,concept_id,version,name,description,created_by) values
 ('95100000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','95000000-0000-4000-8000-000000000001',1,'Addition','Addition','91000000-0000-4000-8000-000000000001');
-update app.concepts set current_version_id='95100000-0000-4000-8000-000000000001' where id='95000000-0000-4000-8000-000000000001';
+update app.concept_tags set current_version_id='95100000-0000-4000-8000-000000000001' where id='95000000-0000-4000-8000-000000000001';
 insert into app.exercises(id,organization_id,owner_id) values('96000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002');
-insert into app.exercise_versions(id,organization_id,exercise_id,version,title,statement,starter_code,difficulty,execution_limits,created_by) values
-('96100000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000001',1,'Sum','Return sum','module.exports.solve=(a,b)=>a+b;','BASIC','{"memoryBytes":67108864,"timeoutMs":1500,"outputBytes":4096}','91000000-0000-4000-8000-000000000002');
-insert into app.exercise_version_concepts values('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','95000000-0000-4000-8000-000000000001','95100000-0000-4000-8000-000000000001');
-insert into app_private.exercise_tests(organization_id,exercise_version_id,id,position,visibility,args,expected) values
-('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','96110000-0000-4000-8000-000000000001',0,'VISIBLE','[1,2]','3'),
-('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','96110000-0000-4000-8000-000000000002',1,'HIDDEN','[2,2]','4');
+insert into app.exercise_versions(id,organization_id,exercise_id,version,title,statement,starter_code,difficulty,created_by) values
+('96100000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000001',1,'Sum','Return sum','module.exports.solve=(a,b)=>a+b;','BEGINNER','91000000-0000-4000-8000-000000000002');
+insert into app.exercise_version_concepts values('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','95100000-0000-4000-8000-000000000001');
+insert into app_private.exercise_tests(organization_id,exercise_version_id,test_id,position,visibility,args,expected) values
+('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','visible',0,'visible','[1,2]','3'),
+('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','hidden-sentinel',1,'hidden','[2,2]','4');
 update app.exercises set current_version_id='96100000-0000-4000-8000-000000000001' where id='96000000-0000-4000-8000-000000000001';
 insert into app.activities(id,organization_id,class_id,created_by,title,type) values
 ('97000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','Published','FORMATIVE'),
 ('97000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','Draft','FORMATIVE');
 insert into app.activity_exercises(id,organization_id,activity_id,exercise_version_id,position) values('98000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001',0);
 update app.activities set state='PUBLISHED' where id='97000000-0000-4000-8000-000000000001';
-set constraints all immediate;
+-- Validate the original domain constraints without flushing signal capture mid-transaction.
+-- SET CONSTRAINTS ALL IMMEDIATE and subsequent DML rejection have their own signals integration test.
+set constraints app.provisioning_complete, app.exercise_definition_complete,
+ app.concept_current_version, app.exercise_current_version immediate;
 
 -- Four additional students exercise the shared organization quota without
 -- relying on an in-memory semaphore or bypassing the personal quota.
@@ -79,7 +84,7 @@ create function pg_temp.submit_result(outcome text default 'SUCCESS') returns js
  select case when outcome='UNKNOWN' then
  '{"runnerVersion":"sql-test","diagnosisCode":"UNKNOWN","terminationReason":"RUNNER_FAILURE","infrastructureStatus":"FAILED","visibleTestResults":[],"visiblePassed":0,"visibleTotal":1,"outputTruncated":false,"outputBytes":0,"runtimeMs":0,"lifecycleMs":0,"hiddenChecksPassed":null,"allRequiredPassed":false}'::jsonb
  else jsonb_build_object('runnerVersion','sql-test','diagnosisCode',outcome,'terminationReason',case when outcome='SUCCESS' then 'COMPLETED' else 'ASSERTION_FAILED' end,
- 'infrastructureStatus','OK','visibleTestResults','[{"id":"96110000-0000-4000-8000-000000000001","passed":true,"stdout":"","stderr":""}]'::jsonb,'visiblePassed',1,'visibleTotal',1,'outputTruncated',false,
+ 'infrastructureStatus','OK','visibleTestResults','[{"id":"visible","passed":true,"stdout":"","stderr":""}]'::jsonb,'visiblePassed',1,'visibleTotal',1,'outputTruncated',false,
  'outputBytes',0,'runtimeMs',10,'lifecycleMs',20,'hiddenChecksPassed',outcome='SUCCESS','allRequiredPassed',outcome='SUCCESS') end
 $$;
 create function pg_temp.stage_submit(n integer,outcome text default 'SUCCESS') returns boolean language plpgsql as $$
@@ -87,7 +92,7 @@ declare actor text:=current_setting('app.actor_id',true); session text:=current_
 begin
  perform set_config('app.actor_id','',true),set_config('app.session_id','',true);
  result:=app_private.stage_practice_submit_result(pg_temp.sid(n),pg_temp.submit_token(n),pg_temp.submit_result(outcome),
-  case when outcome='UNKNOWN' then '[]'::jsonb else jsonb_build_array(jsonb_build_object('id','96110000-0000-4000-8000-000000000002','passed',outcome='SUCCESS')) end);
+  case when outcome='UNKNOWN' then '[]'::jsonb else jsonb_build_array(jsonb_build_object('id','hidden-sentinel','passed',outcome='SUCCESS')) end);
  perform set_config('app.actor_id',coalesce(actor,''),true),set_config('app.session_id',coalesce(session,''),true);
  return result;
 end $$;
@@ -135,13 +140,11 @@ select throws_ok($$select app_private.admit_practice_run(pg_temp.sid(11),'970000
 set local app.actor_id='';
 set local app.session_id='';
 select is(jsonb_array_length(app_private.load_practice_submit_suite(pg_temp.sid(1),pg_temp.submit_token(1))->'tests'),2,'Fenced internal loader returns complete associated suite');
-select is(app_private.load_practice_submit_suite(pg_temp.sid(1),pg_temp.submit_token(1))->'limits','{"memoryBytes":67108864,"runtimeMs":1500,"outputBytes":4096}'::jsonb,'SUBMIT uses smaller immutable limits from its fixed version');
-select throws_ok($$select app_private.stage_practice_submit_result(pg_temp.sid(1),pg_temp.submit_token(1),pg_temp.submit_result()||'{"outputBytes":4097}'::jsonb,'[{"id":"96110000-0000-4000-8000-000000000002","passed":true}]')$$,'23514','INVALID_SUBMIT_RESULT','SUBMIT result cannot exceed the version output budget');
 select throws_ok($$select app_private.load_practice_submit_suite(pg_temp.sid(1),null)$$,'P0001','REQUEST_IN_PROGRESS','Null token cannot obtain suite');
 select throws_ok($$select app_private.stage_practice_submit_result(pg_temp.sid(1),pg_temp.submit_token(1),pg_temp.submit_result(),'[]')$$,'23514','INVALID_SUBMIT_RESULT','Success without hidden evidence is rejected');
 select throws_ok($$select app_private.stage_practice_submit_result(pg_temp.sid(1),pg_temp.submit_token(1),pg_temp.submit_result('FAILED_TEST')||'{"hiddenChecksPassed":null}'::jsonb,'[]')$$,'23514','INVALID_SUBMIT_RESULT','FAILED_TEST cannot claim a complete verdict from an incomplete suite');
-select throws_ok($$select app_private.stage_practice_submit_result(pg_temp.sid(1),pg_temp.submit_token(1),pg_temp.submit_result(),'[{"id":"96110000-0000-4000-8000-000000000001","passed":true}]')$$,'23514','INVALID_SUBMIT_RESULT','Private evidence cannot relabel visible test');
-select throws_ok($$select app_private.stage_practice_submit_result(pg_temp.sid(1),pg_temp.submit_token(1),pg_temp.submit_result(),'[{"id":"96110000-0000-4000-8000-000000000002","passed":true,"stdout":"secret"}]')$$,'23514','INVALID_SUBMIT_RESULT','Private evidence refuses hidden console');
+select throws_ok($$select app_private.stage_practice_submit_result(pg_temp.sid(1),pg_temp.submit_token(1),pg_temp.submit_result(),'[{"id":"visible","passed":true}]')$$,'23514','INVALID_SUBMIT_RESULT','Private evidence cannot relabel visible test');
+select throws_ok($$select app_private.stage_practice_submit_result(pg_temp.sid(1),pg_temp.submit_token(1),pg_temp.submit_result(),'[{"id":"hidden-sentinel","passed":true,"stdout":"secret"}]')$$,'23514','INVALID_SUBMIT_RESULT','Private evidence refuses hidden console');
 select throws_ok($$select app_private.finish_practice_submit(pg_temp.sid(1),pg_temp.submit_token(1),true)$$,'23514','SUBMIT_RESULT_REQUIRED','Missing durable result cannot become an attempt');
 select ok(pg_temp.stage_submit(1,'FAILED_TEST'),'Full suite hidden failure is staged');
 select throws_ok($$select pg_temp.stage_submit(1,'SUCCESS')$$,'23514','IMMUTABLE_SUBMISSION_RESULT','Staged canonical evidence cannot be overwritten');
@@ -157,7 +160,7 @@ set local app.actor_id='91000000-0000-4000-8000-000000000003';
 set local app.session_id='91100000-0000-4000-8000-000000000003';
 select is(app_private.practice_activity_progress('97000000-0000-4000-8000-000000000001')->>'completed','0','Visible success with hidden failure does not complete exercise');
 select is(app_private.read_practice_attempt(current_setting('test.first_attempt')::uuid)->>'code','module.exports.solve=(a,b)=>a+b;','Authorized history recovers immutable submitted source');
-select ok(app_private.read_practice_attempt(current_setting('test.first_attempt')::uuid)::text not like '%96110000-0000-4000-8000-000000000002%','Public attempt excludes hidden identifiers');
+select ok(app_private.read_practice_attempt(current_setting('test.first_attempt')::uuid)::text not like '%hidden-sentinel%','Public attempt excludes hidden identifiers');
 select ok(pg_temp.stage_submit(2),'Success with complete evidence stages');
 select is(pg_temp.finish_submit(2)->>'attemptNumber','2','Second result confirms its admission order');
 select is(app_private.practice_activity_progress('97000000-0000-4000-8000-000000000001')->>'completed','1','Full required suite completes one assignment');
@@ -235,26 +238,11 @@ select is(pg_temp.admit_submit(7,'submit-key-0007')->>'kind','reserved','Submiss
 select ok(pg_temp.stage_submit(7),'Before-close result stages');
 reset role;
 update app.activities set state='CLOSED' where id='97000000-0000-4000-8000-000000000001';
-set local app.actor_id='91000000-0000-4000-8000-000000000001';
-set local app.session_id='91100000-0000-4000-8000-000000000001';
 select throws_ok($$update app.classes set archived_at=clock_timestamp() where id='94000000-0000-4000-8000-000000000001'$$,'P0001','DEPENDENCIES_ACTIVE','Class archive cannot interrupt active SUBMIT');
 set local role alunza_app;
-set local app.actor_id='91000000-0000-4000-8000-000000000003';
-set local app.session_id='91100000-0000-4000-8000-000000000003';
 select throws_ok($$select pg_temp.admit_submit(8,'submit-key-0008')$$,'P0001','ACTIVITY_CLOSED','Server closure rejects new admissions');
 select is(pg_temp.finish_submit(7)->'technicalResult'->>'diagnosisCode','SUCCESS','Admission preceding closure persists afterward');
 select is(pg_temp.admit_submit(99,'submit-key-0007')->>'kind','replay','Closure preserves currently authorized replay');
-select is((select count(*)::integer from app.activities where id='97000000-0000-4000-8000-000000000001'),0,'CLOSED remains excluded from the academic catalog');
-select is((select count(*)::integer from app_private.exercise_tests),0,'CLOSED does not reopen direct exercise resolution');
-select is(app_private.list_practice_attempts('97000000-0000-4000-8000-000000000001','98000000-0000-4000-8000-000000000001',null,20)->'items'->0->>'attemptNumber','5','CLOSED own history remains readable through evidence function');
-select is(app_private.practice_attempted_activities('94000000-0000-4000-8000-000000000001')->0->>'activityState','CLOSED','Own historic activity has a navigable class index');
-select is(app_private.practice_attempted_activities('94000000-0000-4000-8000-000000000001')->0->'exercises'->0->>'assignmentId','98000000-0000-4000-8000-000000000001','Historic index exposes only the attempted assignment');
-set local app.actor_id='91000000-0000-4000-8000-000000000009';
-set local app.session_id='91100000-0000-4000-8000-000000000009';
-select is(app_private.practice_attempted_activities('94000000-0000-4000-8000-000000000001'),'[]'::jsonb,'Peer without own evidence has an empty historic index');
-select is(app_private.read_practice_attempt(current_setting('test.first_attempt')::uuid),null::jsonb,'Class membership does not permit reading another student attempt');
-set local app.actor_id='91000000-0000-4000-8000-000000000003';
-set local app.session_id='91100000-0000-4000-8000-000000000003';
 reset role;
 update app.organization_memberships set state='DISABLED' where user_id='91000000-0000-4000-8000-000000000003';
 set local role alunza_app;
@@ -263,22 +251,14 @@ select throws_ok($$select pg_temp.admit_submit(99,'submit-key-0007')$$,'42501','
 reset role;
 update app.organization_memberships set state='ACTIVE' where user_id='91000000-0000-4000-8000-000000000003';
 
--- A published activity may contain optional exercises and no required ones.
+-- Boundary-only fixture: publication still rejects zero required exercises.
 savepoint no_required_boundary;
--- The PRIVATE exercise belongs to this teacher; a student context cannot
--- attach it to a new activity, including during privileged fixture setup.
-set local app.actor_id='91000000-0000-4000-8000-000000000002';
-set local app.session_id='91100000-0000-4000-8000-000000000002';
-insert into app.activities(id,organization_id,class_id,created_by,title,type) values
-('97000000-0000-4000-8000-000000000020','92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','Optional practice','FORMATIVE');
-insert into app.activity_exercises(id,organization_id,activity_id,exercise_version_id,position,required) values
-('98000000-0000-4000-8000-000000000020','92000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000020','96100000-0000-4000-8000-000000000001',0,false);
-update app.activities set state='PUBLISHED' where id='97000000-0000-4000-8000-000000000020';
+alter table app.activity_exercises disable trigger user;
+update app.activity_exercises set required=false where id='98000000-0000-4000-8000-000000000001';
+alter table app.activity_exercises enable trigger user;
 set local role alunza_app;
-set local app.actor_id='91000000-0000-4000-8000-000000000003';
-set local app.session_id='91100000-0000-4000-8000-000000000003';
-select is(app_private.practice_activity_progress('97000000-0000-4000-8000-000000000020')->>'evidenceState','NO_REQUIRED_EXERCISES','0/0 has its own non-error state');
-select is(app_private.practice_activity_progress('97000000-0000-4000-8000-000000000020')->'ratio','null'::jsonb,'0/0 has no proportion');
+select is(app_private.practice_activity_progress('97000000-0000-4000-8000-000000000001')->>'evidenceState','NO_REQUIRED_EXERCISES','0/0 has its own non-error state');
+select is(app_private.practice_activity_progress('97000000-0000-4000-8000-000000000001')->'ratio','null'::jsonb,'0/0 has no proportion');
 rollback to savepoint no_required_boundary;
 
 -- Expired operational snapshots may be purged, canonical evidence survives.
@@ -293,7 +273,7 @@ set local app.session_id='';
 select is(app_private.purge_submit_responses(),1,'One expired redundant snapshot is purged');
 reset role;
 select ok((select code is null and staged_result is null and staged_private_results is null and response_body is null from app_private.submission_reservations where id=pg_temp.sid(1)),'Operational source/evidence/response are removed together');
-select is((select private_test_results->0->>'id' from app_private.attempt_results where attempt_id=current_setting('test.first_attempt')::uuid),'96110000-0000-4000-8000-000000000002','Canonical private evidence survives operational retention');
+select is((select private_test_results->0->>'id' from app_private.attempt_results where attempt_id=current_setting('test.first_attempt')::uuid),'hidden-sentinel','Canonical private evidence survives operational retention');
 select is((select code from app.attempts where id=current_setting('test.first_attempt')::uuid),'module.exports.solve=(a,b)=>a+b;','Canonical source survives operational retention');
 select is((select count(*)::integer from app.attempts where organization_id='92000000-0000-4000-8000-000000000001'),6,'No transport duplicate or automatic rerun created an extra attempt');
 select is((select count(*)::integer from app_private.attempt_events where organization_id='92000000-0000-4000-8000-000000000001'),12,'Every surviving attempt owns exactly two immutable facts');
@@ -334,12 +314,12 @@ set constraints all deferred;
 insert into app.exercise_versions(id,organization_id,exercise_id,version,title,statement,starter_code,difficulty,created_by)
 select '96100000-0000-4000-8000-000000000002',organization_id,exercise_id,2,'Sum v2',statement,starter_code,difficulty,created_by
  from app.exercise_versions where id='96100000-0000-4000-8000-000000000001';
-insert into app.exercise_version_concepts(organization_id,exercise_version_id,concept_id,concept_version_id)
-select organization_id,'96100000-0000-4000-8000-000000000002',concept_id,concept_version_id from app.exercise_version_concepts where exercise_version_id='96100000-0000-4000-8000-000000000001';
-insert into app_private.exercise_tests(organization_id,exercise_version_id,id,position,visibility,args,expected)
-select organization_id,'96100000-0000-4000-8000-000000000002',gen_random_uuid(),position,visibility,args,expected from app_private.exercise_tests where exercise_version_id='96100000-0000-4000-8000-000000000001';
-update app.exercises set current_version_id='96100000-0000-4000-8000-000000000002' where id='96000000-0000-4000-8000-000000000001';
-set constraints all immediate;
+insert into app.exercise_version_concepts(organization_id,exercise_version_id,concept_version_id)
+select organization_id,'96100000-0000-4000-8000-000000000002',concept_version_id from app.exercise_version_concepts where exercise_version_id='96100000-0000-4000-8000-000000000001';
+insert into app_private.exercise_tests(organization_id,exercise_version_id,test_id,position,visibility,args,expected)
+select organization_id,'96100000-0000-4000-8000-000000000002',test_id,position,visibility,args,expected from app_private.exercise_tests where exercise_version_id='96100000-0000-4000-8000-000000000001';
+set constraints app.provisioning_complete, app.exercise_definition_complete,
+ app.concept_current_version, app.exercise_current_version immediate;
 insert into app.activities(id,organization_id,class_id,created_by,title,type) values
 ('97000000-0000-4000-8000-000000000024','92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','Independent assignments and versions','FORMATIVE');
 insert into app.activity_exercises(id,organization_id,activity_id,exercise_version_id,position) values

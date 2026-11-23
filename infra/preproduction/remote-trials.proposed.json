@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "status": "PROPOSED_NOT_AUTHORIZED",
+  "preparedOn": "2026-10-04",
+  "purpose": "Public configuration and cost proposal; not an executable authorization manifest",
+  "azure": {
+    "environment": "LAB-EVAL",
+    "region": "eastus2",
+    "apiVersion": "v1",
+    "baseURL": null,
+    "subscriptionId": null,
+    "resourceId": null,
+    "authMode": "azure-cli",
+    "corpusVersion": "help-evaluation-1",
+    "embeddingTokenizerVersion": "js-tiktoken-1.0.21-cl100k_base",
+    "helpTokenizer": "o200k_base",
+    "profiles": {
+      "EMBEDDING": {
+        "id": "lab-eval-te3small-standard-1536-20261004",
+        "model": "text-embedding-3-small",
+        "deploymentModelVersion": "1",
+        "deploymentType": "Standard",
+        "proposedDeploymentName": "alunza-lab-embedding",
+        "dimensions": 1536,
+        "fingerprint": null,
+        "inputMicroUsdPerMillion": "22000",
+        "outputMicroUsdPerMillion": "0"
+      },
+      "GENERATION": {
+        "id": "lab-eval-gpt41mini-globalstandard-20261004",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "deploymentModelName": "gpt-4.1-mini",
+        "deploymentModelVersion": "2025-04-14",
+        "deploymentType": "GlobalStandard",
+        "proposedDeploymentName": "alunza-lab-generation",
+        "fingerprint": null,
+        "inputMicroUsdPerMillion": "400000",
+        "outputMicroUsdPerMillion": "1600000"
+      },
+      "REVIEW": {
+        "id": "lab-eval-gpt41mini-globalstandard-20261004",
+        "model": "gpt-4.1-mini-2025-04-14",
+        "deploymentModelName": "gpt-4.1-mini",
+        "deploymentModelVersion": "2025-04-14",
+        "deploymentType": "GlobalStandard",
+        "proposedDeploymentName": "alunza-lab-review",
+        "fingerprint": null,
+        "inputMicroUsdPerMillion": "400000",
+        "outputMicroUsdPerMillion": "1600000"
+      }
+    },
+    "quotaEvidence": {
+      "checkedAt": null,
+      "EMBEDDING": { "assignedTpm": null, "assignedRpm": null },
+      "GENERATION": { "assignedTpm": null, "assignedRpm": null },
+      "REVIEW": { "assignedTpm": null, "assignedRpm": null }
+    },
+    "providerEnvTemplate": "infra/preproduction/eval-provider.proposed.example.json",
+    "planTemplate": "infra/preproduction/help-evaluation.costed.example.json",
+    "priceEvidence": "infra/preproduction/azure-retail-prices-2026-10-04.json",
+    "workloadEvidence": "infra/preproduction/azure-trial-workload-2026-10-04.json",
+    "maximumReservedCostUsd": "2.479287",
+    "authorized": false
+  },
+  "sandbox": {
+    "operation": "probe:sandbox",
+    "planAssumption": "Pro",
+    "region": "iad1",
+    "teamId": null,
+    "projectId": null,
+    "imageDigest": null,
+    "releaseSha": null,
+    "maxSandboxRuns": 1,
+    "maxHttpRequests": 60,
+    "globalDispatchWindowSeconds": 1800,
+    "adapterVmTimeoutSeconds": 60,
+    "maximumApprovalWindowDays": 7,
+    "vcpus": 1,
+    "memoryGb": 2,
+    "priceEvidenceUrl": "https://vercel.com/docs/sandbox/pricing",
+    "activeCpuUsdPerVcpuHour": "0.128",
+    "memoryUsdPerGbHour": "0.0212",
+    "creationUsdPerMillion": "0.60",
+    "estimatedCpuMemoryAndCreationUsd": "0.0028406",
+    "planTemplate": "infra/preproduction/sandbox-probe.costed.example.json",
+    "authorized": false
+  },
+  "clpPlanning": {
+    "status": "ASSUMPTION_NOT_LIVE_EXCHANGE_RATE",
+    "assumedClpPerUsd": 1000,
+    "azureCalculatedCeilingClpRoundedUp": 2480,
+    "sandboxCalculatedSubtotalClpRoundedUp": 3,
+    "azureProposedReserveClp": 5000,
+    "sandboxProposedReserveClp": 1000,
+    "combinedProposedReserveClp": 6000,
+    "authorizedAmountClp": null,
+    "excluded": [
+      "Taxes and actual currency conversion or card fees",
+      "Vercel plan subscription",
+      "Image registry publication and storage",
+      "Network transfer and other unmeasured provider charges",
+      "Cloud deployment or new infrastructure",
+      "Additional or manually repeated trial runs"
+    ]
+  },
+  "approval": {
+    "requiredRole": "Product Owner",
+    "approvedBy": null,
+    "reference": null,
+    "approvedAt": null,
+    "expiresAt": null
+  }
+}

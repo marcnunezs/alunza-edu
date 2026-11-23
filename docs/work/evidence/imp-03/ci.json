@@ -1,0 +1,85 @@
+{
+  "recordedAt": "2026-10-23T05:45:08.166Z",
+  "status": "passed",
+  "execution": "local",
+  "steps": [
+    {
+      "command": "npm run format:check",
+      "status": "passed",
+      "durationMs": 3991
+    },
+    {
+      "command": "npm run lint",
+      "status": "passed",
+      "durationMs": 6501
+    },
+    {
+      "command": "npm run typecheck",
+      "status": "passed",
+      "durationMs": 15079
+    },
+    {
+      "command": "npm test",
+      "status": "passed",
+      "durationMs": 32504,
+      "passedTests": 675,
+      "testGroups": 6
+    },
+    {
+      "command": "npm run runner:prepare",
+      "status": "passed",
+      "durationMs": 2161
+    },
+    {
+      "command": "npm run runner:doctor",
+      "status": "passed",
+      "durationMs": 3018
+    },
+    {
+      "command": "npm run runner:probe -- --adapter docker",
+      "status": "passed",
+      "durationMs": 76263
+    },
+    {
+      "command": "npm run test:migration:practice",
+      "status": "passed",
+      "durationMs": 54055
+    },
+    {
+      "command": "npm run cypress:install",
+      "status": "passed",
+      "durationMs": 4258
+    },
+    {
+      "command": "npm run test:integration",
+      "status": "passed",
+      "durationMs": 220252
+    },
+    {
+      "command": "npm run test:practice:performance",
+      "status": "passed",
+      "durationMs": 130241
+    },
+    {
+      "command": "npm run test:practice:performance -- --submit",
+      "status": "passed",
+      "durationMs": 179333
+    },
+    {
+      "command": "npm run test:ai:integration",
+      "status": "passed",
+      "durationMs": 66608
+    },
+    {
+      "command": "npm run test:e2e",
+      "status": "passed",
+      "durationMs": 217220
+    }
+  ],
+  "source": {
+    "algorithm": "sha256",
+    "value": "5a5ec24f2a9535101f7cb7a303460d479a06bdf866c4b592ab1b1fcf61076194",
+    "files": 290,
+    "scope": "source-contracts-migrations-tests-fixtures-tooling-infra; excludes docs, generated next-env.d.ts and private/ignored files"
+  }
+}

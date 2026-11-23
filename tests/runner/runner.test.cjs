@@ -95,85 +95,6 @@ test('execution correlation is propagated to every capsule', async () => {
   await runner.execute(source, backend);
   expect(backend.execute.mock.calls[0][0].executionId).toBe(source.executionId);
 });
-test('published limits reach every capsule and accumulate time and output', async () => {
-  const source = input();
-  source.limits = { memoryBytes: 67108865, runtimeMs: 500, outputBytes: 20 };
-  source.tests.push({ ...source.tests[0], id: 'second' });
-  const first = capsule();
-  first.packet.cgroup['memory.max'] = '67108864';
-  first.packet.stdout = Buffer.from('first').toString('base64');
-  first.packet.outputBytes = 5;
-  const second = capsule();
-  second.packet.cgroup['memory.max'] = '67108864';
-  const backend = adapter([first, second]);
-  const result = await runner.execute(source, backend);
-  expect(result.diagnosisCode).toBe('SUCCESS');
-  expect(backend.execute.mock.calls[0][0]).toMatchObject({
-    memoryBytes: 67108864,
-    budgetMs: 500,
-    outputRemaining: 20,
-  });
-  expect(backend.execute.mock.calls[1][0]).toMatchObject({
-    memoryBytes: 67108864,
-    budgetMs: 400,
-    outputRemaining: 15,
-  });
-});
-test('a provider widening the published memory cap cannot grant success', async () => {
-  const source = input();
-  source.limits = { memoryBytes: 67108864, runtimeMs: 500, outputBytes: 20 };
-  const result = await runner.execute(source, adapter([capsule()]));
-  expect(result.terminationReason).toBe('CAPABILITY_GAP');
-  expect(result.allRequiredPassed).toBe(false);
-});
-test('published output cap is enforced even if a provider returns extra output', async () => {
-  const source = input();
-  source.limits = { memoryBytes: 134217728, runtimeMs: 500, outputBytes: 4 };
-  const response = capsule();
-  response.packet.stdout = Buffer.from('12345').toString('base64');
-  response.packet.outputBytes = 5;
-  const result = await runner.execute(source, adapter([response]));
-  expect(result.terminationReason).toBe('PROTOCOL_INVALID');
-  expect(result.visibleTestResults).toEqual([]);
-});
-test('published time cap prevents running later tests with a fresh budget', async () => {
-  const source = input();
-  source.limits = { memoryBytes: 134217728, runtimeMs: 100, outputBytes: 20 };
-  source.tests.push({ ...source.tests[0], id: 'second' });
-  const backend = adapter([capsule(), capsule()]);
-  const result = await runner.execute(source, backend);
-  expect(result.diagnosisCode).toBe('TIMEOUT');
-  expect(backend.execute).toHaveBeenCalledTimes(1);
-});
-test.each([1, 4095, 6291455])(
-  'unavailable memory cap %s never launches student code',
-  async (memoryBytes) => {
-    const source = input();
-    source.limits = { memoryBytes, runtimeMs: 3000, outputBytes: 65536 };
-    const backend = adapter([]);
-    const result = await runner.execute(source, backend);
-    expect(result.terminationReason).toBe('CAPABILITY_GAP');
-    expect(result.infrastructureStatus).toBe('FAILED');
-    expect(result.evidence.cgroups).toEqual([]);
-    expect(backend.execute).not.toHaveBeenCalled();
-    expect(backend.close).toHaveBeenCalledTimes(1);
-  },
-);
-test.each([
-  { memoryBytes: 134217729, runtimeMs: 3000, outputBytes: 65536 },
-  { memoryBytes: 134217728, runtimeMs: 3001, outputBytes: 65536 },
-  { memoryBytes: 134217728, runtimeMs: 3000, outputBytes: 65537 },
-  { memoryBytes: 134217728, runtimeMs: 0, outputBytes: 65536 },
-])(
-  'invalid published limits reject before external effects: %o',
-  async (limits) => {
-    const backend = adapter([]);
-    await expect(
-      runner.execute({ ...input(), limits }, backend),
-    ).rejects.toThrow();
-    expect(backend.execute).not.toHaveBeenCalled();
-  },
-);
 test('cleanup rejects arbitrary Docker selectors before external effects', async () => {
   await expect(runner.cleanupDockerExecution('--all')).rejects.toThrow(
     'Execution UUID required',
@@ -274,6 +195,69 @@ test('Docker startup latency is operational time and cannot forge a student time
   expect(result.evidence.hostProgramWallMs).toBe(5000);
 });
 
+test.each([2999, 3000, 3001])(
+  'eight cases share one time budget at %i ms total',
+  async (total) => {
+    const source = input();
+    source.tests = Array.from({ length: 8 }, (_, index) => ({
+      ...source.tests[0],
+      id: `case-${index + 1}`,
+    }));
+    const responses = source.tests.map((_, index) => {
+      const response = capsule();
+      response.packet.runtimeMs = index === 7 ? total - 2800 : 400;
+      return response;
+    });
+    const backend = adapter(responses);
+    const result = await runner.execute(source, backend);
+    expect(backend.execute.mock.calls.map(([sent]) => sent.budgetMs)).toEqual([
+      3000, 2600, 2200, 1800, 1400, 1000, 600, 200,
+    ]);
+    expect(result.diagnosisCode).toBe(total < 3000 ? 'SUCCESS' : 'TIMEOUT');
+    expect(result.allRequiredPassed).toBe(total < 3000);
+    expect(result.runtimeMs).toBe(total);
+  },
+);
+
+test.each([65535, 65536, 65537])(
+  'eight cases share combined stdout/stderr at %i generated bytes',
+  async (total) => {
+    const source = input();
+    source.tests = Array.from({ length: 8 }, (_, index) => ({
+      ...source.tests[0],
+      id: `case-${index + 1}`,
+    }));
+    const responses = source.tests.map((_, index) => {
+      const response = capsule();
+      const bytes = index === 7 ? Math.min(total, 65536) - 57344 : 8192;
+      response.packet.stdout = Buffer.alloc(
+        Math.floor(bytes / 2),
+        'x',
+      ).toString('base64');
+      response.packet.stderr = Buffer.alloc(
+        bytes - Math.floor(bytes / 2),
+        'y',
+      ).toString('base64');
+      response.packet.outputBytes = bytes;
+      if (index === 7 && total > 65536) {
+        response.packet.status = 'output';
+        response.packet.outputTruncated = true;
+      }
+      return response;
+    });
+    const backend = adapter(responses);
+    const result = await runner.execute(source, backend);
+    expect(
+      backend.execute.mock.calls.map(([sent]) => sent.outputRemaining),
+    ).toEqual([65536, 57344, 49152, 40960, 32768, 24576, 16384, 8192]);
+    expect(result.outputBytes).toBe(Math.min(total, 65536));
+    expect(result.terminationReason).toBe(
+      total > 65536 ? 'OUTPUT_LIMIT' : 'COMPLETED',
+    );
+    expect(result.allRequiredPassed).toBe(total <= 65536);
+  },
+);
+
 test('missing effective cgroups cannot grant success even with a valid invocation', async () => {
   const response = capsule();
   response.packet.cgroup = {};
@@ -282,6 +266,26 @@ test('missing effective cgroups cannot grant success even with a valid invocatio
   expect(result.terminationReason).toBe('CAPABILITY_GAP');
   expect(result.allRequiredPassed).toBe(false);
 });
+test.each([
+  { kills: 0, expected: 'SUCCESS', reason: 'COMPLETED' },
+  { kills: 1, expected: 'UNKNOWN', reason: 'MEMORY_LIMIT' },
+])(
+  'a normal return respects the fresh capsule OOM counter ($kills)',
+  async ({ kills, expected, reason }) => {
+    const response = capsule();
+    response.packet.cgroup['memory.events'] =
+      `max 8\noom ${kills}\noom_kill ${kills}\n`;
+    const result = await runner.execute(input(), adapter([response]));
+    expect(result).toMatchObject({
+      diagnosisCode: expected,
+      terminationReason: reason,
+      allRequiredPassed: kills === 0,
+      evidence: { oomObserved: kills > 0 },
+    });
+    expect(result.runtimeMs).toBe(response.packet.runtimeMs);
+    expect(result.evidence.cgroups).toEqual([response.packet.cgroup]);
+  },
+);
 test.each([{ oomKilled: true }, { packet: null }, { exitCode: 137 }])(
   'incomplete evidence never grants success: %o',
   async (override) => {
@@ -293,6 +297,246 @@ test.each([{ oomKilled: true }, { packet: null }, { exitCode: 137 }])(
     expect(result.allRequiredPassed).toBe(false);
   },
 );
+
+test.each([false, true])(
+  'OOM packet evidence is accounted once before stopping, including concurrent host timeout %s',
+  async (timedOut) => {
+    const response = capsule(true, { oomKilled: true, timedOut });
+    response.packet.runtimeMs = 482.80039800000003;
+    response.packet.stdout = Buffer.from('before oom\n').toString('base64');
+    response.packet.stderr = Buffer.from('bounded stderr\n').toString('base64');
+    response.packet.outputBytes = Buffer.byteLength(
+      'before oom\nbounded stderr\n',
+    );
+    response.packet.exitCode = null;
+    response.packet.signal = 'SIGKILL';
+    response.packet.cgroup['memory.events'] = 'oom 1\noom_kill 1\n';
+    const backend = adapter([response, capsule()]);
+    const source = input();
+    source.tests.push({
+      id: 'never',
+      visibility: 'visible',
+      args: [],
+      expected: true,
+    });
+    const result = await runner.execute(source, backend);
+    expect(result).toMatchObject({
+      diagnosisCode: 'UNKNOWN',
+      terminationReason: 'MEMORY_LIMIT',
+      runtimeMs: response.packet.runtimeMs,
+      outputBytes: response.packet.outputBytes,
+      allRequiredPassed: false,
+      evidence: { oomObserved: true, cleanupVerified: true },
+    });
+    expect(result.evidence.cgroups).toEqual([response.packet.cgroup]);
+    expect(
+      result.evidence.timings.map((row) => row.supervisorProcessMs),
+    ).toEqual([response.packet.runtimeMs]);
+    expect(result.visibleTestResults).toEqual([
+      {
+        id: 'visible',
+        passed: false,
+        stdout: 'before oom\n',
+        stderr: 'bounded stderr\n',
+      },
+    ]);
+    expect(backend.execute).toHaveBeenCalledTimes(1);
+    expect(backend.close).toHaveBeenCalledTimes(1);
+  },
+);
+
+test('OOM in a hidden second case preserves cumulative accounting and private output', async () => {
+  const first = capsule();
+  first.packet.runtimeMs = 200;
+  first.packet.stdout = Buffer.from('ok').toString('base64');
+  first.packet.outputBytes = 2;
+  const oom = capsule(true, { oomKilled: true });
+  const secret = 'PRIVATE_OOM_CASE_OUTPUT';
+  oom.packet.runtimeMs = 248.24951000000001;
+  oom.packet.stdout = Buffer.from(secret).toString('base64');
+  oom.packet.outputBytes = Buffer.byteLength(secret);
+  const backend = adapter([first, oom, capsule()]);
+  const source = input();
+  source.tests.push(
+    { id: secret, visibility: 'hidden', args: [], expected: true },
+    { id: 'never', visibility: 'visible', args: [], expected: true },
+  );
+  const result = await runner.execute(source, backend);
+  expect(result.terminationReason).toBe('MEMORY_LIMIT');
+  expect(result.runtimeMs).toBe(first.packet.runtimeMs + oom.packet.runtimeMs);
+  expect(result.outputBytes).toBe(2 + Buffer.byteLength(secret));
+  expect(result.evidence.cgroups).toEqual([
+    first.packet.cgroup,
+    oom.packet.cgroup,
+  ]);
+  expect(result.evidence.timings.map((row) => row.budgetMs)).toEqual([
+    3000, 2800,
+  ]);
+  expect(
+    backend.execute.mock.calls.map(([sent]) => sent.outputRemaining),
+  ).toEqual([65536, 65534]);
+  expect(backend.execute).toHaveBeenCalledTimes(2);
+  expect(result.privateTestResults).toEqual([
+    { id: secret, passed: false, stdout: secret, stderr: '' },
+  ]);
+  const publicView = runner.publicResult(result);
+  expect(publicView.runtimeMs).toBe(result.runtimeMs);
+  expect(publicView.hiddenChecksPassed).toBe(false);
+  expect(JSON.stringify(publicView)).not.toContain(secret);
+  expect(backend.close).toHaveBeenCalledTimes(1);
+});
+
+test.each([
+  [
+    'absent packet',
+    (response) => {
+      response.packet = null;
+    },
+  ],
+  [
+    'invalid schema',
+    (response) => {
+      response.packet.runtimeMs = 'untrusted';
+    },
+  ],
+  [
+    'invalid base64',
+    (response) => {
+      response.packet.stdout = '!!!!';
+    },
+  ],
+  [
+    'noncanonical base64',
+    (response) => {
+      response.packet.stdout = 'eB==';
+      response.packet.outputBytes = 1;
+    },
+  ],
+  [
+    'invalid stderr base64',
+    (response) => {
+      response.packet.stderr = '!!!!';
+    },
+  ],
+  [
+    'missing cgroups',
+    (response) => {
+      response.packet.cgroup = {};
+    },
+  ],
+  [
+    'weaker memory control',
+    (response) => {
+      response.packet.cgroup['memory.max'] = '268435456';
+    },
+  ],
+  [
+    'undeclared output',
+    (response) => {
+      response.packet.stdout = Buffer.from('not counted').toString('base64');
+    },
+  ],
+  [
+    'unconfirmed exit',
+    (response) => {
+      response.exitCode = 137;
+    },
+  ],
+  [
+    'unconfirmed cleanup',
+    (response) => {
+      response.cleanupVerified = false;
+    },
+  ],
+])(
+  'OOM with %s does not account unverified evidence or continue',
+  async (_label, mutate) => {
+    const first = capsule();
+    const oom = capsule(true, { oomKilled: true });
+    mutate(oom);
+    const backend = adapter([first, oom, capsule()]);
+    const source = input();
+    source.tests.push(
+      { id: 'oom', visibility: 'visible', args: [], expected: true },
+      { id: 'never', visibility: 'visible', args: [], expected: true },
+    );
+    const result = await runner.execute(source, backend);
+    expect(result).toMatchObject({
+      diagnosisCode: 'UNKNOWN',
+      terminationReason: 'MEMORY_LIMIT',
+      runtimeMs: first.packet.runtimeMs,
+      outputBytes: 0,
+      allRequiredPassed: false,
+      evidence: { oomObserved: true, cleanupVerified: oom.cleanupVerified },
+    });
+    expect(result.evidence.cgroups).toEqual([first.packet.cgroup]);
+    expect(result.visibleTestResults).toHaveLength(1);
+    if (!oom.packet || typeof oom.packet.runtimeMs !== 'number') {
+      expect(result.evidence.timings[1].supervisorProcessMs).toBeNull();
+    }
+    expect(backend.execute).toHaveBeenCalledTimes(2);
+    expect(backend.close).toHaveBeenCalledTimes(1);
+  },
+);
+
+test('OOM packet exceeding the remaining combined output budget is not partly counted', async () => {
+  const first = capsule();
+  first.packet.stdout = Buffer.from('x').toString('base64');
+  first.packet.outputBytes = 1;
+  const oom = capsule(true, { oomKilled: true });
+  oom.packet.stdout = Buffer.alloc(65536, 120).toString('base64');
+  oom.packet.outputBytes = 65536;
+  const source = input();
+  source.tests.push({
+    id: 'oom',
+    visibility: 'visible',
+    args: [],
+    expected: true,
+  });
+  const backend = adapter([first, oom]);
+  const result = await runner.execute(source, backend);
+  expect(result.terminationReason).toBe('MEMORY_LIMIT');
+  expect(result.runtimeMs).toBe(first.packet.runtimeMs);
+  expect(result.outputBytes).toBe(1);
+  expect(result.evidence.cgroups).toEqual([first.packet.cgroup]);
+  expect(backend.execute.mock.calls[1][0].outputRemaining).toBe(65535);
+});
+
+test.each([3000, 3004.7])(
+  'OOM preserves measured %s ms without clipping an overrun or becoming TIMEOUT',
+  async (runtimeMs) => {
+    const response = capsule(true, { oomKilled: true, timedOut: true });
+    response.packet.runtimeMs = runtimeMs;
+    response.packet.status = 'timeout';
+    const result = await runner.execute(input(), adapter([response]));
+    expect(result.terminationReason).toBe('MEMORY_LIMIT');
+    expect(result.runtimeMs).toBe(runtimeMs);
+    expect(result.evidence.timings[0].supervisorProcessMs).toBe(runtimeMs);
+    expect(result.allRequiredPassed).toBe(false);
+  },
+);
+
+test('cancellation still precedes OOM and close failure still invalidates its cleanup', async () => {
+  const cancelled = await runner.execute(
+    input(),
+    adapter([capsule(true, { oomKilled: true, cancelled: true })]),
+  );
+  expect(cancelled.terminationReason).toBe('CANCELLED');
+  expect(cancelled.runtimeMs).toBe(0);
+  const backend = adapter([capsule(true, { oomKilled: true })]);
+  backend.close.mockRejectedValue(new Error('private provider detail'));
+  const failedCleanup = await runner.execute(input(), backend);
+  expect(failedCleanup).toMatchObject({
+    terminationReason: 'PROVIDER_FAILURE',
+    infrastructureStatus: 'FAILED',
+    allRequiredPassed: false,
+    runtimeMs: 100,
+    evidence: { cleanupVerified: false, oomObserved: true },
+  });
+  expect(JSON.stringify(failedCleanup)).not.toContain(
+    'private provider detail',
+  );
+});
 test('student fake verdict is rejected by the return data schema', async () => {
   const response = capsule();
   response.packet.returnData = Buffer.from(

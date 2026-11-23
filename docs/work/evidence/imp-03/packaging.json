@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "environment": "local-docker-linux",
+  "source": {
+    "algorithm": "sha256",
+    "value": "5a5ec24f2a9535101f7cb7a303460d479a06bdf866c4b592ab1b1fcf61076194",
+    "files": 290,
+    "scope": "source-contracts-migrations-tests-fixtures-tooling-infra; excludes docs, generated next-env.d.ts and private/ignored files"
+  },
+  "checks": [
+    {
+      "command": "docker build --target api --file infra/Dockerfile --tag alunza-foundation-api:imp-03-build-check .",
+      "exitCode": 0
+    },
+    {
+      "command": "docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges alunza-foundation-api:imp-03-build-check node --input-type=module -e <API module and image helper verification>",
+      "args": [
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--read-only",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "alunza-foundation-api:imp-03-build-check",
+        "node",
+        "--input-type=module",
+        "-e",
+        "const runner = await import(\"@alunza/runner\"); const api = await import(\"./apps/api/dist/app.module.js\"); const image = await import(\"./infra/runner/docker-image.mjs\"); const uid = process.getuid(); if (uid !== 1000 || !api.AppModule || typeof image.readImageIdentity !== \"function\") throw new Error(\"PACKAGING_ASSERTION_FAILED\"); console.log(JSON.stringify({runnerVersion: runner.RUNNER_VERSION, apiModule: \"loaded\", imageHelper: \"loaded\", uid}));"
+      ],
+      "exitCode": 0,
+      "result": {
+        "runnerVersion": "imp-03-quickjs-main.1",
+        "apiModule": "loaded",
+        "imageHelper": "loaded",
+        "uid": 1000
+      }
+    },
+    {
+      "command": "docker compose --env-file .local/compose.env -f infra/compose.yaml config --quiet",
+      "exitCode": 0,
+      "output": ""
+    },
+    {
+      "command": "docker build --file infra/preproduction/Job.Dockerfile --tag alunza-preproduction-job:imp-03-build-check .",
+      "exitCode": 0
+    },
+    {
+      "command": "docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --tmpfs /app/.local/reports/imp-00-06-08:rw,noexec,nosuid,nodev,size=1048576,uid=1000,gid=1000,mode=0700 alunza-preproduction-job:imp-03-build-check node --input-type=module -e <assert unauthorized Vercel probe fails before remote calls>",
+      "args": [
+        "run",
+        "--rm",
+        "--network",
+        "none",
+        "--read-only",
+        "--cap-drop",
+        "ALL",
+        "--security-opt",
+        "no-new-privileges",
+        "--tmpfs",
+        "/app/.local/reports/imp-00-06-08:rw,noexec,nosuid,nodev,size=1048576,uid=1000,gid=1000,mode=0700",
+        "alunza-preproduction-job:imp-03-build-check",
+        "node",
+        "--input-type=module",
+        "-e",
+        "import { spawnSync } from \"node:child_process\"; import { readFileSync } from \"node:fs\"; const runner = await import(\"@alunza/runner\"); const image = await import(\"./infra/runner/docker-image.mjs\"); if (process.getuid() !== 1000 || typeof image.readImageIdentity !== \"function\") throw new Error(\"PACKAGING_ASSERTION_FAILED\"); const child = spawnSync(process.execPath, [\"scripts/runner-probe.mjs\", \"--adapter\", \"vercel\"], { encoding: \"utf8\", timeout: 10000 }); const report = JSON.parse(readFileSync(\".local/reports/imp-00-06-08/runner-vercel.json\", \"utf8\")); if (child.status !== 2 || report.reason !== \"APPROVED_MANIFEST_REQUIRED\" || report.remoteCalls !== 0 || report.status !== \"PENDING\") throw new Error(\"PROBE_GUARD_ASSERTION_FAILED\"); console.log(JSON.stringify({runnerVersion: runner.RUNNER_VERSION, imageHelper: \"loaded\", uid: process.getuid(), probeExitCode: child.status, reason: report.reason, remoteCalls: report.remoteCalls, status: report.status}));"
+      ],
+      "exitCode": 0,
+      "wrapperExitCode": 0,
+      "result": {
+        "runnerVersion": "imp-03-quickjs-main.1",
+        "imageHelper": "loaded",
+        "uid": 1000,
+        "probeExitCode": 2,
+        "reason": "APPROVED_MANIFEST_REQUIRED",
+        "remoteCalls": 0,
+        "status": "PENDING"
+      },
+      "assertedProbeExitCode": 2,
+      "reason": "APPROVED_MANIFEST_REQUIRED",
+      "remoteCalls": 0
+    }
+  ],
+  "images": {
+    "api": {
+      "tag": "alunza-foundation-api:imp-03-build-check",
+      "id": "sha256:76747d1dc74ce3db905254071ce0e526a6a4e309dc8d205aa8f14ebce90ff5d1"
+    },
+    "job": {
+      "tag": "alunza-preproduction-job:imp-03-build-check",
+      "id": "sha256:670a21c79bd174e4d3a546136696605212550f85030476594cab4d8354999e6e"
+    }
+  },
+  "verification": "Real local builds and isolated container checks; no TEST/laboratory operation, remote deployment or image push.",
+  "limitations": "Packaging and module loading only; no remote deployment or Vercel Sandbox execution. Compose intentionally does not enable the host practice runner.",
+  "recordedAt": "2026-10-23T05:48:34.008Z",
+  "observedDate": "2026-10-23",
+  "sourceUnchanged": true,
+  "sourceAfterVerification": {
+    "algorithm": "sha256",
+    "value": "5a5ec24f2a9535101f7cb7a303460d479a06bdf866c4b592ab1b1fcf61076194",
+    "files": 290,
+    "scope": "source-contracts-migrations-tests-fixtures-tooling-infra; excludes docs, generated next-env.d.ts and private/ignored files"
+  },
+  "status": "passed"
+}

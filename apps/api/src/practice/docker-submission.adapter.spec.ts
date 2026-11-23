@@ -6,9 +6,9 @@ import {
   projectSubmission,
 } from './docker-submission.adapter';
 import type { SubmissionExecutionInput } from './submission-execution.port';
+import type { ExecutionContext } from './execution.port';
 
 const input: SubmissionExecutionInput = {
-  limits: { memoryBytes: 134217728, runtimeMs: 3000, outputBytes: 65536 },
   executionId: '10000000-0000-4000-8000-000000000001',
   requestId: '10000000-0000-4000-8000-000000000002',
   exerciseVersionId: '10000000-0000-4000-8000-000000000003',
@@ -251,64 +251,6 @@ describe('Docker SUBMIT private TEST timing hook', () => {
     );
   });
 
-  it('passes the inspected image only to a new adapter and never into the execution payload or result', async () => {
-    const adapter = new DockerSubmissionAdapter({
-      environment: 'local',
-    } as AppConfig);
-    const first = {
-      provider: 'docker' as const,
-      image: 'sha256:' + 'a'.repeat(64),
-    };
-    const second = {
-      provider: 'docker' as const,
-      image: 'sha256:' + 'b'.repeat(64),
-    };
-    const output = await adapter.execute(input, first);
-    await adapter.execute(input, second);
-    expect(mockDockerAdapter).toHaveBeenNthCalledWith(1, {
-      image: first.image,
-      observeTiming: undefined,
-    });
-    expect(mockDockerAdapter).toHaveBeenNthCalledWith(2, {
-      image: second.image,
-      observeTiming: undefined,
-    });
-    expect(mockExecute).toHaveBeenNthCalledWith(
-      1,
-      input,
-      mockDockerAdapter.mock.results[0]?.value,
-      expect.any(AbortSignal),
-    );
-    expect(mockExecute).toHaveBeenNthCalledWith(
-      2,
-      input,
-      mockDockerAdapter.mock.results[1]?.value,
-      expect.any(AbortSignal),
-    );
-    expect(JSON.stringify(output)).not.toContain(first.image);
-    expect(JSON.stringify(input)).not.toContain('preparation');
-  });
-
-  it.each([
-    null,
-    {},
-    { provider: 'docker' },
-    { provider: 'docker', image: null },
-    { provider: 'other', image: 'sha256:' + 'a'.repeat(64) },
-  ])(
-    'rejects malformed preparation %p without falling back to an unprepared adapter',
-    async (preparation) => {
-      const adapter = new DockerSubmissionAdapter({
-        environment: 'local',
-      } as AppConfig);
-      await expect(
-        adapter.execute(input, preparation as never),
-      ).rejects.toThrow('Invalid execution preparation');
-      expect(mockDockerAdapter).not.toHaveBeenCalled();
-      expect(mockExecute).not.toHaveBeenCalled();
-    },
-  );
-
   it('projects Docker phases and public correlation without changing execution or evidence', async () => {
     const output = jest
       .spyOn(console, 'log')
@@ -410,6 +352,64 @@ describe('Docker SUBMIT private TEST timing hook', () => {
     ).resolves.toMatchObject({
       technicalResult: { diagnosisCode: 'SUCCESS' },
       cleanupVerified: true,
+    });
+  });
+});
+
+describe('Docker SUBMIT inspected runtime context', () => {
+  const context: ExecutionContext = {
+    provider: 'docker',
+    image: `sha256:${'a'.repeat(64)}`,
+    runnerVersion: 'unit',
+  };
+  beforeEach(() => {
+    mockDockerAdapter.mockClear();
+    mockExecute.mockReset();
+    mockExecute.mockResolvedValue(
+      makeResult({
+        evidence: { cleanupVerified: true } as ExecutionResult['evidence'],
+      }),
+    );
+  });
+  it('pins the inspected image while keeping strict execution input and persisted evidence unchanged', async () => {
+    const result = await new DockerSubmissionAdapter({
+      environment: 'local',
+    } as AppConfig).execute(input, context);
+    expect(mockDockerAdapter).toHaveBeenCalledWith({
+      image: context.image,
+      observeTiming: undefined,
+    });
+    expect(mockExecute).toHaveBeenCalledWith(
+      input,
+      expect.anything(),
+      expect.any(AbortSignal),
+    );
+    expect(JSON.stringify(result)).not.toContain(context.image);
+  });
+  it.each([
+    { ...context, image: 'runner:latest' },
+    { ...context, image: `sha256:${'A'.repeat(64)}` },
+    { ...context, image: '' },
+    { ...context, provider: 'different' },
+    { ...context, runnerVersion: 'different' },
+  ])(
+    'rejects invalid inspection context before creating a Docker adapter: %p',
+    async (invalid) => {
+      await expect(
+        new DockerSubmissionAdapter({
+          environment: 'local',
+        } as AppConfig).execute(input, invalid as ExecutionContext),
+      ).rejects.toThrow('Runner inspection context invalid');
+      expect(mockDockerAdapter).not.toHaveBeenCalled();
+      expect(mockExecute).not.toHaveBeenCalled();
+    },
+  );
+  it('keeps normal image resolution for callers without inspection context', async () => {
+    await new DockerSubmissionAdapter({
+      environment: 'local',
+    } as AppConfig).execute(input);
+    expect(mockDockerAdapter).toHaveBeenCalledWith({
+      observeTiming: undefined,
     });
   });
 });

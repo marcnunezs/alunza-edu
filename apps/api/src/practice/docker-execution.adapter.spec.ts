@@ -1,80 +1,58 @@
 import { DockerExecutionAdapter } from './docker-execution.adapter';
 import { jest as esmJest } from '@jest/globals';
+import type { RunnerInspection } from './execution.port';
 import { PracticeReconciler } from './practice.reconciler';
 import { SubmissionReconciler } from './submission.reconciler';
 import type { PracticeRepository } from './practice.repository';
 import type { SubmissionRepository } from './submission.repository';
 import type { AppConfig } from '../config';
 
-const availability = jest.fn<
+const mockAvailability = jest.fn<
   Promise<{ available: boolean; image: string | null }>,
   []
 >();
 esmJest.unstable_mockModule('@alunza/runner', () => ({
   RUNNER_VERSION: 'unit',
-  getDockerAvailability: availability,
+  getDockerAvailability: mockAvailability,
 }));
 
-describe('Docker inspection preparation', () => {
-  it('returns the immutable image only for this completed inspection and probes again next time', async () => {
-    const adapter = new DockerExecutionAdapter();
-    const first = 'sha256:' + 'a'.repeat(64);
-    const second = 'sha256:' + 'b'.repeat(64);
-    availability.mockResolvedValueOnce({ available: true, image: first });
-    const prepared = await adapter.inspect();
-    expect(prepared).toEqual({
-      available: true,
-      runnerVersion: 'unit',
-      preparation: { provider: 'docker', image: first },
-    });
-    expect(Object.isFrozen(prepared.preparation)).toBe(true);
-    availability.mockResolvedValueOnce({ available: true, image: second });
-    await expect(adapter.inspect()).resolves.toMatchObject({
-      preparation: { provider: 'docker', image: second },
-    });
-    expect(prepared.preparation?.image).toBe(first);
-    expect(availability).toHaveBeenCalledTimes(2);
-  });
-
-  it.each([
-    null,
-    '',
-    'runner:latest',
-    'sha256:' + 'A'.repeat(64),
-    'sha256:' + 'a'.repeat(64) + '\n',
-  ])(
-    'does not admit or prepare an invalid inspected image %p',
-    async (image) => {
-      availability.mockResolvedValueOnce({ available: true, image });
-      await expect(new DockerExecutionAdapter().inspect()).resolves.toEqual({
-        available: false,
-        runnerVersion: 'unit',
-      });
-    },
-  );
-  it('does not prepare an image when machine capabilities are unavailable', async () => {
-    availability.mockResolvedValueOnce({
-      available: false,
-      image: 'sha256:' + 'a'.repeat(64),
-    });
-    await expect(new DockerExecutionAdapter().inspect()).resolves.toEqual({
-      available: false,
-      runnerVersion: 'unit',
-    });
-  });
-});
-
 class ProbeAdapter extends DockerExecutionAdapter {
-  readonly probe = jest.fn<
-    Promise<{ available: boolean; runnerVersion: string }>,
-    []
-  >();
+  readonly probe = jest.fn<Promise<RunnerInspection>, []>();
   protected override inspectDocker() {
     return this.probe();
   }
 }
 
 describe('shared Docker capability probe', () => {
+  it('returns the inspected immutable image only to this inspection and probes again next time', async () => {
+    mockAvailability.mockReset();
+    const firstImage = `sha256:${'a'.repeat(64)}`;
+    const secondImage = `sha256:${'b'.repeat(64)}`;
+    mockAvailability
+      .mockResolvedValueOnce({ available: true, image: firstImage })
+      .mockResolvedValueOnce({ available: true, image: secondImage });
+    const adapter = new DockerExecutionAdapter();
+    const first = await adapter.inspect();
+    expect(first).toEqual({
+      available: true,
+      runnerVersion: 'unit',
+      context: { provider: 'docker', image: firstImage, runnerVersion: 'unit' },
+    });
+    expect(Object.isFrozen(first.context)).toBe(true);
+    expect(await adapter.inspect()).toMatchObject({
+      context: { image: secondImage },
+    });
+    expect(first.context?.image).toBe(firstImage);
+    expect(mockAvailability).toHaveBeenCalledTimes(2);
+  });
+  it('does not publish an execution context when the image is unavailable', async () => {
+    mockAvailability.mockReset();
+    mockAvailability.mockResolvedValueOnce({ available: false, image: null });
+    await expect(new DockerExecutionAdapter().inspect()).resolves.toEqual({
+      available: false,
+      runnerVersion: 'unit',
+    });
+  });
   it('shares only a probe in flight and checks availability again after settlement', async () => {
     const adapter = new ProbeAdapter();
     let finish:

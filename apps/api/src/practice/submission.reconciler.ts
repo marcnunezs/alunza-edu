@@ -42,7 +42,12 @@ export class SubmissionReconciler implements OnModuleInit, OnModuleDestroy {
       const local =
         this.config.environment !== 'production' &&
         this.config.environment !== 'preproduction';
-      const sweep = local
+      const recoverable =
+        local ||
+        (this.config.environment === 'preproduction' &&
+          this.config.practiceRunnerProvider === 'vercel' &&
+          !!this.config.sandboxConfiguration);
+      const sweep = recoverable
         ? await measureSubmitBackgroundPhase(
             observer,
             'sweep',
@@ -53,8 +58,8 @@ export class SubmissionReconciler implements OnModuleInit, OnModuleDestroy {
       await measureSubmitBackgroundPhase(observer, 'purge', () =>
         this.repository.purgeExpired(),
       );
-      if (!local || !sweep?.cleanupVerified) return;
-      for (let index = 0; index < 4; index++) {
+      if (!recoverable || !sweep?.cleanupVerified) return;
+      for (let index = 0; index < 4 && !this.stopped; index++) {
         const reservation = await measureSubmitBackgroundPhase(
           observer,
           'claim',
@@ -63,7 +68,13 @@ export class SubmissionReconciler implements OnModuleInit, OnModuleDestroy {
         );
         if (!reservation) return;
         await measureSubmitBackgroundPhase(observer, 'recover', async () => {
-          const cleaned = await this.execution.cleanup(reservation.executionId);
+          const cleaned = reservation.executionContext
+            ? await this.execution.cleanup(
+                reservation.executionId,
+                undefined,
+                reservation.executionContext,
+              )
+            : await this.execution.cleanup(reservation.executionId);
           // Prefer already durable evidence. Never rerun an uncertain execution and
           // never replace its valid staged result with a later operational failure.
           if (!reservation.stagedResult) {

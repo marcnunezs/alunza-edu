@@ -1,3 +1,4 @@
+const { assertLaboratoryTestState } = require('../laboratory-test-state.cjs');
 const fs = require('node:fs/promises');
 const { Pool } = require('pg');
 const { PgvectorAssayRepository, runRagAssay } = require('@alunza/ai');
@@ -5,9 +6,10 @@ let f, state, admin, repository;
 beforeAll(async () => {
   f = await import('../../fixtures/ai/corpus.mjs');
   state = JSON.parse(await fs.readFile(process.env.ALUNZA_TEST_STATE, 'utf8'));
+  assertLaboratoryTestState(state);
   if (
-    state.projectId !== 'alunza-edu-foundation-test' ||
-    state.authUrl !== 'http://127.0.0.1:16421'
+    state.projectId !== 'alunza-edu-laboratorio-test' ||
+    state.authUrl !== 'http://127.0.0.1:18421'
   )
     throw new Error('Wrong isolated test project');
   admin = new Pool({ connectionString: state.migrationUrl });

@@ -5,6 +5,7 @@ import {
   Param,
   Post,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -22,6 +23,8 @@ import {
 import { ApiError } from '../http/errors';
 import type { ApiRequest } from '../http/errors';
 import { PracticeService } from './practice.service';
+import type { Response } from 'express';
+import { responseClosed } from './response-closed';
 
 @Controller('api/v1')
 @UseGuards(AuthGuard)
@@ -35,6 +38,7 @@ export class PracticeController {
     @Param('assignmentId') assignment: string,
     @Body() body: unknown,
     @Headers('idempotency-key') key: string | undefined,
+    @Res({ passthrough: true }) response?: Response,
   ) {
     if (
       typeof body === 'object' &&
@@ -55,6 +59,7 @@ export class PracticeController {
         uuid(assignment),
         parse(runExecutionInputSchema, body),
         idempotency(key),
+        responseClosed(response),
       ),
       requestId: request.requestId,
     });

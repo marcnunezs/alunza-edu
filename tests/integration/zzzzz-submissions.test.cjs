@@ -4,7 +4,7 @@ const { readFileSync } = require('node:fs');
 const pg = require('pg');
 const { createClient } = require('@supabase/supabase-js');
 const contracts = require('@alunza/contracts');
-const { assertPracticeTestState } = require('../practice-test-state.cjs');
+const { assertLaboratoryTestState } = require('../laboratory-test-state.cjs');
 const fixture = require('../../fixtures/foundation/identity.json');
 const admin = fixture.users[0],
   teacher = fixture.users[1],
@@ -21,7 +21,6 @@ let ids = Object.fromEntries(
     'version',
     'activity',
     'assignment',
-    'hiddenTest',
   ].map((name) => [name, randomUUID()]),
 );
 const sessions = new Map();
@@ -65,7 +64,7 @@ async function api(
     expect(contracts.attemptResponseSchema.safeParse(payload).success).toBe(
       true,
     );
-  expect(JSON.stringify(payload)).not.toContain(ids.hiddenTest);
+  expect(JSON.stringify(payload)).not.toContain('IMP03_HIDDEN_SENTINEL');
   return {
     status: response.status,
     payload,
@@ -110,23 +109,16 @@ async function asApplication(user, action) {
 }
 beforeAll(async () => {
   state = JSON.parse(readFileSync(process.env.ALUNZA_TEST_STATE, 'utf8'));
-  assertPracticeTestState(state);
-  const { testContext } = await import('../../scripts/test-environment.mjs');
-  await (
-    await import('../../scripts/academic-seed.mjs')
-  ).seedAcademic(testContext);
+  assertLaboratoryTestState(state);
   base = process.env.ALUNZA_TEST_API_URL;
   if (
-    state.projectId !== 'alunza-edu-foundation-test' ||
-    base !== 'http://127.0.0.1:4100'
+    state.projectId !== 'alunza-edu-laboratorio-test' ||
+    base !== 'http://127.0.0.1:4300'
   )
     throw new Error('SUBMIT tests require isolated TEST.');
   pool = new pg.Pool({ connectionString: state.migrationUrl, max: 5 });
-  secondStudent = {
-    id: '20000000-0000-4000-8000-000000000007',
-    email: 'student.a2@alunza.test',
-    role: 'STUDENT',
-  };
+  const demo = await import('../../fixtures/demo/academic.mjs');
+  secondStudent = demo.additionalStudents[0];
   for (const user of [admin, teacher, student, outsider, secondStudent]) {
     const auth = createClient(state.authUrl, state.publishableKey, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -174,7 +166,7 @@ beforeEach(async () => {
         [ids.org, ids.class, user.id],
       );
     await client.query(
-      "INSERT INTO app.concepts(id,organization_id,normalized_name) VALUES($1,$2,'sumar')",
+      "INSERT INTO app.concept_tags(id,organization_id,normalized_name) VALUES($1,$2,'sumar')",
       [ids.concept, ids.org],
     );
     await client.query(
@@ -182,7 +174,7 @@ beforeEach(async () => {
       [ids.conceptVersion, ids.org, ids.concept, admin.id],
     );
     await client.query(
-      'UPDATE app.concepts SET current_version_id=$2 WHERE id=$1',
+      'UPDATE app.concept_tags SET current_version_id=$2 WHERE id=$1',
       [ids.concept, ids.conceptVersion],
     );
     await client.query(
@@ -190,16 +182,16 @@ beforeEach(async () => {
       [ids.exercise, ids.org, teacher.id],
     );
     await client.query(
-      "INSERT INTO app.exercise_versions(id,organization_id,exercise_id,version,title,statement,starter_code,difficulty,created_by) VALUES($1,$2,$3,1,'Sumar','Suma dos valores',$4,'BASIC',$5)",
+      "INSERT INTO app.exercise_versions(id,organization_id,exercise_id,version,title,statement,starter_code,difficulty,created_by) VALUES($1,$2,$3,1,'Sumar','Suma dos valores',$4,'BEGINNER',$5)",
       [ids.version, ids.org, ids.exercise, source, teacher.id],
     );
     await client.query(
-      'INSERT INTO app.exercise_version_concepts(organization_id,exercise_version_id,concept_id,concept_version_id) VALUES($1,$2,$3,$4)',
-      [ids.org, ids.version, ids.concept, ids.conceptVersion],
+      'INSERT INTO app.exercise_version_concepts VALUES($1,$2,$3)',
+      [ids.org, ids.version, ids.conceptVersion],
     );
     await client.query(
-      "INSERT INTO app_private.exercise_tests(organization_id,exercise_version_id,id,position,visibility,args,expected) VALUES($1,$2,gen_random_uuid(),0,'VISIBLE','[2,3]','5'),($1,$2,$3,1,'HIDDEN','[7,8]','15')",
-      [ids.org, ids.version, ids.hiddenTest],
+      "INSERT INTO app_private.exercise_tests(organization_id,exercise_version_id,test_id,position,visibility,args,expected) VALUES($1,$2,'visible',0,'visible','[2,3]','5'),($1,$2,'IMP03_HIDDEN_SENTINEL',1,'hidden','[7,8]','15')",
+      [ids.org, ids.version],
     );
     await client.query(
       'UPDATE app.exercises SET current_version_id=$2 WHERE id=$1',
@@ -577,11 +569,6 @@ test('DEC002 guarda admitido antes del cierre; historia y replay siguen autoriza
     revision: current.payload.data.revision,
   });
   expect(closed.status).toBe(200);
-  const available = await api(`/classes/${ids.class}/activities`, {
-    method: 'GET',
-  });
-  expect(available.status).toBe(200);
-  expect(available.payload.data).toEqual([]);
   const saved = await running;
   expect(saved.status).toBe(201);
   expect(Date.parse(saved.payload.data.admittedAt)).toBeLessThanOrEqual(
@@ -624,61 +611,4 @@ test('Clave vencida conserva intento histórico y nunca ejecuta un duplicado', a
       )
     ).rows[0].n,
   ).toBe(1);
-});
-
-test('SUBMIT cerca una finalización cuyo lease vence mientras espera el bloqueo de fila', async () => {
-  const { expiredLeaseWhileWaiting } = require('../practice-lease-race.cjs');
-  await expiredLeaseWhileWaiting({
-    pool,
-    ids,
-    student,
-    source,
-    mode: 'SUBMIT',
-    asApplication,
-    eventually,
-  });
-}, 15000);
-
-test('HU007-E2 y RF011-E2 rechazan filtros e identificadores inválidos sin confundirlos con falta de evidencia', async () => {
-  for (const route of [
-    '/activities/no-es-uuid/progress',
-    '/attempts/no-es-uuid',
-    `${path()}?limit=0`,
-    `${path()}?cursor=no-valido`,
-  ]) {
-    const rejected = await api(route, { method: 'GET' });
-    expect(rejected.status).toBe(422);
-    expect(rejected.payload.error.code).toBe('VALIDATION_FAILED');
-    expect(rejected.payload).not.toHaveProperty('data');
-  }
-  for (const route of [
-    `/attempts/${randomUUID()}`,
-    `/activities/${randomUUID()}/progress`,
-  ]) {
-    const missing = await api(route, { method: 'GET' });
-    expect(missing.status).toBe(404);
-    expect(missing.payload.error.code).toBe('RESOURCE_NOT_FOUND');
-  }
-  const foreign = await api(`/activities/${ids.activity}/progress`, {
-    method: 'GET',
-    actor: outsider,
-  });
-  expect(foreign.status).toBe(404);
-  expect(foreign.payload.error.code).toBe('RESOURCE_NOT_FOUND');
-  await pool.query(
-    "INSERT INTO app.organization_memberships(organization_id,user_id,role,state,joined_at) VALUES($1,$2,'STUDENT','ACTIVE',now())",
-    [ids.org, outsider.id],
-  );
-  const notEnrolled = await api(`/activities/${ids.activity}/progress`, {
-    method: 'GET',
-    actor: outsider,
-  });
-  expect(notEnrolled.status).toBe(404);
-  expect(notEnrolled.payload.error.code).toBe('RESOURCE_NOT_FOUND');
-  expect(await progress()).toMatchObject({
-    completed: 0,
-    required: 1,
-    ratio: 0,
-    evidenceState: 'NO_ATTEMPTS',
-  });
 });

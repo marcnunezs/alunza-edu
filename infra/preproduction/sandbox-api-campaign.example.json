@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "campaignId": "f3d4bdf1-0e9c-46c1-9bdd-0268d9c52b96",
+  "environment": "preproduction",
+  "authorized": false,
+  "expiresAt": null,
+  "teamId": null,
+  "projectId": null,
+  "region": null,
+  "image": null,
+  "runnerVersion": "imp-03-quickjs.9",
+  "maxCreations": 208,
+  "maxRequests": 18304,
+  "maxCost": 0,
+  "currency": "USD",
+  "candidate": {
+    "commit": null,
+    "sourceDigest": null
+  },
+  "approval": {
+    "approvedBy": null,
+    "reference": null,
+    "approvedAt": null
+  },
+  "rates": null,
+  "stages": [
+    {
+      "id": "api",
+      "kind": "api",
+      "enabled": true,
+      "fixtures": [],
+      "creations": 6,
+      "maxRequests": 528,
+      "maxDurationSeconds": 600,
+      "config": {
+        "baseUrl": null,
+        "fictitiousOnly": true
+      }
+    },
+    {
+      "id": "recovery",
+      "kind": "recovery",
+      "enabled": true,
+      "fixtures": [],
+      "creations": 2,
+      "maxRequests": 176,
+      "maxDurationSeconds": 600,
+      "config": {
+        "baseUrl": null,
+        "fictitiousOnly": true,
+        "azure": {
+          "subscriptionId": null,
+          "resourceGroup": null,
+          "appName": null,
+          "revision": null,
+          "replica": null,
+          "container": "api"
+        },
+        "allowedOperations": []
+      }
+    },
+    {
+      "id": "performance",
+      "kind": "performance",
+      "enabled": true,
+      "fixtures": [],
+      "creations": 200,
+      "maxRequests": 17600,
+      "maxDurationSeconds": 10800,
+      "config": {
+        "baseUrl": null,
+        "fictitiousOnly": true,
+        "azure": {
+          "subscriptionId": null,
+          "resourceGroup": null,
+          "appName": null,
+          "revision": null,
+          "replica": null,
+          "container": "api"
+        },
+        "allowedOperations": []
+      }
+    },
+    {
+      "id": "browser-vertical",
+      "kind": "api",
+      "enabled": false,
+      "fixtures": ["browser-vertical"],
+      "creations": 4,
+      "maxRequests": 352,
+      "maxDurationSeconds": 600,
+      "config": {
+        "baseUrl": null,
+        "webOrigin": null,
+        "fictitiousOnly": true
+      }
+    }
+  ]
+}

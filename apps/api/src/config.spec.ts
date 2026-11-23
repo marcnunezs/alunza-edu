@@ -10,6 +10,37 @@ export const validEnvironment: NodeJS.ProcessEnv = {
 };
 
 describe('configuration boundary', () => {
+  it('enables private dashboard timings only through explicit TEST configuration', () => {
+    expect(loadConfig(validEnvironment).dashboardTimingsEnabled).toBe(false);
+    expect(
+      loadConfig({
+        ...validEnvironment,
+        ENVIRONMENT: 'test',
+        ALUNZA_TEST_DASHBOARD_TIMINGS: '1',
+      }).dashboardTimingsEnabled,
+    ).toBe(true);
+    for (const ENVIRONMENT of [
+      'local',
+      'evaluation',
+      'preproduction',
+      'production',
+    ]) {
+      expect(() =>
+        loadConfig({
+          ...validEnvironment,
+          ENVIRONMENT,
+          ALUNZA_TEST_DASHBOARD_TIMINGS: '1',
+        }),
+      ).toThrow('ALUNZA_TEST_DASHBOARD_TIMINGS');
+    }
+    expect(() =>
+      loadConfig({
+        ...validEnvironment,
+        ENVIRONMENT: 'test',
+        ALUNZA_TEST_DASHBOARD_TIMINGS: 'secret-invalid-value',
+      }),
+    ).toThrow('ALUNZA_TEST_DASHBOARD_TIMINGS');
+  });
   const remote = {
     ENVIRONMENT: 'preproduction',
     RELEASE_ID: 'a'.repeat(40),
@@ -79,27 +110,40 @@ describe('configuration boundary', () => {
     expect(config.allowedOrigins).toEqual(['http://localhost:3000']);
     expect(Object.isFrozen(config)).toBe(true);
     expect(config.invitationWorkerEnabled).toBe(false);
+    expect(config.practiceRunnerEnabled).toBe(false);
+    expect(config.practiceQuotas).toEqual({
+      actorConcurrency: 1,
+      submitActorConcurrency: 2,
+      organizationConcurrency: 4,
+      actorRequestsPerMinute: 10,
+    });
     expect(config.invitationCallbackUrl).toBe(
       'http://localhost:3000/acceso/invitacion',
     );
   });
 
-  it('keeps Docker execution disabled unless explicitly enabled locally', () => {
-    expect(loadConfig(validEnvironment).practiceRunnerEnabled).toBe(false);
+  it('permits Docker practice only on explicit local/test environments', () => {
     expect(
       loadConfig({ ...validEnvironment, PRACTICE_RUNNER_ENABLED: 'true' })
         .practiceRunnerEnabled,
     ).toBe(true);
-    for (const environment of ['preproduction', 'production'])
-      expect(() =>
-        loadConfig({
-          ...remote,
-          ENVIRONMENT: environment,
-          PRACTICE_RUNNER_ENABLED: 'true',
-        }),
-      ).toThrow(ConfigurationError);
+    expect(() =>
+      loadConfig({ ...remote, PRACTICE_RUNNER_ENABLED: 'true' }),
+    ).toThrow(ConfigurationError);
     expect(() =>
       loadConfig({ ...validEnvironment, PRACTICE_ACTOR_CONCURRENCY: '0' }),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      loadConfig({
+        ...validEnvironment,
+        PRACTICE_SUBMIT_ACTOR_CONCURRENCY: '0',
+      }),
+    ).toThrow(ConfigurationError);
+    expect(() =>
+      loadConfig({
+        ...validEnvironment,
+        PRACTICE_ORGANIZATION_CONCURRENCY: '33',
+      }),
     ).toThrow(ConfigurationError);
     expect(() =>
       loadConfig({
@@ -190,5 +234,80 @@ describe('configuration boundary', () => {
         APP_ORIGIN: 'http://host.docker.internal:3000',
       }),
     ).toThrow(ConfigurationError);
+  });
+
+  it('keeps missing embeddings explicit and requires private Storage for its worker', () => {
+    expect(loadConfig(validEnvironment).azureEmbeddingConfiguration).toBeNull();
+    expect(() =>
+      loadConfig({ ...validEnvironment, MATERIALS_WORKER_ENABLED: 'true' }),
+    ).toThrow(ConfigurationError);
+  });
+
+  it('configures ingestion independently of generation credentials', () => {
+    const config = loadConfig({
+      ...validEnvironment,
+      AI_AZURE_BASE_URL: 'https://materials.openai.azure.com/openai/v1/',
+      AI_EMBEDDING_DEPLOYMENT: 'embeddings',
+      AI_EMBEDDING_MODEL: 'text-embedding-3-small',
+      AI_EMBEDDING_DIMENSIONS: '1536',
+      AI_CONFIGURATION_ID: 'materials-v1',
+      AI_AUTH_MODE: 'azure-cli',
+    });
+    expect(config.azureEmbeddingConfiguration?.embeddingModel).toBe(
+      'text-embedding-3-small',
+    );
+    expect(config.materialsLeaseMs).toBe(60_000);
+  });
+
+  it('configures generation independently while missing calibration remains explicit', () => {
+    const config = loadConfig({
+      ...validEnvironment,
+      AI_AZURE_BASE_URL: 'https://help.openai.azure.com/openai/v1/',
+      AI_AUTH_MODE: 'azure-cli',
+      AI_GENERATION_DEPLOYMENT: 'help',
+      AI_GENERATION_MODEL: 'gpt-4o',
+      AI_GENERATION_CONFIGURATION_ID: 'help-v1',
+      AI_GENERATION_TOKENIZER: 'o200k_base',
+      HELP_WORKER_ENABLED: 'true',
+    });
+    expect(config.azureEmbeddingConfiguration).toBeNull();
+    expect(config.azureGenerationConfiguration?.verificationDeployment).toBe(
+      'help',
+    );
+    expect(config.helpCalibration).toBeNull();
+    expect(config.helpCalibrationCorpusHash).toBeNull();
+    expect(config.helpWorkerEnabled).toBe(true);
+  });
+  it('rejects incomplete generation or unvalidated calibration without disclosing values', () => {
+    for (const patch of [
+      { AI_GENERATION_DEPLOYMENT: 'private-fixture-value' },
+      { HELP_CALIBRATION_JSON: 'private-fixture-value' },
+      { HELP_CALIBRATION_CORPUS_SHA256: 'private-fixture-value' },
+    ]) {
+      try {
+        loadConfig({ ...validEnvironment, ...patch });
+        throw new Error('Expected rejection');
+      } catch (error) {
+        expect(error).toBeInstanceOf(ConfigurationError);
+        expect(String(error)).not.toContain('private-fixture-value');
+      }
+    }
+  });
+
+  it('rejects incomplete embedding configuration without exposing supplied values', () => {
+    expect(() =>
+      loadConfig({
+        ...validEnvironment,
+        AI_AZURE_API_KEY: 'private-fixture-value',
+      }),
+    ).toThrow(ConfigurationError);
+    try {
+      loadConfig({
+        ...validEnvironment,
+        AI_AZURE_API_KEY: 'private-fixture-value',
+      });
+    } catch (error) {
+      expect(String(error)).not.toContain('private-fixture-value');
+    }
   });
 });

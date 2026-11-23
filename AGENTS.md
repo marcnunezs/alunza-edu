@@ -9,7 +9,7 @@ Este archivo orienta tareas de código futuras. Una solicitud de documentación,
 ## Lectura inicial
 
 1. Lee la solicitud actual y las instrucciones superiores del entorno. Las indicaciones explícitas del usuario prevalecen sobre estas guías de proyecto; ninguna guía cambia las políticas o permisos del entorno.
-2. Ejecuta la inspección de [inicio y contexto](docs/agent/00-inicio-y-contexto.md), sin exponer secretos.
+2. Ejecuta la inspección de [inicio y contexto](docs/agent/00-inicio-y-contexto.md) y consulta el [estado actual](docs/estado-actual.md), sin exponer secretos. Distingue ese índice de los cortes históricos y contrástalo con el repositorio antes de editar.
 3. Lee [fuentes y decisiones](specs/00-fuentes-y-decisiones.md), [producto](specs/01-producto-y-alcance.md) y [arquitectura](specs/05-arquitectura.md).
 4. Identifica los RF/HU/CU/PT y RNF afectados; consulta sus [requisitos](specs/02-requisitos-funcionales.md) y [escenarios](specs/03-flujos-y-criterios-de-aceptacion.md).
 5. Carga las guías de las áreas afectadas mediante la tabla siguiente. No necesitas releer toda la documentación por cada cambio pequeño.

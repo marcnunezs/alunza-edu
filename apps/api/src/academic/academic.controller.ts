@@ -13,9 +13,8 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import * as contracts from '@alunza/contracts';
 import type { Response } from 'express';
-import { z } from 'zod';
-import * as c from '@alunza/contracts';
 import type { ApiRequest } from '../http/errors';
 import { AuthGuard } from '../identity/auth.guard';
 import {
@@ -26,25 +25,9 @@ import {
   uuid,
 } from '../governance/governance.shared';
 import { AcademicService } from './academic.service';
-
-export function result<T extends z.ZodType>(
-  schema: T,
-  data: unknown,
-  request: ApiRequest,
-  response?: Response,
-) {
-  if (response && data && typeof data === 'object' && 'revision' in data)
-    response.setHeader('ETag', `"${data.revision}"`);
-  return schema.parse({ data, requestId: request.requestId });
-}
-export function listing<T extends z.ZodType>(
-  schema: T,
-  data: { data: unknown; page: unknown },
-  request: ApiRequest,
-) {
-  return schema.parse({ ...data, requestId: request.requestId });
-}
-
+import { academicPaginationSchema } from './academic.shared';
+import { z } from 'zod';
+import { answer } from '../http/responses';
 @Controller('api/v1')
 @UseGuards(AuthGuard)
 export class AcademicController {
@@ -55,15 +38,14 @@ export class AcademicController {
     @Param('orgId') org: string,
     @Query() q: unknown,
   ) {
-    return listing(
-      c.courseListResponseSchema,
-      await this.service.courses(
+    return contracts.courseListResponseSchema.parse({
+      ...(await this.service.courses(
         actor(r),
         uuid(org),
-        parse(c.academicPageQuerySchema, q),
-      ),
-      r,
-    );
+        parse(academicPaginationSchema, q),
+      )),
+      requestId: r.requestId,
+    });
   }
   @Post('organizations/:orgId/courses')
   async createCourse(
@@ -73,12 +55,12 @@ export class AcademicController {
     @Headers('idempotency-key') key: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return result(
-      c.courseResponseSchema,
+    return answer(
+      contracts.courseResponseSchema,
       await this.service.createCourse(
         actor(r),
         uuid(org),
-        parse(c.courseCreateSchema, body),
+        parse(contracts.courseCreateSchema, body),
         idempotency(key),
       ),
       r,
@@ -91,8 +73,8 @@ export class AcademicController {
     @Param('id') id: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return result(
-      c.courseResponseSchema,
+    return answer(
+      contracts.courseResponseSchema,
       await this.service.course(actor(r), uuid(id)),
       r,
       res,
@@ -106,12 +88,12 @@ export class AcademicController {
     @Headers('if-match') match: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return result(
-      c.courseResponseSchema,
+    return answer(
+      contracts.courseResponseSchema,
       await this.service.updateCourse(
         actor(r),
         uuid(id),
-        parse(c.courseUpdateSchema, body),
+        parse(contracts.courseUpdateSchema, body),
         revision(match),
       ),
       r,
@@ -125,12 +107,56 @@ export class AcademicController {
     @Param('id') id: string,
     @Body() body: unknown,
     @Headers('if-match') match: string | undefined,
+    @Headers('idempotency-key') key: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ) {
-    parse(c.academicArchiveSchema, body ?? {});
-    return result(
-      c.courseResponseSchema,
-      await this.service.archiveCourse(actor(r), uuid(id), revision(match)),
+    return answer(
+      contracts.courseResponseSchema,
+      await this.service.archive(
+        actor(r),
+        'course',
+        uuid(id),
+        parse(contracts.academicArchiveSchema, body).reason,
+        revision(match),
+        idempotency(key),
+      ),
+      r,
+      res,
+    );
+  }
+  @Get('courses/:id/teachers')
+  async teachers(
+    @Req() r: ApiRequest,
+    @Param('id') id: string,
+    @Query() q: unknown,
+  ) {
+    return contracts.courseTeacherListResponseSchema.parse({
+      ...(await this.service.courseTeachers(
+        actor(r),
+        uuid(id),
+        parse(academicPaginationSchema, q),
+      )),
+      requestId: r.requestId,
+    });
+  }
+  @Put('courses/:id/teachers/:teacherId')
+  async grant(
+    @Req() r: ApiRequest,
+    @Param('id') id: string,
+    @Param('teacherId') teacher: string,
+    @Body() body: unknown,
+    @Headers('if-match') match: string | undefined,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return answer(
+      contracts.courseResponseSchema,
+      await this.service.grantTeacher(
+        actor(r),
+        uuid(id),
+        uuid(teacher),
+        parse(contracts.courseTeacherGrantSchema, body).enabled,
+        revision(match),
+      ),
       r,
       res,
     );
@@ -141,15 +167,14 @@ export class AcademicController {
     @Param('orgId') org: string,
     @Query() q: unknown,
   ) {
-    return listing(
-      c.academicClassListResponseSchema,
-      await this.service.classes(
+    return contracts.classListResponseSchema.parse({
+      ...(await this.service.classes(
         actor(r),
         uuid(org),
-        parse(c.academicPageQuerySchema, q),
-      ),
-      r,
-    );
+        parse(academicPaginationSchema, q),
+      )),
+      requestId: r.requestId,
+    });
   }
   @Post('organizations/:orgId/classes')
   async createClass(
@@ -159,12 +184,12 @@ export class AcademicController {
     @Headers('idempotency-key') key: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return result(
-      c.academicClassResponseSchema,
+    return answer(
+      contracts.classResponseSchema,
       await this.service.createClass(
         actor(r),
         uuid(org),
-        parse(c.classCreateSchema, body),
+        parse(contracts.classCreateSchema, body),
         idempotency(key),
       ),
       r,
@@ -177,8 +202,8 @@ export class AcademicController {
     @Param('id') id: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return result(
-      c.academicClassResponseSchema,
+    return answer(
+      contracts.classResponseSchema,
       await this.service.class(actor(r), uuid(id)),
       r,
       res,
@@ -192,12 +217,12 @@ export class AcademicController {
     @Headers('if-match') match: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return result(
-      c.academicClassResponseSchema,
+    return answer(
+      contracts.classResponseSchema,
       await this.service.updateClass(
         actor(r),
         uuid(id),
-        parse(c.classUpdateSchema, body),
+        parse(contracts.classUpdateSchema, body),
         revision(match),
       ),
       r,
@@ -205,19 +230,19 @@ export class AcademicController {
     );
   }
   @Put('classes/:id/teacher')
-  async teacher(
+  async assign(
     @Req() r: ApiRequest,
     @Param('id') id: string,
     @Body() body: unknown,
     @Headers('if-match') match: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return result(
-      c.academicClassResponseSchema,
+    return answer(
+      contracts.classResponseSchema,
       await this.service.assignTeacher(
         actor(r),
         uuid(id),
-        parse(c.classTeacherSchema, body).teacherId,
+        parse(contracts.teacherAssignmentSchema, body).teacherId,
         revision(match),
       ),
       r,
@@ -231,12 +256,19 @@ export class AcademicController {
     @Param('id') id: string,
     @Body() body: unknown,
     @Headers('if-match') match: string | undefined,
+    @Headers('idempotency-key') key: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ) {
-    parse(c.academicArchiveSchema, body ?? {});
-    return result(
-      c.academicClassResponseSchema,
-      await this.service.archiveClass(actor(r), uuid(id), revision(match)),
+    return answer(
+      contracts.classResponseSchema,
+      await this.service.archive(
+        actor(r),
+        'class',
+        uuid(id),
+        parse(contracts.academicArchiveSchema, body).reason,
+        revision(match),
+        idempotency(key),
+      ),
       r,
       res,
     );
@@ -247,29 +279,32 @@ export class AcademicController {
     @Param('id') id: string,
     @Query() q: unknown,
   ) {
-    return listing(
-      c.joinCodeListResponseSchema,
-      await this.service.codes(
+    return contracts.joinCodeListResponseSchema.parse({
+      ...(await this.service.codes(
         actor(r),
         uuid(id),
-        parse(c.academicPageQuerySchema, q),
-      ),
-      r,
-    );
+        parse(academicPaginationSchema, q),
+      )),
+      requestId: r.requestId,
+    });
   }
   @Post('classes/:id/join-codes')
   async issueCode(
     @Req() r: ApiRequest,
     @Param('id') id: string,
     @Body() body: unknown,
+    @Headers('if-match') match: string | undefined,
+    @Headers('idempotency-key') key: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return result(
-      c.issuedJoinCodeResponseSchema,
+    return answer(
+      contracts.joinCodeResponseSchema,
       await this.service.issueCode(
         actor(r),
         uuid(id),
-        parse(c.joinCodeCreateSchema, body).expiresAt,
+        parse(contracts.joinCodeCreateSchema, body).expiresAt,
+        revision(match),
+        idempotency(key),
       ),
       r,
       res,
@@ -280,19 +315,21 @@ export class AcademicController {
   async revokeCode(
     @Req() r: ApiRequest,
     @Param('id') id: string,
-    @Param('codeId') codeId: string,
+    @Param('codeId') code: string,
     @Body() body: unknown,
     @Headers('if-match') match: string | undefined,
+    @Headers('idempotency-key') key: string | undefined,
     @Res({ passthrough: true }) res: Response,
   ) {
-    parse(c.academicArchiveSchema, body ?? {});
-    return result(
-      c.joinCodeResponseSchema,
+    parse(z.strictObject({}), body ?? {});
+    return answer(
+      contracts.joinCodeResponseSchema,
       await this.service.revokeCode(
         actor(r),
         uuid(id),
-        uuid(codeId),
+        uuid(code),
         revision(match),
+        idempotency(key),
       ),
       r,
       res,
@@ -301,33 +338,45 @@ export class AcademicController {
   @Post('class-enrollments/preview')
   @HttpCode(200)
   async preview(@Req() r: ApiRequest, @Body() body: unknown) {
-    const input = parse(c.classEnrollmentInputSchema, body);
-    return result(
-      c.classJoinPreviewResponseSchema,
-      await this.service.previewEnrollment(
+    return answer(
+      contracts.enrollmentResponseSchema,
+      await this.service.enrollment(
         actor(r),
-        input.organizationId,
-        input.code,
+        parse(contracts.enrollmentInputSchema, body).code,
       ),
       r,
     );
   }
   @Post('class-enrollments')
+  @HttpCode(200)
   async enroll(
     @Req() r: ApiRequest,
     @Body() body: unknown,
     @Headers('idempotency-key') key: string | undefined,
   ) {
-    const input = parse(c.classEnrollmentInputSchema, body);
-    return result(
-      c.classEnrollmentResponseSchema,
-      await this.service.enroll(
+    return answer(
+      contracts.enrollmentResponseSchema,
+      await this.service.enrollment(
         actor(r),
-        input.organizationId,
-        input.code,
+        parse(contracts.enrollmentInputSchema, body).code,
         idempotency(key),
       ),
       r,
     );
+  }
+  @Get('classes/:id/students')
+  async students(
+    @Req() r: ApiRequest,
+    @Param('id') id: string,
+    @Query() q: unknown,
+  ) {
+    return contracts.classStudentListResponseSchema.parse({
+      ...(await this.service.students(
+        actor(r),
+        uuid(id),
+        parse(academicPaginationSchema, q),
+      )),
+      requestId: r.requestId,
+    });
   }
 }

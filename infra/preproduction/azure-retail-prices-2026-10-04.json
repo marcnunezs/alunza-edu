@@ -1,0 +1,139 @@
+{
+  "schemaVersion": 1,
+  "asOfDate": "2026-10-04",
+  "fetchedAt": "2026-10-04T18:15:28Z",
+  "timestampSource": "clock.curr_time immediately after the public HTTP response",
+  "request": {
+    "method": "GET",
+    "url": "https://prices.azure.com/api/retail/prices?currencyCode=USD&$filter=armRegionName%20eq%20%27eastus2%27%20and%20productName%20eq%20%27Azure%20OpenAI%27%20and%20%28skuName%20eq%20%27gpt%204.1%20mini%20Inp%20glbl%27%20or%20skuName%20eq%20%27gpt%204.1%20mini%20Outp%20glbl%27%20or%20skuName%20eq%20%27text-embedding-3-small-regional%27%29",
+    "currencyCode": "USD",
+    "filter": "armRegionName eq 'eastus2' and productName eq 'Azure OpenAI' and (skuName eq 'gpt 4.1 mini Inp glbl' or skuName eq 'gpt 4.1 mini Outp glbl' or skuName eq 'text-embedding-3-small-regional')"
+  },
+  "response": {
+    "BillingCurrency": "USD",
+    "CustomerEntityId": "Default",
+    "CustomerEntityType": "Retail",
+    "Items": [
+      {
+        "currencyCode": "USD",
+        "tierMinimumUnits": 0,
+        "retailPrice": 0.0004,
+        "unitPrice": 0.0004,
+        "armRegionName": "eastus2",
+        "location": "US East 2",
+        "effectiveStartDate": "2025-04-01T00:00:00Z",
+        "meterId": "57521dfc-bef8-5487-b986-74c323006a82",
+        "meterName": "gpt 4.1 mini Inp glbl Tokens",
+        "productId": "DZH318Z0HHG7",
+        "skuId": "DZH318Z0HHG7/1LSD",
+        "productName": "Azure OpenAI",
+        "skuName": "gpt 4.1 mini Inp glbl",
+        "serviceName": "Foundry Models",
+        "serviceId": "DZH31600VF1F",
+        "serviceFamily": "AI + Machine Learning",
+        "unitOfMeasure": "1K",
+        "type": "Consumption",
+        "isPrimaryMeterRegion": true,
+        "armSkuName": "gpt 4.1 mini Inp glbl"
+      },
+      {
+        "currencyCode": "USD",
+        "tierMinimumUnits": 0,
+        "retailPrice": 0.0016,
+        "unitPrice": 0.0016,
+        "armRegionName": "eastus2",
+        "location": "US East 2",
+        "effectiveStartDate": "2025-04-01T00:00:00Z",
+        "meterId": "9e3ce534-5dc7-5335-974b-9d0c96250659",
+        "meterName": "gpt 4.1 mini Outp glbl Tokens",
+        "productId": "DZH318Z0HHG7",
+        "skuId": "DZH318Z0HHG7/1LRX",
+        "productName": "Azure OpenAI",
+        "skuName": "gpt 4.1 mini Outp glbl",
+        "serviceName": "Foundry Models",
+        "serviceId": "DZH31600VF1F",
+        "serviceFamily": "AI + Machine Learning",
+        "unitOfMeasure": "1K",
+        "type": "Consumption",
+        "isPrimaryMeterRegion": true,
+        "armSkuName": "gpt 4.1 mini Outp glbl"
+      },
+      {
+        "currencyCode": "USD",
+        "tierMinimumUnits": 0,
+        "retailPrice": 0.000022,
+        "unitPrice": 0.000022,
+        "armRegionName": "eastus2",
+        "location": "US East 2",
+        "effectiveStartDate": "2025-09-01T00:00:00Z",
+        "meterId": "bf74adc4-0965-5bf9-b859-5db6147fc36a",
+        "meterName": "text-embedding-3-small-regional Tokens",
+        "productId": "DZH318Z0HHG7",
+        "skuId": "DZH318Z0HHG7/0LHJ",
+        "productName": "Azure OpenAI",
+        "skuName": "text-embedding-3-small-regional",
+        "serviceName": "Foundry Models",
+        "serviceId": "DZH31600VF1F",
+        "serviceFamily": "AI + Machine Learning",
+        "unitOfMeasure": "1K",
+        "type": "Consumption",
+        "isPrimaryMeterRegion": true,
+        "armSkuName": "text-embedding-3-small-regional"
+      }
+    ],
+    "NextPageLink": null,
+    "Count": 3
+  },
+  "derivedRates": [
+    {
+      "meterId": "57521dfc-bef8-5487-b986-74c323006a82",
+      "model": "gpt-4.1-mini",
+      "modelVersion": "2025-04-14",
+      "deploymentType": "GlobalStandard",
+      "direction": "input",
+      "usdPer1MTokens": 0.4
+    },
+    {
+      "meterId": "9e3ce534-5dc7-5335-974b-9d0c96250659",
+      "model": "gpt-4.1-mini",
+      "modelVersion": "2025-04-14",
+      "deploymentType": "GlobalStandard",
+      "direction": "output",
+      "usdPer1MTokens": 1.6
+    },
+    {
+      "meterId": "bf74adc4-0965-5bf9-b859-5db6147fc36a",
+      "model": "text-embedding-3-small",
+      "modelVersion": "1",
+      "deploymentType": "Standard",
+      "direction": "input",
+      "usdPer1MTokens": 0.022
+    }
+  ],
+  "derivation": "All three meters report unitOfMeasure 1K. USD per 1M tokens = retailPrice * 1000. Model version and deployment type are selected configuration assumptions mapped to official model/deployment documentation, not fields returned by Retail Prices.",
+  "sources": [
+    {
+      "purpose": "Azure retail price API documentation",
+      "url": "https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices"
+    },
+    {
+      "purpose": "Azure OpenAI pricing: GPT-4.1-mini Global and embeddings tables",
+      "url": "https://azure.microsoft.com/en-us/pricing/details/azure-openai/"
+    },
+    {
+      "purpose": "Model versions and regional availability by deployment type",
+      "url": "https://learn.microsoft.com/en-us/azure/foundry/foundry-models/concepts/models-sold-directly-by-azure-region-availability"
+    },
+    {
+      "purpose": "GPT-4.1-mini structured outputs and GA v1 support",
+      "url": "https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/structured-outputs?view=foundry-classic"
+    }
+  ],
+  "limitations": [
+    "Public USD retail estimate; subscription-specific agreements, taxes and CLP conversion are not verified.",
+    "No subscription, endpoint, actual deployment, remaining quota, capacity or inference request was inspected.",
+    "GlobalStandard deployment in eastus2 does not establish processing residency in eastus2.",
+    "No cached-input or batch discount is assumed.",
+    "The pricing HTML displayed dynamic price placeholders; concrete rates were obtained from the public Retail Prices response."
+  ]
+}

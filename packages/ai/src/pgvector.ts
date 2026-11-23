@@ -25,7 +25,7 @@ export class PgvectorAssayRepository implements RetrievalPort {
     if (
       !['postgres:', 'postgresql:'].includes(url.protocol) ||
       url.hostname !== '127.0.0.1' ||
-      url.port !== '16422' ||
+      url.port !== '18422' ||
       url.username !== 'alunza_app' ||
       url.search ||
       url.hash ||

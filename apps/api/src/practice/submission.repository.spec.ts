@@ -57,15 +57,8 @@ describe('SUBMIT transaction identity', () => {
             rows: access.allowed
               ? [
                   {
-                    context: {
-                      organizationId: admission.organizationId,
-                      exerciseVersionId: access.version,
-                      limits: {
-                        memoryBytes: 134217728,
-                        runtimeMs: 3000,
-                        outputBytes: 65536,
-                      },
-                    },
+                    organization_id: admission.organizationId,
+                    exercise_version_id: access.version,
                   },
                 ]
               : [],
@@ -141,6 +134,34 @@ describe('SUBMIT transaction identity', () => {
       false,
     );
     expect(queries.some((sql) => sql.includes('set_config'))).toBe(false);
+  });
+  it('passes the private capacity snapshot as its own SQL argument', async () => {
+    const { repository, clients } = setup();
+    await repository.admit(
+      who,
+      'activity',
+      'assignment',
+      { exerciseVersionId: version, code: 'code' },
+      'submit-key-capacity',
+      { available: true, runnerVersion: 'unit', capacity: 'BUSY' },
+      {
+        actorConcurrency: 1,
+        submitActorConcurrency: 2,
+        organizationConcurrency: 4,
+        actorRequestsPerMinute: 10,
+      },
+    );
+    const calls = (clients[0]!.query as jest.Mock).mock.calls as [
+      string,
+      unknown[],
+    ][];
+    const statement = calls.find(([sql]) =>
+      sql.includes('admit_practice_submit'),
+    )!;
+    expect(statement[0]).toContain('$16::text');
+    expect(statement[1]).toHaveLength(16);
+    expect(statement[1].at(-1)).toBe('BUSY');
+    expect(statement[1].at(-2)).toBeNull();
   });
   it('retains VERSION_CONFLICT for an accessible assignment with a different version', async () => {
     const { repository, access } = setup();

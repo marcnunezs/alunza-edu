@@ -1,0 +1,26 @@
+{
+  "recordedAt": "2026-10-23T05:41:30.738Z",
+  "status": "passed",
+  "infrastructure": "real-local-pgvector",
+  "provider": "explicit-synthetic-double",
+  "azure": "not-executed",
+  "versions": {
+    "postgres": "17.6",
+    "pgvector": "0.8.0"
+  },
+  "passed": 27,
+  "failed": 0,
+  "databaseOutage": "passed",
+  "databaseRecovery": "passed",
+  "foundationCounts": {
+    "profiles": 6,
+    "organizations": 2,
+    "memberships": 6
+  },
+  "corpusVersion": "fictitious-rag-assay-1",
+  "corpusHash": "6d7b08e41afc59a5a6166238e30f6ac5f65b1886f15ea6c424bbf336a7c06e3a",
+  "documents": 6,
+  "dimensions": 3,
+  "semanticValidation": "explicit-fixture-oracle-only",
+  "extensionUsageRestored": true
+}

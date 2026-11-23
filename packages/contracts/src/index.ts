@@ -1,5 +1,12 @@
 import { z } from 'zod';
 export * from './rag';
+export * from './academic';
+export * from './practice';
+export * from './submissions';
+export * from './progress';
+export * from './signal-rules';
+export * from './signal-review';
+export * from './materials';
 
 export const roleSchema = z.enum(['ADMIN', 'TEACHER', 'STUDENT']);
 export const accountStateSchema = z.enum(['INVITED', 'ACTIVE', 'DISABLED']);
@@ -51,6 +58,7 @@ export const errorResponseSchema = z.strictObject({
       'RESOURCE_NOT_FOUND',
       'DEPENDENCY_UNAVAILABLE',
       'PERSISTENCE_UNAVAILABLE',
+      'STORAGE_UNAVAILABLE',
       'INTERNAL_ERROR',
       'VALIDATION_FAILED',
       'DUPLICATE',
@@ -58,23 +66,32 @@ export const errorResponseSchema = z.strictObject({
       'DEPENDENCIES_ACTIVE',
       'REQUEST_IN_PROGRESS',
       'IDEMPOTENCY_CONFLICT',
-      'IDEMPOTENCY_EXPIRED',
-      'VERSION_CONFLICT',
       'PRECONDITION_FAILED',
       'PRECONDITION_REQUIRED',
       'INVITATION_INVALID',
       'INVITATION_EXPIRED',
       'INVITATION_REVOKED',
       'ORGANIZATION_ARCHIVED',
-      'RESOURCE_ARCHIVED',
-      'ACTIVITY_UNAVAILABLE',
-      'ACTIVITY_CLOSED',
-      'ACTIVITY_NOT_AVAILABLE',
       'RATE_LIMITED',
+      'RUNNER_BUSY',
       'PAYLOAD_TOO_LARGE',
-      'CODE_TOO_LARGE',
       'UNSUPPORTED_MEDIA_TYPE',
       'OPERATION_DEADLINE_EXCEEDED',
+      'ACADEMIC_ARCHIVED',
+      'JOIN_CODE_INVALID',
+      'ACTIVITY_NOT_AVAILABLE',
+      'INVALID_TRANSITION',
+      'CONCEPT_CYCLE',
+      'CODE_TOO_LARGE',
+      'VERSION_CONFLICT',
+      'ACTIVITY_CLOSED',
+      'IDEMPOTENCY_EXPIRED',
+      'RULE_VERSION_CONFLICT',
+      'RULE_VERSION_ALREADY_ACTIVATED',
+      'AUDIT_EXPORT_LIMIT_EXCEEDED',
+      'AUDIT_EXPORT_EXPIRED',
+      'AUDIT_EXPORT_FAILED',
+      'AUDIT_EXPORT_INTERRUPTED',
     ]),
     message: z.string().min(1).max(240),
     fields: z.array(z.strictObject({ field: z.string(), message: z.string() })),
@@ -197,6 +214,11 @@ export const invitationAcceptanceResponseSchema = z.strictObject({
 export type Member = z.infer<typeof memberSchema>;
 export type Invitation = z.infer<typeof invitationSchema>;
 export type InvitationAcceptance = z.infer<typeof invitationAcceptanceSchema>;
-export * from './academic';
-export * from './practice';
-export * from './submissions';
+export * from './help';
+export * from './evaluation';
+export * from './progress-observation';
+export * from './dashboard';
+export * from './exercise-bank';
+export * from './student-detail';
+export * from './audit';
+export * from './audit-export';

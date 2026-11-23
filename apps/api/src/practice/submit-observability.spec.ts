@@ -297,6 +297,356 @@ describe('private TEST SUBMIT timing projection', () => {
   });
 });
 
+describe('private TEST SUBMIT clock anchors', () => {
+  const submission: SubmitTimingObservation = {
+    source: 'submission',
+    phase: 'authorizeInitial',
+    durationMs: 5,
+    completed: true,
+  };
+  const utcMs = 1_700_000_000_000;
+
+  it.each([
+    ['local', '1', '1'],
+    ['production', '1', '1'],
+    ['preproduction', '1', '1'],
+    ['evaluation', '1', '1'],
+    ['TEST', '1', '1'],
+    ['test', '0', '1'],
+    ['test', 'true', '1'],
+    ['test', '1', '0'],
+    ['test', '1', 'true'],
+    ['test', '1', ''],
+  ])(
+    'requires exact TEST and both opt-ins (%s, %s, %s)',
+    (environment, timingFlag, continuousFlag) => {
+      const now = jest.spyOn(performance, 'now').mockReturnValue(42);
+      const utc = jest.spyOn(Date, 'now');
+      const output = jest.fn();
+      createSubmitTimingObserver(
+        environment,
+        { requestId },
+        timingFlag,
+        output,
+        continuousFlag,
+      )?.(submission);
+      expect(utc).not.toHaveBeenCalled();
+      const timingEnabled = environment === 'test' && timingFlag === '1';
+      expect(now).toHaveBeenCalledTimes(timingEnabled ? 1 : 0);
+      expect(output).toHaveBeenCalledTimes(timingEnabled ? 1 : 0);
+      if (timingEnabled)
+        expect(JSON.parse(output.mock.calls[0]![0]).event).toBe(
+          'TEST_SUBMIT_TIMING',
+        );
+    },
+  );
+
+  it('reads the continuous opt-in from the process environment by default', () => {
+    jest.replaceProperty(process, 'env', {
+      ...process.env,
+      ALUNZA_TEST_SUBMIT_TIMINGS: '1',
+      ALUNZA_TEST_SUBMIT_CONTINUOUS_DIAGNOSTICS: '1',
+    });
+    jest.spyOn(performance, 'now').mockReturnValue(42);
+    jest.spyOn(Date, 'now').mockReturnValue(utcMs);
+    const output = jest.fn();
+    createSubmitTimingObserver(
+      'test',
+      { requestId },
+      undefined,
+      output,
+    )?.(submission);
+    expect(output.mock.calls.map(([line]) => JSON.parse(line).event)).toEqual([
+      'TEST_SUBMIT_CLOCK',
+      'TEST_SUBMIT_TIMING',
+    ]);
+  });
+
+  it('emits exact bounded anchors once, before the first submission event and total', () => {
+    jest
+      .spyOn(performance, 'now')
+      .mockReturnValueOnce(10)
+      .mockReturnValueOnce(12)
+      .mockReturnValueOnce(13)
+      .mockReturnValueOnce(14)
+      .mockReturnValueOnce(20)
+      .mockReturnValueOnce(22)
+      .mockReturnValueOnce(23)
+      .mockReturnValueOnce(24);
+    const utc = jest
+      .spyOn(Date, 'now')
+      .mockReturnValueOnce(utcMs)
+      .mockReturnValueOnce(utcMs + 10);
+    const context = { requestId, executionId: undefined as string | undefined };
+    const output = jest.fn();
+    const observe = createSubmitTimingObserver(
+      'test',
+      context,
+      '1',
+      output,
+      '1',
+    );
+    observe?.({
+      ...submission,
+      code: 'PRIVATE_CODE',
+      args: ['PRIVATE_ARGUMENT'],
+      utcMs: 'PRIVATE_INPUT_TIMESTAMP',
+      uncertaintyMs: 'PRIVATE_UNCERTAINTY',
+      endpoint: 'PRIVATE_ENDPOINT',
+      credentials: 'PRIVATE_CREDENTIALS',
+    } as SubmitTimingObservation);
+    context.executionId = executionId;
+    observe?.({ ...submission, phase: 'inspect' });
+    observe?.({ ...submission, phase: 'total' });
+    observe?.({ ...submission, phase: 'total' });
+    const events = output.mock.calls.map(([line]) => JSON.parse(line));
+    expect(events.map(({ event }) => event)).toEqual([
+      'TEST_SUBMIT_CLOCK',
+      'TEST_SUBMIT_TIMING',
+      'TEST_SUBMIT_TIMING',
+      'TEST_SUBMIT_CLOCK',
+      'TEST_SUBMIT_TIMING',
+      'TEST_SUBMIT_TIMING',
+    ]);
+    expect(events.filter(({ event }) => event === 'TEST_SUBMIT_CLOCK')).toEqual(
+      [
+        {
+          event: 'TEST_SUBMIT_CLOCK',
+          version: 1,
+          requestId,
+          boundary: 'start',
+          monotonicMs: 11,
+          utcMs,
+          uncertaintyMs: 2,
+        },
+        {
+          event: 'TEST_SUBMIT_CLOCK',
+          version: 1,
+          requestId,
+          boundary: 'end',
+          monotonicMs: 21,
+          utcMs: utcMs + 10,
+          uncertaintyMs: 2,
+        },
+      ],
+    );
+    expect(events[1]).toEqual({
+      event: 'TEST_SUBMIT_TIMING',
+      version: 2,
+      requestId,
+      observedAtMs: 13,
+      ...submission,
+    });
+    expect(events[4].observedAtMs).toBe(23);
+    expect(events[4].executionId).toBe(executionId);
+    expect(utc).toHaveBeenCalledTimes(2);
+    expect(JSON.stringify(events)).not.toContain('PRIVATE_');
+  });
+
+  it('does not emit or sample clock anchors from a separate Docker observer', () => {
+    const now = jest.spyOn(performance, 'now').mockReturnValue(42);
+    const utc = jest.spyOn(Date, 'now').mockReturnValue(utcMs);
+    const output = jest.fn();
+    const context = { requestId, executionId };
+    const docker = createSubmitTimingObserver(
+      'test',
+      context,
+      '1',
+      output,
+      '1',
+    );
+    const submit = createSubmitTimingObserver(
+      'test',
+      context,
+      '1',
+      output,
+      '1',
+    );
+    docker?.(timing);
+    docker?.({ ...timing, phase: 'wait' });
+    expect(utc).not.toHaveBeenCalled();
+    expect(now).toHaveBeenCalledTimes(2);
+    submit?.(submission);
+    submit?.({ ...submission, phase: 'total' });
+    expect(
+      output.mock.calls
+        .map(([line]) => JSON.parse(line))
+        .filter(({ event }) => event === 'TEST_SUBMIT_CLOCK')
+        .map(({ boundary }) => boundary),
+    ).toEqual(['start', 'end']);
+  });
+
+  it.each([
+    { requestId: 'PRIVATE_REQUEST' },
+    { requestId, executionId: 'PRIVATE_EXECUTION' },
+    { requestId: requestId + '\n' },
+  ])('does not read either clock for invalid context %#', (context) => {
+    const now = jest.spyOn(performance, 'now');
+    const utc = jest.spyOn(Date, 'now');
+    const output = jest.fn();
+    createSubmitTimingObserver('test', context, '1', output, '1')?.(submission);
+    expect(now).not.toHaveBeenCalled();
+    expect(utc).not.toHaveBeenCalled();
+    expect(output).not.toHaveBeenCalled();
+  });
+
+  it('does not consume the start anchor for a rejected observation', () => {
+    const now = jest.spyOn(performance, 'now').mockReturnValue(42);
+    const utc = jest.spyOn(Date, 'now').mockReturnValue(utcMs);
+    const output = jest.fn();
+    const observe = createSubmitTimingObserver(
+      'test',
+      { requestId },
+      '1',
+      output,
+      '1',
+    );
+    observe?.({ ...submission, phase: 'PRIVATE_PHASE' });
+    expect(now).not.toHaveBeenCalled();
+    expect(utc).not.toHaveBeenCalled();
+    observe?.(submission);
+    expect(output.mock.calls.map(([line]) => JSON.parse(line).event)).toEqual([
+      'TEST_SUBMIT_CLOCK',
+      'TEST_SUBMIT_TIMING',
+    ]);
+  });
+
+  it.each([0, 10])(
+    'accepts the inclusive uncertainty boundary %s ms',
+    (width) => {
+      jest
+        .spyOn(performance, 'now')
+        .mockReturnValueOnce(20)
+        .mockReturnValueOnce(20 + width)
+        .mockReturnValue(42);
+      jest.spyOn(Date, 'now').mockReturnValue(utcMs);
+      const output = jest.fn();
+      createSubmitTimingObserver(
+        'test',
+        { requestId },
+        '1',
+        output,
+        '1',
+      )?.(submission);
+      expect(JSON.parse(output.mock.calls[0]![0])).toEqual({
+        event: 'TEST_SUBMIT_CLOCK',
+        version: 1,
+        requestId,
+        boundary: 'start',
+        monotonicMs: 20 + width / 2,
+        utcMs,
+        uncertaintyMs: width,
+      });
+    },
+  );
+
+  it.each([
+    { before: -1, after: 2, utc: utcMs },
+    { before: Number.NaN, after: 2, utc: utcMs },
+    { before: Number.POSITIVE_INFINITY, after: 2, utc: utcMs },
+    { before: 2, after: Number.NaN, utc: utcMs },
+    { before: 2, after: Number.POSITIVE_INFINITY, utc: utcMs },
+    { before: 2, after: 1, utc: utcMs },
+    { before: 2, after: 12.001, utc: utcMs },
+    { before: 2, after: 3, utc: -1 },
+    { before: 2, after: 3, utc: 1.5 },
+    { before: 2, after: 3, utc: Number.NaN },
+    { before: 2, after: 3, utc: Number.POSITIVE_INFINITY },
+    { before: 2, after: 3, utc: Number.MAX_SAFE_INTEGER + 1 },
+  ])('drops invalid clock alignment without suppressing TIMING %#', (clock) => {
+    jest
+      .spyOn(performance, 'now')
+      .mockReturnValueOnce(clock.before)
+      .mockReturnValueOnce(clock.after)
+      .mockReturnValue(42);
+    jest.spyOn(Date, 'now').mockReturnValue(clock.utc);
+    const output = jest.fn();
+    const observe = createSubmitTimingObserver(
+      'test',
+      { requestId },
+      '1',
+      output,
+      '1',
+    );
+    expect(() => observe?.(submission)).not.toThrow();
+    observe?.({ ...submission, phase: 'inspect' });
+    expect(output.mock.calls.map(([line]) => JSON.parse(line).event)).toEqual([
+      'TEST_SUBMIT_TIMING',
+      'TEST_SUBMIT_TIMING',
+    ]);
+  });
+
+  it.each(['before', 'utc', 'after'])(
+    'tolerates a throwing %s clock and preserves TIMING',
+    (clock) => {
+      const now = jest.spyOn(performance, 'now').mockReturnValue(42);
+      const utc = jest.spyOn(Date, 'now').mockReturnValue(utcMs);
+      const fail = () => {
+        throw new Error('PRIVATE_CLOCK_FAILURE');
+      };
+      if (clock === 'before') now.mockImplementationOnce(fail);
+      if (clock === 'utc') utc.mockImplementationOnce(fail);
+      if (clock === 'after')
+        now.mockReturnValueOnce(40).mockImplementationOnce(fail);
+      const output = jest.fn();
+      const observe = createSubmitTimingObserver(
+        'test',
+        { requestId },
+        '1',
+        output,
+        '1',
+      );
+      expect(() => observe?.(submission)).not.toThrow();
+      expect(output.mock.calls.map(([line]) => JSON.parse(line).event)).toEqual(
+        ['TEST_SUBMIT_TIMING'],
+      );
+    },
+  );
+
+  it.each(['throw', 'reject'])(
+    'an anchor output %s does not replace operation results or original failures',
+    async (kind) => {
+      jest.spyOn(performance, 'now').mockReturnValue(42);
+      jest.spyOn(Date, 'now').mockReturnValue(utcMs);
+      const output = jest.fn((line: string) => {
+        if (JSON.parse(line).event !== 'TEST_SUBMIT_CLOCK') return;
+        const failure = new Error('PRIVATE_ANCHOR_OUTPUT_FAILURE');
+        if (kind === 'throw') throw failure;
+        return Promise.reject(failure);
+      });
+      const observe = createSubmitTimingObserver(
+        'test',
+        { requestId },
+        '1',
+        output,
+        '1',
+      );
+      const result = { preserved: true };
+      const failure = new Error('PRIVATE_OPERATION_FAILURE');
+      await expect(
+        measureSubmitPhase(observe, 'authorizeInitial', async () => result),
+      ).resolves.toBe(result);
+      await expect(
+        measureSubmitPhase(observe, 'total', async () => {
+          throw failure;
+        }),
+      ).rejects.toBe(failure);
+      observe?.({ ...submission, phase: 'total' });
+      await new Promise<void>((resolve) => setImmediate(resolve));
+      expect(output.mock.calls.map(([line]) => JSON.parse(line).event)).toEqual(
+        [
+          'TEST_SUBMIT_CLOCK',
+          'TEST_SUBMIT_TIMING',
+          'TEST_SUBMIT_CLOCK',
+          'TEST_SUBMIT_TIMING',
+          'TEST_SUBMIT_TIMING',
+        ],
+      );
+      expect(JSON.stringify(output.mock.calls)).not.toContain('PRIVATE_');
+    },
+  );
+});
+
 type BackgroundObservation = Parameters<
   NonNullable<ReturnType<typeof createSubmitBackgroundObserver>>
 >[0];

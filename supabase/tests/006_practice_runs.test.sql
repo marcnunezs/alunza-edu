@@ -24,6 +24,8 @@ insert into app.organization_memberships(organization_id,user_id,role,state,join
 insert into app.courses(id,organization_id,code,name,academic_period) values
 ('93000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','P1','Programming','2026-2'),
 ('93000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000002','P1','Foreign','2026-2');
+insert into app.course_teacher_grants(organization_id,course_id,teacher_id,granted_by) values
+('92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','91000000-0000-4000-8000-000000000001');
 insert into app.classes(id,organization_id,course_id,teacher_id,code,name) values
 ('94000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','A1','Own class'),
 ('94000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000001','93000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000005','A2','Other class'),
@@ -32,24 +34,27 @@ insert into app.class_memberships(organization_id,class_id,user_id) values('9200
 insert into app.class_join_codes(organization_id,class_id,token_digest,expires_at,created_by) values
 ('92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000002',repeat('a',64),now()+interval '1 day','91000000-0000-4000-8000-000000000005'),
 ('92000000-0000-4000-8000-000000000002','94000000-0000-4000-8000-000000000003',repeat('b',64),now()+interval '1 day','91000000-0000-4000-8000-000000000004');
-insert into app.concepts(id,organization_id,normalized_name) values('95000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','addition');
+insert into app.concept_tags(id,organization_id,normalized_name) values('95000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','addition');
 insert into app.concept_versions(id,organization_id,concept_id,version,name,description,created_by) values
 ('95100000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','95000000-0000-4000-8000-000000000001',1,'Addition','Addition','91000000-0000-4000-8000-000000000001');
-update app.concepts set current_version_id='95100000-0000-4000-8000-000000000001' where id='95000000-0000-4000-8000-000000000001';
+update app.concept_tags set current_version_id='95100000-0000-4000-8000-000000000001' where id='95000000-0000-4000-8000-000000000001';
 insert into app.exercises(id,organization_id,owner_id) values('96000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002');
-insert into app.exercise_versions(id,organization_id,exercise_id,version,title,statement,starter_code,difficulty,execution_limits,created_by) values
-('96100000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000001',1,'Sum','Return sum','module.exports.solve=(a,b)=>a+b;','BASIC','{"memoryBytes":67108864,"timeoutMs":1500,"outputBytes":4096}','91000000-0000-4000-8000-000000000002');
-insert into app.exercise_version_concepts values('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','95000000-0000-4000-8000-000000000001','95100000-0000-4000-8000-000000000001');
-insert into app_private.exercise_tests(organization_id,exercise_version_id,id,position,visibility,args,expected) values
-('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','96110000-0000-4000-8000-000000000001',0,'VISIBLE','[1,2]','3'),
-('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','96110000-0000-4000-8000-000000000002',1,'HIDDEN','[2,2]','4');
+insert into app.exercise_versions(id,organization_id,exercise_id,version,title,statement,starter_code,difficulty,created_by) values
+('96100000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','96000000-0000-4000-8000-000000000001',1,'Sum','Return sum','module.exports.solve=(a,b)=>a+b;','BEGINNER','91000000-0000-4000-8000-000000000002');
+insert into app.exercise_version_concepts values('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','95100000-0000-4000-8000-000000000001');
+insert into app_private.exercise_tests(organization_id,exercise_version_id,test_id,position,visibility,args,expected) values
+('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','visible',0,'visible','[1,2]','3'),
+('92000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001','hidden-sentinel',1,'hidden','[2,2]','4');
 update app.exercises set current_version_id='96100000-0000-4000-8000-000000000001' where id='96000000-0000-4000-8000-000000000001';
 insert into app.activities(id,organization_id,class_id,created_by,title,type) values
 ('97000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','Published','FORMATIVE'),
 ('97000000-0000-4000-8000-000000000002','92000000-0000-4000-8000-000000000001','94000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000002','Draft','FORMATIVE');
 insert into app.activity_exercises(id,organization_id,activity_id,exercise_version_id,position) values('98000000-0000-4000-8000-000000000001','92000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000001','96100000-0000-4000-8000-000000000001',0);
 update app.activities set state='PUBLISHED' where id='97000000-0000-4000-8000-000000000001';
-set constraints all immediate;
+-- Validate the original domain constraints without flushing signal capture mid-transaction.
+-- SET CONSTRAINTS ALL IMMEDIATE and subsequent DML rejection have their own signals integration test.
+set constraints app.provisioning_complete, app.exercise_definition_complete,
+ app.concept_current_version, app.exercise_current_version immediate;
 
 -- Four additional students exercise the shared organization quota without
 -- relying on an in-memory semaphore or bypassing the personal quota.
@@ -112,9 +117,7 @@ select throws_ok($$select lease_token from app.executions$$,'42501',null,'Actor 
 select throws_ok($$insert into app.operation_keys(organization_id,actor_id,operation,key,payload_hash) values('92000000-0000-4000-8000-000000000001','91000000-0000-4000-8000-000000000003','practice.run','forged-key-0001',repeat('a',64))$$,'42501',null,'Runtime cannot forge a RUN operation key');
 with changed as(update app.operation_keys set state='COMPLETED',response_body='{}' where operation='practice.run' returning id) select is((select count(*)::integer from changed),0,'Runtime cannot replace RUN replay response');
 select throws_ok($$select app_private.finish_practice_run('98100000-0000-4000-8000-000000000001',pg_temp.run_token('98100000-0000-4000-8000-000000000001'),pg_temp.run_result(),true)$$,'42501','FORBIDDEN','Actor request cannot invoke internal finalization');
-select is((select count(*)::integer from app_private.exercise_tests where visibility='HIDDEN'),0,'RUN did not broaden hidden-test RLS');
-select is((select limits_snapshot from app.executions where id='98100000-0000-4000-8000-000000000001'),'{"memoryBytes":67108864,"runtimeMs":1500,"outputBytes":4096}'::jsonb,'RUN retains the smaller academic version limits');
-select throws_ok($$select pg_temp.finish_run('98100000-0000-4000-8000-000000000001',pg_temp.run_token('98100000-0000-4000-8000-000000000001'),pg_temp.run_result()||'{"outputBytes":4097}'::jsonb,true)$$,'23514','INVALID_RUN_RESULT','RUN result cannot exceed the version output budget');
+select is((select count(*)::integer from app_private.exercise_tests where visibility='hidden'),0,'RUN did not broaden hidden-test RLS');
 select throws_ok($$select pg_temp.admit_run('98100000-0000-4000-8000-000000000002','run-key-0001')$$,'P0001','REQUEST_IN_PROGRESS','Concurrent transport replay cannot reserve twice');
 select throws_ok($$select pg_temp.admit_run('98100000-0000-4000-8000-000000000002','run-key-0001',repeat('d',64))$$,'P0001','IDEMPOTENCY_CONFLICT','Same key with different payload rejected');
 select throws_ok($$select pg_temp.admit_run('98100000-0000-4000-8000-000000000002','run-key-0002')$$,'P0001','RATE_LIMITED','One active RUN per student enforced in database');
@@ -123,9 +126,9 @@ select throws_ok($$select pg_temp.finish_run('98100000-0000-4000-8000-0000000000
 select throws_ok($$select pg_temp.finish_run('98100000-0000-4000-8000-000000000001',pg_temp.run_token('98100000-0000-4000-8000-000000000001'),'{}',true)$$,'23514','INVALID_RUN_RESULT','Incomplete result cannot be persisted');
 select throws_ok($$select pg_temp.finish_run('98100000-0000-4000-8000-000000000001',pg_temp.run_token('98100000-0000-4000-8000-000000000001'),jsonb_set(pg_temp.run_result(),'{diagnosisCode}','null'),true)$$,'23514','INVALID_RUN_RESULT','JSON null diagnosis cannot be persisted');
 select throws_ok($$select pg_temp.finish_run('98100000-0000-4000-8000-000000000001',pg_temp.run_token('98100000-0000-4000-8000-000000000001'),jsonb_set(pg_temp.run_result(),'{runtimeMs}','null'),true)$$,'23514','INVALID_RUN_RESULT','JSON null timing cannot be persisted');
-select throws_ok($$select pg_temp.finish_run('98100000-0000-4000-8000-000000000001',pg_temp.run_token('98100000-0000-4000-8000-000000000001'),jsonb_set(pg_temp.run_result(),'{visibleTestResults}','[{"id":"96110000-0000-4000-8000-000000000002","passed":false,"stdout":"","stderr":""}]'),true)$$,'23514','INVALID_RUN_RESULT','Result cannot introduce a hidden-test ID');
-select throws_ok($$select pg_temp.finish_run('98100000-0000-4000-8000-000000000001',pg_temp.run_token('98100000-0000-4000-8000-000000000001'),jsonb_set(pg_temp.run_result(),'{visibleTestResults}','[{"id":"96110000-0000-4000-8000-000000000001","passed":false,"stdout":"","stderr":"","extra":"untrusted"}]'),true)$$,'23514','INVALID_RUN_RESULT','Nested result keys are allowlisted');
-select throws_ok($$select pg_temp.finish_run('98100000-0000-4000-8000-000000000001',pg_temp.run_token('98100000-0000-4000-8000-000000000001'),jsonb_set(pg_temp.run_result(),'{visibleTestResults}','[{"id":"96110000-0000-4000-8000-000000000001","passed":false,"stdout":"unexpected bytes","stderr":""}]'),true)$$,'23514','INVALID_RUN_RESULT','Visible output cannot exceed declared captured byte count');
+select throws_ok($$select pg_temp.finish_run('98100000-0000-4000-8000-000000000001',pg_temp.run_token('98100000-0000-4000-8000-000000000001'),jsonb_set(pg_temp.run_result(),'{visibleTestResults}','[{"id":"hidden-sentinel","passed":false,"stdout":"","stderr":""}]'),true)$$,'23514','INVALID_RUN_RESULT','Result cannot introduce a hidden-test ID');
+select throws_ok($$select pg_temp.finish_run('98100000-0000-4000-8000-000000000001',pg_temp.run_token('98100000-0000-4000-8000-000000000001'),jsonb_set(pg_temp.run_result(),'{visibleTestResults}','[{"id":"visible","passed":false,"stdout":"","stderr":"","extra":"untrusted"}]'),true)$$,'23514','INVALID_RUN_RESULT','Nested result keys are allowlisted');
+select throws_ok($$select pg_temp.finish_run('98100000-0000-4000-8000-000000000001',pg_temp.run_token('98100000-0000-4000-8000-000000000001'),jsonb_set(pg_temp.run_result(),'{visibleTestResults}','[{"id":"visible","passed":false,"stdout":"unexpected bytes","stderr":""}]'),true)$$,'23514','INVALID_RUN_RESULT','Visible output cannot exceed declared captured byte count');
 select is(pg_temp.finish_run('98100000-0000-4000-8000-000000000001',pg_temp.run_token('98100000-0000-4000-8000-000000000001'),pg_temp.run_result(),null),null::jsonb,'NULL cleanup confirmation cannot complete RUN');
 select is((select lifecycle_status from app.executions limit 1),'RECOVERING','Unknown cleanup keeps lease and quota occupied');
 select ok((select lease_until>=admitted_at+interval '60 seconds' from app.executions where id='98100000-0000-4000-8000-000000000001'),'Unknown cleanup preserves the original admission grace period');
@@ -199,15 +202,12 @@ reset role;
 savepoint archive_run_guard;
 -- Remove all other archive dependencies so only RUN's operational state can
 -- reject this request. This scenario is restored before the close/replay tests.
--- Class archival requires a live institutional ADMIN even for fixture SQL.
-set local app.actor_id='91000000-0000-4000-8000-000000000001';
-set local app.session_id='91100000-0000-4000-8000-000000000001';
 update app.organization_memberships set state='DISABLED' where organization_id='92000000-0000-4000-8000-000000000001' and role<>'ADMIN';
 update app.activities set state='CLOSED' where id='97000000-0000-4000-8000-000000000001';
 update app.classes set archived_at=clock_timestamp() where organization_id='92000000-0000-4000-8000-000000000001';
 update app.courses set archived_at=clock_timestamp() where organization_id='92000000-0000-4000-8000-000000000001';
 update app.exercises set archived_at=clock_timestamp() where organization_id='92000000-0000-4000-8000-000000000001';
-update app.concepts set archived_at=clock_timestamp() where organization_id='92000000-0000-4000-8000-000000000001';
+update app.concept_tags set archived_at=clock_timestamp() where organization_id='92000000-0000-4000-8000-000000000001';
 set local role alunza_app;
 set local app.actor_id='91000000-0000-4000-8000-000000000001';
 set local app.session_id='91100000-0000-4000-8000-000000000001';

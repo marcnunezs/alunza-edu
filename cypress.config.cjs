@@ -4,13 +4,81 @@ const { defineConfig } = require('cypress');
 const { readFileSync, mkdirSync, writeFileSync } = require('node:fs');
 const { resolve, join } = require('node:path');
 const { identityTasks } = require('./tests/identity-fixture.cjs');
-const { academicTasks } = require('./tests/academic-fixture.cjs');
+const { helpFaultTasks } = require('./tests/help-fault-controls.cjs');
+const {
+  suites,
+  contextSpecs,
+  inspectContextCoverage,
+} = require('./scripts/phase-context.cjs');
+const {
+  casesForSuite,
+  specsForSuite,
+  inspectSuiteCoverage,
+} = require('./scripts/e2e-inventory.cjs');
+const {
+  assertLaboratoryTestState,
+} = require('./tests/laboratory-test-state.cjs');
 
-const reportDirectory = resolve(__dirname, '.local/reports/imp-01');
+const suite = process.env.ALUNZA_E2E_SUITE ?? 'full';
+if (!suites.includes(suite)) throw new Error('ALUNZA_E2E_SUITE no admitida.');
+const phaseContext = suite === 'phase-context';
+const governancePhaseOnly = suite === 'governance-phase';
+const phaseDiagnostics = process.env.ALUNZA_TEST_DASHBOARD_TIMINGS === '1';
+if (phaseDiagnostics && !phaseContext)
+  throw new Error('El diagnóstico de tablero requiere phase-context.');
+const materialsOnly = suite === 'materials';
+const helpOnly = suite === 'help';
+const progressOnly = suite === 'progress';
+const rulesOnly = suite === 'rules';
+const dashboardOnly = suite === 'dashboard';
+const phaseOnly = suite === 'phase';
+const bankOnly = suite === 'bank';
+const governanceOnly = suite === 'bank-governance';
+const studentDetailOnly = suite === 'student-detail';
+const signalReviewOnly = suite === 'signal-review';
+const auditOnly = suite === 'audit';
+const auditExportOnly = suite === 'audit-export';
+const specPattern =
+  suite === 'full'
+    ? 'tests/e2e/*.cy.ts'
+    : phaseContext
+      ? contextSpecs
+      : specsForSuite(suite)[0];
+const reportDirectory = resolve(
+  __dirname,
+  '.local/reports',
+  governancePhaseOnly ||
+    phaseContext ||
+    auditExportOnly ||
+    auditOnly ||
+    bankOnly ||
+    governanceOnly ||
+    studentDetailOnly ||
+    signalReviewOnly
+    ? 'imp-06'
+    : progressOnly || rulesOnly || dashboardOnly || phaseOnly
+      ? 'imp-05'
+      : materialsOnly || helpOnly
+        ? 'imp-04'
+        : 'imp-01',
+);
+const reportName = suite === 'full' ? 'e2e.json' : `e2e-${suite}.json`;
+const requiredCases = casesForSuite(suite);
 
 module.exports = defineConfig({
   video: false,
   screenshotOnRunFailure: false,
+  screenshotsFolder:
+    governancePhaseOnly ||
+    bankOnly ||
+    governanceOnly ||
+    studentDetailOnly ||
+    signalReviewOnly ||
+    auditOnly ||
+    auditExportOnly
+      ? '.local/evidence/imp-06/screenshots'
+      : '.local/evidence/imp-05/screenshots',
+  downloadsFolder: '.local/evidence/cypress-downloads',
   numTestsKeptInMemory: 0,
   retries: 0,
   viewportWidth: 1280,
@@ -21,8 +89,8 @@ module.exports = defineConfig({
   taskTimeout: 35_000,
   reporter: 'dot',
   e2e: {
-    baseUrl: 'http://127.0.0.1:3100',
-    specPattern: 'tests/e2e/*.cy.ts',
+    baseUrl: 'http://127.0.0.1:3300',
+    specPattern,
     supportFile: 'tests/e2e/support.ts',
     testIsolation: true,
     setupNodeEvents(on, config) {
@@ -40,16 +108,17 @@ module.exports = defineConfig({
         );
       } catch {
         throw new Error(
-          'No se pudo cargar la configuración local aislada de Cypress.',
+          'No se pudo cargar la configuraciÃ³n local aislada de Cypress.',
         );
       }
       const apiBaseUrl = process.env.ALUNZA_TEST_API_URL;
       const controlKey = process.env.ALUNZA_E2E_CONTROL_KEY;
+      assertLaboratoryTestState(state);
       if (
-        state.projectId !== 'alunza-edu-foundation-test' ||
-        state.authUrl !== 'http://127.0.0.1:16421' ||
-        apiBaseUrl !== 'http://127.0.0.1:4100' ||
-        config.baseUrl !== 'http://127.0.0.1:3100' ||
+        state.projectId !== 'alunza-edu-laboratorio-test' ||
+        state.authUrl !== 'http://127.0.0.1:18421' ||
+        apiBaseUrl !== 'http://127.0.0.1:4300' ||
+        config.baseUrl !== 'http://127.0.0.1:3300' ||
         controlUrl.protocol !== 'http:' ||
         controlUrl.hostname !== '127.0.0.1' ||
         !controlUrl.port ||
@@ -69,7 +138,424 @@ module.exports = defineConfig({
       }
 
       // Explicit allowlist: no administrative key, database URL or control key enters the browser.
-      config.env = { fixturePassword: state.fixturePassword, apiBaseUrl };
+      config.env = {
+        fixturePassword: state.fixturePassword,
+        apiBaseUrl,
+        phaseDiagnostics,
+      };
+      config.expose = { ...(config.expose ?? {}), phaseDiagnostics };
+      const ruleTasks = import('./tests/e2e/signal-rules-fixture.mjs').then(
+        ({ signalRuleTasks }) => signalRuleTasks(state),
+      );
+      const dashboardTaskSet = import('./tests/e2e/dashboard-fixture.mjs').then(
+        ({ dashboardTasks }) => dashboardTasks(state),
+      );
+      const phaseTaskSet =
+        import('./tests/e2e/progress-phase-fixture.mjs').then(
+          ({ progressPhaseTasks }) => progressPhaseTasks(state),
+        );
+      const bankTaskSet = import('./tests/e2e/exercise-bank-fixture.mjs').then(
+        ({ exerciseBankTasks }) => exerciseBankTasks(state),
+      );
+      const bankGovernanceTaskSet =
+        import('./tests/e2e/exercise-bank-governance-fixture.mjs').then(
+          ({ bankGovernanceTasks }) => bankGovernanceTasks(state),
+        );
+      const studentDetailTaskSet =
+        import('./tests/e2e/student-detail-fixture.mjs').then(
+          ({ studentDetailTasks }) => studentDetailTasks(state),
+        );
+      const signalReviewTaskSet =
+        import('./tests/e2e/signal-review-fixture.mjs').then(
+          ({ signalReviewTasks }) => signalReviewTasks(state),
+        );
+      const governancePhaseTaskSet =
+        import('./tests/e2e/governance-phase-fixture.mjs').then(
+          ({ governancePhaseTasks }) => governancePhaseTasks(state),
+        );
+      const auditExportTaskSet = import('./tests/e2e/audit-fixture.mjs').then(
+        ({ auditExportTasks }) => auditExportTasks(state),
+      );
+      const auditTaskSet = import('./tests/e2e/audit-fixture.mjs').then(
+        ({ auditTasks }) => auditTasks(state),
+      );
+      on('before:browser:launch', (browser, launchOptions) => {
+        if (browser.name === 'chrome' && browser.isHeadless) {
+          // cy.viewport changes the application, not Chrome's native canvas.
+          // Keep enough physical pixels for all three explicit rule captures.
+          launchOptions.args.push('--window-size=1920,1440');
+          launchOptions.args.push('--force-device-scale-factor=1');
+        }
+        return launchOptions;
+      });
+      const ruleScreenshots = [];
+      const dashboardScreenshots = [];
+      const phaseScreenshots = new Map();
+      const bankScreenshots = new Map();
+      const studentDetailScreenshots = new Map();
+      const signalReviewScreenshots = new Map();
+      const auditScreenshots = new Map();
+      const auditExportScreenshots = new Map();
+      const governancePhaseScreenshots = new Map();
+      const phaseSizes = {
+        desktop: { width: 1440, height: 900 },
+        tablet: { width: 768, height: 1024 },
+        mobile: { width: 390, height: 844 },
+      };
+      const phaseScreenshotNames = Object.keys(phaseSizes).flatMap((size) =>
+        [
+          'signals',
+          'signal-detail',
+          'evidence',
+          'table-right',
+          'rules',
+          'progress',
+        ].map((view) => `imp05-phase-${size}-${view}`),
+      );
+      const bankScreenshotNames = Object.keys(phaseSizes).flatMap((size) =>
+        ['list', 'detail'].map((view) => `imp06-bank-${size}-${view}`),
+      );
+      on('after:screenshot', async (details) => {
+        const governanceName =
+          /^imp06-governance-phase-(desktop|tablet|mobile)$/.exec(details.name);
+        if (governanceName) {
+          const expected = phaseSizes[governanceName[1]];
+          const passed =
+            details.dimensions.width === expected.width &&
+            details.dimensions.height === expected.height;
+          governancePhaseScreenshots.set(governanceName[1], {
+            name: details.name,
+            dimensions: details.dimensions,
+            expected,
+            passed,
+          });
+          mkdirSync(reportDirectory, { recursive: true });
+          writeFileSync(
+            resolve(reportDirectory, 'governance-phase-ui-screenshots.json'),
+            JSON.stringify(
+              {
+                schemaVersion: 1,
+                status: [...governancePhaseScreenshots.values()].some(
+                  (item) => !item.passed,
+                )
+                  ? 'failed'
+                  : governancePhaseScreenshots.size === 3
+                    ? 'passed'
+                    : 'incomplete',
+                screenshots: [...governancePhaseScreenshots.values()],
+              },
+              null,
+              2,
+            ),
+          );
+          if (!passed)
+            throw new Error('Governance phase screenshot dimensions differ.');
+          return;
+        }
+        const auditExportName =
+          /^imp06-audit-export-(desktop|tablet|mobile)$/.exec(details.name);
+        if (auditExportName) {
+          mkdirSync(reportDirectory, { recursive: true });
+          const expected = phaseSizes[auditExportName[1]];
+          const passed =
+            details.dimensions.width === expected.width &&
+            details.dimensions.height === expected.height;
+          auditExportScreenshots.set(auditExportName[1], {
+            name: details.name,
+            dimensions: details.dimensions,
+            expected,
+            passed,
+          });
+          writeFileSync(
+            resolve(reportDirectory, 'audit-export-ui-screenshots.json'),
+            JSON.stringify(
+              {
+                status: [...auditExportScreenshots.values()].some(
+                  (item) => !item.passed,
+                )
+                  ? 'failed'
+                  : auditExportScreenshots.size === 3
+                    ? 'passed'
+                    : 'incomplete',
+                screenshots: [...auditExportScreenshots.values()],
+              },
+              null,
+              2,
+            ),
+          );
+        }
+        const auditName = /^imp06-audit-(desktop|tablet|mobile)$/.exec(
+          details.name,
+        );
+        if (auditName) {
+          mkdirSync(reportDirectory, { recursive: true });
+          const expected = phaseSizes[auditName[1]];
+          const passed =
+            details.dimensions.width === expected.width &&
+            details.dimensions.height === expected.height;
+          auditScreenshots.set(auditName[1], {
+            name: details.name,
+            dimensions: details.dimensions,
+            expected,
+            passed,
+          });
+          writeFileSync(
+            resolve(reportDirectory, 'audit-ui-screenshots.json'),
+            JSON.stringify(
+              {
+                status: [...auditScreenshots.values()].some(
+                  (item) => !item.passed,
+                )
+                  ? 'failed'
+                  : auditScreenshots.size === 3
+                    ? 'passed'
+                    : 'incomplete',
+                screenshots: [...auditScreenshots.values()],
+              },
+              null,
+              2,
+            ),
+          );
+        }
+        const studentDetailName =
+          /^imp06-student-detail-(desktop|tablet|mobile)$/.exec(details.name);
+        if (studentDetailName) {
+          const png = readFileSync(details.path),
+            expected = phaseSizes[studentDetailName[1]];
+          if (
+            png.length < 24 ||
+            png.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' ||
+            png.subarray(12, 16).toString('ascii') !== 'IHDR'
+          )
+            throw new Error('La captura del detalle no es PNG vÃ¡lido.');
+          const actual = {
+            width: png.readUInt32BE(16),
+            height: png.readUInt32BE(20),
+          };
+          const passed =
+            actual.width === expected.width &&
+            actual.height === expected.height &&
+            details.dimensions.width === actual.width &&
+            details.dimensions.height === actual.height;
+          studentDetailScreenshots.set(studentDetailName[1], {
+            name: details.name,
+            expected,
+            actual,
+            passed,
+          });
+          const { report } = await import('./scripts/test-environment.mjs');
+          await report(
+            'student-detail-ui-screenshots',
+            {
+              status: [...studentDetailScreenshots.values()].some(
+                (s) => !s.passed,
+              )
+                ? 'failed'
+                : studentDetailScreenshots.size === 3
+                  ? 'passed'
+                  : 'incomplete',
+              expected: 3,
+              screenshots: [...studentDetailScreenshots.values()],
+            },
+            'imp-06',
+          );
+          if (!passed) throw new Error('La captura del detalle fue recortada.');
+          return;
+        }
+        const signalReviewName =
+          /^imp06-signal-review-(desktop|tablet|mobile)$/.exec(details.name);
+        if (signalReviewName) {
+          const png = readFileSync(details.path),
+            expected = phaseSizes[signalReviewName[1]];
+          if (
+            png.length < 24 ||
+            png.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' ||
+            png.subarray(12, 16).toString('ascii') !== 'IHDR'
+          )
+            throw new Error('La captura del detalle no es PNG vÃ¡lido.');
+          const actual = {
+            width: png.readUInt32BE(16),
+            height: png.readUInt32BE(20),
+          };
+          const passed =
+            actual.width === expected.width &&
+            actual.height === expected.height &&
+            details.dimensions.width === actual.width &&
+            details.dimensions.height === actual.height;
+          signalReviewScreenshots.set(signalReviewName[1], {
+            name: details.name,
+            expected,
+            actual,
+            passed,
+          });
+          const { report } = await import('./scripts/test-environment.mjs');
+          await report(
+            'signal-review-ui-screenshots',
+            {
+              status: [...signalReviewScreenshots.values()].some(
+                (s) => !s.passed,
+              )
+                ? 'failed'
+                : signalReviewScreenshots.size === 3
+                  ? 'passed'
+                  : 'incomplete',
+              expected: 3,
+              screenshots: [...signalReviewScreenshots.values()],
+            },
+            'imp-06',
+          );
+          if (!passed) throw new Error('La captura del detalle fue recortada.');
+          return;
+        }
+        const bankName =
+          /^imp06-bank-(desktop|tablet|mobile)-(list|detail)$/.exec(
+            details.name,
+          );
+        if (bankName) {
+          const png = readFileSync(details.path);
+          const expected = phaseSizes[bankName[1]];
+          if (
+            png.length < 24 ||
+            png.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' ||
+            png.subarray(12, 16).toString('ascii') !== 'IHDR'
+          )
+            throw new Error('La captura del banco no es un PNG vÃ¡lido.');
+          const actual = {
+            width: png.readUInt32BE(16),
+            height: png.readUInt32BE(20),
+          };
+          const passed =
+            actual.width === expected.width &&
+            actual.height === expected.height &&
+            details.dimensions.width === actual.width &&
+            details.dimensions.height === actual.height;
+          bankScreenshots.set(details.name, {
+            name: details.name,
+            expected,
+            actual,
+            passed,
+          });
+          const screenshots = [...bankScreenshots.values()];
+          const { report } = await import('./scripts/test-environment.mjs');
+          await report(
+            'exercise-bank-ui-screenshots',
+            {
+              status: screenshots.some((item) => !item.passed)
+                ? 'failed'
+                : bankScreenshotNames.every((name) => bankScreenshots.has(name))
+                  ? 'passed'
+                  : 'incomplete',
+              expected: bankScreenshotNames.length,
+              screenshots,
+            },
+            'imp-06',
+          );
+          if (!passed)
+            throw new Error(
+              `Captura ${details.name} no conserva las dimensiones requeridas.`,
+            );
+          return;
+        }
+        const phaseName =
+          /^imp05-phase-(desktop|tablet|mobile)-(signals|signal-detail|evidence|table-right|rules|progress)$/.exec(
+            details.name,
+          );
+        if (phaseName) {
+          const png = readFileSync(details.path);
+          const expected = phaseSizes[phaseName[1]];
+          if (
+            png.length < 24 ||
+            png.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' ||
+            png.subarray(12, 16).toString('ascii') !== 'IHDR'
+          )
+            throw new Error('La captura de aceptaciÃ³n no es un PNG vÃ¡lido.');
+          const actual = {
+            width: png.readUInt32BE(16),
+            height: png.readUInt32BE(20),
+          };
+          const passed =
+            actual.width === expected.width &&
+            actual.height === expected.height &&
+            details.dimensions.width === actual.width &&
+            details.dimensions.height === actual.height;
+          phaseScreenshots.set(details.name, {
+            name: details.name,
+            expected,
+            actual,
+            passed,
+          });
+          const screenshots = [...phaseScreenshots.values()];
+          const { report } = await import('./scripts/test-environment.mjs');
+          await report(
+            'phase-ui-screenshots',
+            {
+              status: screenshots.some((item) => !item.passed)
+                ? 'failed'
+                : phaseScreenshotNames.every((name) =>
+                      phaseScreenshots.has(name),
+                    )
+                  ? 'passed'
+                  : 'incomplete',
+              expected: phaseScreenshotNames.length,
+              screenshots,
+            },
+            'imp-05',
+          );
+          if (!passed)
+            throw new Error(
+              `Captura ${details.name} no conserva las dimensiones requeridas.`,
+            );
+          return;
+        }
+        const expected = {
+          'imp05-rules-desktop': { width: 1440, height: 900 },
+          'imp05-rules-tablet': { width: 768, height: 1024 },
+          'imp05-rules-mobile': { width: 390, height: 844 },
+          'imp05-dashboard-desktop': { width: 1440, height: 900 },
+          'imp05-dashboard-tablet': { width: 768, height: 1024 },
+          'imp05-dashboard-mobile': { width: 390, height: 844 },
+        }[details.name];
+        if (!expected) return;
+        const png = readFileSync(details.path);
+        if (
+          png.length < 24 ||
+          png.subarray(0, 8).toString('hex') !== '89504e470d0a1a0a' ||
+          png.subarray(12, 16).toString('ascii') !== 'IHDR'
+        )
+          throw new Error('La captura de reglas no es un PNG vÃ¡lido.');
+        const actual = {
+          width: png.readUInt32BE(16),
+          height: png.readUInt32BE(20),
+        };
+        const passed =
+          actual.width === expected.width &&
+          actual.height === expected.height &&
+          details.dimensions.width === actual.width &&
+          details.dimensions.height === actual.height;
+        const screenshots = details.name.startsWith('imp05-dashboard-')
+          ? dashboardScreenshots
+          : ruleScreenshots;
+        screenshots.push({ name: details.name, expected, actual, passed });
+        const { report } = await import('./scripts/test-environment.mjs');
+        await report(
+          details.name.startsWith('imp05-dashboard-')
+            ? 'dashboard-ui-screenshots'
+            : 'rules-ui-screenshots',
+          {
+            status: screenshots.some((item) => !item.passed)
+              ? 'failed'
+              : screenshots.length === 3
+                ? 'passed'
+                : 'incomplete',
+            screenshots,
+          },
+          'imp-05',
+        );
+        if (!passed)
+          throw new Error(
+            `Captura ${details.name} recortada: ${actual.width}Ã—${actual.height}; se esperaba ${expected.width}Ã—${expected.height}.`,
+          );
+      });
       async function control(action) {
         try {
           const response = await fetch(new URL(`/api/${action}`, controlUrl), {
@@ -88,10 +574,207 @@ module.exports = defineConfig({
         }
       }
       on('task', {
+        ...Object.fromEntries(
+          [
+            'prepare',
+            'complete',
+            'snapshot',
+            'facts',
+            'request',
+            'concurrency',
+            'revoke',
+            'auditRows',
+            'readDownload',
+          ].map((name) => [
+            `governance-phase:${name}`,
+            (input) =>
+              governancePhaseTaskSet.then((tasks) =>
+                tasks[`governance-phase:${name}`](input),
+              ),
+          ]),
+        ),
+        ...Object.fromEntries(
+          [
+            'prepare',
+            'revoke',
+            'expire',
+            'facts',
+            'readDownload',
+            'performance',
+          ].map((name) => [
+            `auditExport:${name}`,
+            (input) =>
+              auditExportTaskSet.then((tasks) =>
+                tasks[`auditExport:${name}`](input),
+              ),
+          ]),
+        ),
+        ...Object.fromEntries(
+          ['prepare', 'revoke', 'archive', 'snapshot', 'performance'].map(
+            (name) => [
+              `audit:${name}`,
+              (input) =>
+                auditTaskSet.then((tasks) => tasks[`audit:${name}`](input)),
+            ],
+          ),
+        ),
+        ...Object.fromEntries(
+          [
+            'prepare',
+            'snapshot',
+            'review',
+            'query',
+            'revoke',
+            'enrollment',
+            'archive',
+            'batch',
+            'loadStart',
+            'loadStop',
+            'performance',
+          ].map((name) => [
+            `signal-review:${name}`,
+            (input) =>
+              signalReviewTaskSet.then((tasks) =>
+                tasks[`signal-review:${name}`](input),
+              ),
+          ]),
+        ),
         ...identityTasks(state),
-        ...academicTasks(state),
+        ...helpFaultTasks(state),
+        ...Object.fromEntries(
+          [
+            'prepare',
+            'snapshot',
+            'revoke',
+            'enrollment',
+            'sourceVisibility',
+            'loadStart',
+            'loadStop',
+            'performance',
+          ].map((name) => [
+            `student-detail:${name}`,
+            (input) =>
+              studentDetailTaskSet.then((tasks) =>
+                tasks[`student-detail:${name}`](input),
+              ),
+          ]),
+        ),
+        ...Object.fromEntries(
+          [
+            'prepare',
+            'snapshot',
+            'submit',
+            'govern',
+            'audit',
+            'revoke',
+            'archiveOrganization',
+          ].map((name) => [
+            `bank-governance:${name}`,
+            (input) =>
+              bankGovernanceTaskSet.then((tasks) =>
+                tasks[`bank-governance:${name}`](input),
+              ),
+          ]),
+        ),
+        ...Object.fromEntries(
+          ['prepare', 'revoke', 'archive', 'snapshot', 'performance'].map(
+            (name) => [
+              `bank:${name}`,
+              (input) =>
+                bankTaskSet.then((tasks) => tasks[`bank:${name}`](input)),
+            ],
+          ),
+        ),
+        ...Object.fromEntries(
+          [
+            'prepare',
+            'bridge',
+            'processing',
+            'missingEvidence',
+            'help',
+            'revoke',
+            'snapshot',
+            'loadStart',
+            'loadStop',
+            'performance',
+          ].map((name) => [
+            `phase:${name}`,
+            (input) =>
+              phaseTaskSet.then((tasks) => tasks[`phase:${name}`](input)),
+          ]),
+        ),
+        ...Object.fromEntries(
+          [
+            'prepare',
+            'help',
+            'review',
+            'historical',
+            'syntheticInactivity',
+            'revoke',
+            'processSignals',
+            'loadStart',
+            'loadStop',
+            'performance',
+          ].map((name) => [
+            `dashboard:${name}`,
+            (input) =>
+              dashboardTaskSet.then((tasks) =>
+                tasks[`dashboard:${name}`](input),
+              ),
+          ]),
+        ),
+        ...Object.fromEntries(
+          [
+            'prepare',
+            'audit',
+            'compete',
+            'archive',
+            'verifyBridge',
+            'performance',
+          ].map((name) => [
+            `rules:${name}`,
+            (input) => ruleTasks.then((tasks) => tasks[`rules:${name}`](input)),
+          ]),
+        ),
         'foundation:apiStop': () => control('stop'),
         'foundation:apiStart': () => control('start'),
+        'academic:performance': ({ operation, samples }) => {
+          if (
+            operation !== 'editor' ||
+            !Array.isArray(samples) ||
+            samples.length !== 20 ||
+            samples.some(
+              (value) =>
+                typeof value !== 'number' ||
+                !Number.isFinite(value) ||
+                value < 0,
+            )
+          )
+            throw new Error('Muestra de rendimiento acadÃ©mico invÃ¡lida.');
+          const sorted = [...samples].sort((a, b) => a - b);
+          const p95Ms = sorted[Math.ceil(sorted.length * 0.95) - 1];
+          const directory = resolve(__dirname, '.local/reports/imp-02');
+          mkdirSync(directory, { recursive: true });
+          writeFileSync(
+            join(directory, 'ui-performance.json'),
+            JSON.stringify(
+              {
+                recordedAt: new Date().toISOString(),
+                status: p95Ms < 3000 ? 'passed' : 'failed',
+                operation,
+                samples,
+                p95Ms,
+                percentile: 'nearest-rank',
+                concurrency: 1,
+                environment:
+                  'local Chrome production build; authenticated navigation including first sample',
+              },
+              null,
+              2,
+            ),
+          );
+          return { p95Ms };
+        },
       });
 
       on('after:run', (result) => {
@@ -103,14 +786,136 @@ module.exports = defineConfig({
               (test.title || [])
                 .join(' ')
                 .match(
-                  /\b(?:FND-\d{2}|IMP01-\d{2}|IMP02-\d{2}|IMP03-\d{2})\b/,
+                  /\b(?:FND-\d{2}|IMP01-\d{2}|IMP02-\d{2}|IMP03-\d{2}|IMP04-\d{2}|IMP05-\d{2}|IMP05-RULES-\d{2}|IMP05-DASH-\d{2}|IMP05-PHASE-\d{2}|IMP06-BANK-\d{2}|IMP06-GOV-\d{2}|IMP06-DETAIL-\d{2}|IMP06-REVIEW-\d{2}|IMP06-AUDIT-\d{2}|IMP06-AUDIT-EXPORT-\d{2}|IMP06-PHASE-\d{2})\b/,
                 )?.[0] || 'UNKNOWN',
             state: states.has(test.state) ? test.state : 'unknown',
+            spec: run.spec?.relative?.replace(/\\/g, '/'),
           })),
         );
+        const completed = new Set(
+          tests
+            .filter((test) => test.state === 'passed')
+            .map((test) => test.id),
+        );
+        const contextCoverage = phaseContext
+          ? inspectContextCoverage({
+              specs: result.runs.map((run) => run.spec?.relative),
+              tests,
+            })
+          : null;
+        if (contextCoverage) {
+          contextCoverage.capturesComplete =
+            bankScreenshotNames.every(
+              (name) => bankScreenshots.get(name)?.passed === true,
+            ) &&
+            phaseScreenshotNames.every(
+              (name) => phaseScreenshots.get(name)?.passed === true,
+            );
+          contextCoverage.captures = {
+            dashboard: { expected: 3, observed: dashboardScreenshots.length },
+            bank: {
+              expected: bankScreenshotNames.length,
+              observed: bankScreenshots.size,
+            },
+            phase: {
+              expected: phaseScreenshotNames.length,
+              observed: phaseScreenshots.size,
+            },
+          };
+        }
+        const inventoryCoverage = inspectSuiteCoverage(suite, {
+          specs: result.runs.map((run) => run.spec?.relative),
+          tests,
+        });
+        const scopeComplete =
+          inventoryCoverage.complete &&
+          (!(governancePhaseOnly || suite === 'full') ||
+            Object.keys(phaseSizes).every(
+              (size) => governancePhaseScreenshots.get(size)?.passed === true,
+            )) &&
+          (!phaseContext || contextCoverage.complete) &&
+          result.totalTests === requiredCases.length &&
+          tests.length === requiredCases.length &&
+          completed.size === requiredCases.length &&
+          requiredCases.every((id) => completed.has(id)) &&
+          (!(auditExportOnly || suite === 'full') ||
+            Object.keys(phaseSizes).every(
+              (size) => auditExportScreenshots.get(size)?.passed === true,
+            )) &&
+          (!(auditOnly || suite === 'full') ||
+            Object.keys(phaseSizes).every(
+              (size) => auditScreenshots.get(size)?.passed === true,
+            )) &&
+          (!(signalReviewOnly || suite === 'full') ||
+            Object.keys(phaseSizes).every(
+              (size) => signalReviewScreenshots.get(size)?.passed === true,
+            )) &&
+          (!(studentDetailOnly || suite === 'full') ||
+            Object.keys(phaseSizes).every(
+              (size) => studentDetailScreenshots.get(size)?.passed === true,
+            )) &&
+          (!(bankOnly || phaseContext || suite === 'full') ||
+            bankScreenshotNames.every(
+              (name) => bankScreenshots.get(name)?.passed === true,
+            )) &&
+          (!(phaseOnly || phaseContext || suite === 'full') ||
+            phaseScreenshotNames.every(
+              (name) => phaseScreenshots.get(name)?.passed === true,
+            )) &&
+          (!(
+            governancePhaseOnly ||
+            materialsOnly ||
+            helpOnly ||
+            progressOnly ||
+            rulesOnly ||
+            dashboardOnly ||
+            phaseOnly ||
+            bankOnly ||
+            governanceOnly ||
+            studentDetailOnly ||
+            auditExportOnly ||
+            auditOnly ||
+            signalReviewOnly
+          ) ||
+            result.runs.every(
+              (run) => run.spec?.relative?.replace(/\\/g, '/') === specPattern,
+            ));
         const report = {
           schemaVersion: 1,
-          increment: 'IMP-03',
+          increment: governancePhaseOnly
+            ? 'IMP-06.07'
+            : phaseContext
+              ? 'IMP-06.04-closure'
+              : auditExportOnly
+                ? 'IMP-06.06'
+                : auditOnly
+                  ? 'IMP-06.05'
+                  : signalReviewOnly
+                    ? 'IMP-06.04'
+                    : studentDetailOnly
+                      ? 'IMP-06.03'
+                      : governanceOnly
+                        ? 'IMP-06.02'
+                        : bankOnly
+                          ? 'IMP-06.01'
+                          : phaseOnly
+                            ? 'IMP-05.08'
+                            : dashboardOnly
+                              ? 'IMP-05.07'
+                              : rulesOnly
+                                ? 'IMP-05.06'
+                                : progressOnly
+                                  ? 'IMP-05.01â€“05.02'
+                                  : helpOnly
+                                    ? 'IMP-04.04â€“04.07'
+                                    : materialsOnly
+                                      ? 'IMP-04.01â€“04.03'
+                                      : 'IMP-01–IMP-06.07',
+          suite,
+          inventoryCoverage,
+          ...(phaseContext
+            ? { diagnostics: phaseDiagnostics, contextCoverage }
+            : {}),
           recordedAt: new Date().toISOString(),
           browser: /^[a-z]+$/i.test(result.browserName)
             ? result.browserName
@@ -121,11 +926,12 @@ module.exports = defineConfig({
           cypressVersion: /^[0-9.]+$/.test(result.cypressVersion)
             ? result.cypressVersion
             : 'unknown',
-          spec: 'tests/e2e/*.cy.ts',
+          spec: specPattern,
           status:
             result.totalFailed > 0
               ? 'failed'
-              : result.totalPassed > 0 &&
+              : scopeComplete &&
+                  result.totalPassed > 0 &&
                   result.totalPending === 0 &&
                   result.totalSkipped === 0
                 ? 'passed'
@@ -140,13 +946,7 @@ module.exports = defineConfig({
         };
         mkdirSync(reportDirectory, { recursive: true });
         writeFileSync(
-          join(reportDirectory, 'e2e.json'),
-          JSON.stringify(report, null, 2) + '\n',
-        );
-        const academicReports = resolve(__dirname, '.local/reports/imp-02');
-        mkdirSync(academicReports, { recursive: true });
-        writeFileSync(
-          join(academicReports, 'e2e.json'),
+          join(reportDirectory, reportName),
           JSON.stringify(report, null, 2) + '\n',
         );
       });

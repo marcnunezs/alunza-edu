@@ -1,0 +1,10 @@
+Condiciones y casos límite
+Material ficticio de Programación I, clase A1.
+
+Una condición compara valores y decide qué instrucciones ejecutar. Un bloque if se ejecuta cuando su expresión resulta verdadera; el bloque else cubre la alternativa.
+
+Antes de escribir una condición, identifica las entradas y el resultado esperado. Para un límite como edad mayor o igual a 18, distingue el valor anterior, el propio límite y el valor posterior. Los operadores > y >= representan condiciones diferentes.
+
+Una comparación estricta con === distingue números y textos. El número 5 y el texto "5" no son el mismo valor. Comprueba el tipo de entrada antes de concluir que una comparación está equivocada.
+
+Lee cada rama con un ejemplo pequeño. Anota qué condición se cumple y qué resultado retorna la función. Después revisa una entrada que tome la otra rama. Esta explicación ayuda a localizar el paso que requiere una corrección.

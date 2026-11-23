@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "preparedOn": "2026-10-04",
+  "status": "ESTIMATE_ONLY_NOT_AUTHORIZED",
+  "environment": "LAB-EVAL",
+  "provider": "AZURE",
+  "corpusVersion": "help-evaluation-1",
+  "tokenizerVersion": "js-tiktoken-1.0.21-cl100k_base",
+  "derivation": "Offline inspection and chunkMaterial token counts from repository fixtures; no remote requests, credentials, product records or tests executed.",
+  "candidateFingerprint": null,
+  "preparedCorpusHash": null,
+  "identityNote": "The candidate fingerprint must be recomputed after all changes. The authorized corpus hash includes prepared binding IDs and can only be fixed from the isolated prepared run; fixture hashes below do not replace it.",
+  "fixtureDocumentsHash": "2c066f91ea1ebc1c6f27a01268c656638c75c19f7d9fa471d632f66ad810fed9",
+  "fixtureCasesHash": "8f2759ad92a19d4e2d7db27d90fd577693c4aa807bf85b77e94af7efa4623521",
+  "rubricVersion": "help-rubric-1",
+  "pricingBasis": {
+    "source": "https://prices.azure.com/api/retail/prices",
+    "evidenceFile": "infra/preproduction/azure-retail-prices-2026-10-04.json",
+    "region": "eastus2",
+    "currency": "USD",
+    "EMBEDDING": {
+      "model": "text-embedding-3-small",
+      "deploymentType": "Standard",
+      "inputMicroUsdPerMillion": "22000",
+      "outputMicroUsdPerMillion": "0"
+    },
+    "GENERATION": {
+      "model": "gpt-4.1-mini-2025-04-14",
+      "deploymentType": "GlobalStandard",
+      "inputMicroUsdPerMillion": "400000",
+      "outputMicroUsdPerMillion": "1600000"
+    },
+    "REVIEW": {
+      "model": "gpt-4.1-mini-2025-04-14",
+      "deploymentType": "GlobalStandard",
+      "inputMicroUsdPerMillion": "400000",
+      "outputMicroUsdPerMillion": "1600000"
+    },
+    "rounding": "Sum ceil((reservedInputTokens * inputMicroUsdPerMillion + maxOutputTokens * outputMicroUsdPerMillion) / 1000000) separately for each provider call.",
+    "scope": "Uncached text token reservation estimate only; excludes taxes, FX, other services and unrelated calls. Prices, model availability and provider quotas require confirmation for the concrete destination before authorization."
+  },
+  "ingestion": {
+    "materials": 45,
+    "chunks": 45,
+    "firstAttemptCalls": 45,
+    "firstAttemptInputTokens": 1344,
+    "firstAttemptOutputTokens": 0,
+    "firstAttemptCostMicroUsd": "50",
+    "maxAutomaticAttemptsPerMaterial": 3,
+    "maxChunkInputTokens": 61,
+    "tokenCountsInPreparationOrder": [
+      27, 32, 27, 32, 27, 32, 27, 25, 29, 30, 27, 32, 27, 27, 30, 46, 27, 52,
+      27, 47, 27, 53, 27, 61, 27, 27, 25, 27, 25, 27, 25, 27, 25, 27, 25, 27,
+      27, 27, 27, 27, 27, 27, 25, 27, 18
+    ],
+    "order": "Three classes in fixture order, return/syntax per class; calibration/validation positive and near-negative; eligible adversarial groups and their chunks in fixture order."
+  },
+  "calibration": {
+    "embeddingCalls": 4,
+    "reservedInputTokensPerCall": 500
+  },
+  "functional": {
+    "helps": 4,
+    "maximumCalls": 12
+  },
+  "evaluation": {
+    "serialHelps": 100,
+    "concurrentHelps": 100,
+    "concurrency": 4,
+    "adversarialHelps": 30,
+    "totalHelps": 230,
+    "maximumHelpCalls": 690,
+    "reviewFixtures": 12,
+    "reviewFixtureEmbeddings": 11,
+    "reviewFixtureReviews": 5,
+    "localBoundaryRejections": 7,
+    "preEmbeddingSchemaRejections": 1,
+    "maximumCalls": 706
+  },
+  "helpCallReservations": {
+    "EMBEDDING": {
+      "inputTokens": 500,
+      "outputTokens": 0,
+      "costMicroUsd": "11"
+    },
+    "GENERATION": {
+      "inputTokens": 8000,
+      "outputTokens": 2048,
+      "costMicroUsd": "6477"
+    },
+    "REVIEW": {
+      "inputTokens": 8000,
+      "outputTokens": 512,
+      "costMicroUsd": "4020"
+    },
+    "maximumCostPerHelpMicroUsd": "10508"
+  },
+  "baseMaximum": {
+    "maxCalls": 767,
+    "maxInputTokens": 3909844,
+    "maxOutputTokens": 601600,
+    "maxCostMicroUsd": "2479187"
+  },
+  "proposedBudgetsWithAutomaticMaterialAttempts": {
+    "global": {
+      "maxCalls": 857,
+      "maxInputTokens": 3912532,
+      "maxOutputTokens": 601600,
+      "maxCostMicroUsd": "2479287"
+    },
+    "INGESTION": {
+      "maxCalls": 135,
+      "maxInputTokens": 4032,
+      "maxOutputTokens": 0,
+      "maxCostMicroUsd": "150"
+    },
+    "CALIBRATION": {
+      "maxCalls": 4,
+      "maxInputTokens": 2000,
+      "maxOutputTokens": 0,
+      "maxCostMicroUsd": "44"
+    },
+    "FUNCTIONAL": {
+      "maxCalls": 12,
+      "maxInputTokens": 66000,
+      "maxOutputTokens": 10240,
+      "maxCostMicroUsd": "42032"
+    },
+    "EVALUATION": {
+      "maxCalls": 706,
+      "maxInputTokens": 3840500,
+      "maxOutputTokens": 591360,
+      "maxCostMicroUsd": "2437061"
+    }
+  },
+  "limits": "Maximum reservations for the current finite corpus. Fallbacks can reduce dispatches. Only automatic material retries up to three attempts are included; extra manual runs or repeated helps need separate budget and authorization. Provider invoices are not capped by this artifact or the harness dispatch limits.",
+  "sourceFiles": [
+    {
+      "path": "scripts/evaluation-prepare.mjs",
+      "sha256": "e3c1e7f0137817d13eb7a9f08e8d3c691af6e0afc927446bfa69a6cdb801a369"
+    },
+    {
+      "path": "fixtures/ai/help-adversarial-manifest.mjs",
+      "sha256": "0ec162f80efc150c1a74a15c6a4e387821ed01336a98c3697373967c92cf9e14"
+    },
+    {
+      "path": "fixtures/ai/adversarial/corpus.mjs",
+      "sha256": "4139f85675ae794ed40185b71cd86f11a6d73894474e427c68b1d369d0e3a197"
+    },
+    {
+      "path": "fixtures/demo/academic.mjs",
+      "sha256": "62b6a7ca35f3c1c27d9ed8a5d33c8dfaad3fa7cc73881e19601d6bb4c032e5d9"
+    },
+    {
+      "path": "packages/ai/src/ingestion.ts",
+      "sha256": "849eaf6733a2ed03178a2300fad654d017cc5aec5c28ff5499760aba45224a63"
+    },
+    {
+      "path": "packages/ai/src/help.ts",
+      "sha256": "2bb8578d1860db591fe44208d994ca055f9b3f753594332c06675cc4cd9320bb"
+    },
+    {
+      "path": "apps/api/src/materials/materials.worker.ts",
+      "sha256": "8411123f59e17e2063d768381e66b0d4ea18e1a02d630275702cd1e97274a013"
+    },
+    {
+      "path": "apps/api/src/evaluation-calibration/evaluation-calibration.worker.ts",
+      "sha256": "6cbd3c7f15402bdc88f17e87510b6122d729d6093813a6ada8d189d8854af013"
+    },
+    {
+      "path": "apps/api/src/help/help.worker.ts",
+      "sha256": "d03614d81c3c3bccc941ed64fa5838a6e2f160835be6cc9a34b3f348e8039423"
+    },
+    {
+      "path": "supabase/migrations/20260927155718_materials_ingestion.sql",
+      "sha256": "b86c4c3678f7b902c3d3c5fcc9f99b48b320da9087557671bb06283eecb1e62b"
+    },
+    {
+      "path": "supabase/migrations/20261002001227_evaluation_ledger.sql",
+      "sha256": "fc99848c92ad7e8bb5d88691b4ad6fd6f9179347b3c56055bdc69f13cf1becf1"
+    }
+  ]
+}

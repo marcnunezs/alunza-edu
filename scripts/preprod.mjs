@@ -8,6 +8,7 @@ import {
   assertRemoteAuthorization,
   remoteOperations,
 } from './preprod-manifest.mjs';
+import { validateCampaign, loadCampaign } from './sandbox-campaign.mjs';
 
 export const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export const reportDirectory = join(root, '.local/reports/imp-00-06-08');
@@ -45,7 +46,11 @@ export function preparationStatus(manifest) {
     }
   });
 }
-export function publicParameters(manifest, deployWorkloads = false) {
+export function publicParameters(
+  manifest,
+  deployWorkloads = false,
+  runner = {},
+) {
   validateManifest(manifest);
   // Rendering a local parameter file does not require approval to use Azure.
   // Enabling workloads requires the same live authorization as remote actions.
@@ -69,6 +74,53 @@ export function publicParameters(manifest, deployWorkloads = false) {
   ];
   if (required.some((value) => value === null) || manifest.budget.maxCost <= 0)
     throw new Error('Faltan parámetros públicos de preparación.');
+  const rolloutId = runner.rolloutId ?? '';
+  if (typeof rolloutId !== 'string' || !/^[a-z0-9]{0,8}$/.test(rolloutId))
+    throw new Error('Identificador de rollout inválido.');
+  const campaign = runner.campaign ? validateCampaign(runner.campaign) : null;
+  if (
+    campaign &&
+    (campaign.candidate.commit !== manifest.release.sha ||
+      ['teamId', 'projectId', 'region', 'image'].some(
+        (field) =>
+          !manifest.targets.sandbox[field] ||
+          campaign[field] !== manifest.targets.sandbox[field],
+      ))
+  )
+    throw new Error(
+      'La campaña debe identificar el mismo candidato y destino completo.',
+    );
+  if (
+    (runner.enableAdmissions || runner.enableRecovery) &&
+    (!campaign?.authorized ||
+      !campaign.approval?.approvedBy ||
+      campaign.approval.approvedBy.length > 100 ||
+      !campaign.approval?.reference ||
+      !campaign.approval?.approvedAt ||
+      !campaign.candidate.sourceDigest ||
+      campaign.maxCost <= 0 ||
+      campaign.maxCreations < 1 ||
+      campaign.maxCreations > 10000 ||
+      campaign.maxRequests < 10 ||
+      campaign.maxRequests <= 8 * campaign.maxCreations ||
+      campaign.runnerVersion.length > 100 ||
+      !campaign.expiresAt ||
+      Date.parse(campaign.approval.approvedAt) > Date.now() ||
+      Date.parse(campaign.expiresAt) <=
+        Date.parse(campaign.approval.approvedAt))
+  )
+    throw new Error(
+      'La operación de Sandbox requiere una campaña aprobada completa y compatible.',
+    );
+  // An expired, previously approved campaign remains usable for observation and
+  // cleanup. The original durable counters are preserved; it cannot admit work.
+  if (
+    runner.enableAdmissions &&
+    (!deployWorkloads || Date.parse(campaign.expiresAt) <= Date.now())
+  )
+    throw new Error(
+      'Las admisiones requieren campaña vigente y despliegue autorizado.',
+    );
   return {
     $schema:
       'https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#',
@@ -84,6 +136,10 @@ export function publicParameters(manifest, deployWorkloads = false) {
         webOrigin: vercel.webOrigin,
         authOrigin: supabase.authUrl,
         releaseId: manifest.release.sha,
+        rolloutId,
+        practiceRunnerEnabled: runner.enableAdmissions === true,
+        practiceRunnerProvider: campaign ? 'vercel' : 'docker',
+        sandboxRecoveryEnabled: runner.enableRecovery === true,
         apiImage: manifest.release.apiImage ?? '',
         jobImage: manifest.release.jobImage ?? '',
         deployWorkloads,
@@ -94,10 +150,13 @@ export function publicParameters(manifest, deployWorkloads = false) {
           manifest.budget.maxDurationSeconds + 40,
         ),
         aiResourceId: manifest.targets.azureOpenAi.resourceId ?? '',
-        sandboxImage: manifest.targets.sandbox.image ?? '',
-        sandboxRegion: manifest.targets.sandbox.region ?? '',
-        sandboxTeamId: manifest.targets.sandbox.teamId ?? '',
-        sandboxProjectId: manifest.targets.sandbox.projectId ?? '',
+        sandboxImage: campaign?.image ?? manifest.targets.sandbox.image ?? '',
+        sandboxRegion:
+          campaign?.region ?? manifest.targets.sandbox.region ?? '',
+        sandboxTeamId:
+          campaign?.teamId ?? manifest.targets.sandbox.teamId ?? '',
+        sandboxProjectId:
+          campaign?.projectId ?? manifest.targets.sandbox.projectId ?? '',
       }).map(([name, value]) => [name, { value }]),
     ),
   };
@@ -109,12 +168,30 @@ async function main() {
     process.argv[3] ?? join(root, 'infra/preproduction/manifest.example.json');
   if (!['check', 'plan'].includes(command))
     throw new Error('Usa preprod:check o preprod.mjs plan <manifest>.');
-  const workloads = process.argv[4] === '--workloads';
-  if (
-    process.argv.length > 5 ||
-    (process.argv[4] && (!workloads || command !== 'plan'))
-  )
+  let workloads = false;
+  const runner = {};
+  const flags = process.argv.slice(4);
+  if (flags.length && command !== 'plan')
     throw new Error('Argumentos de preparación inválidos.');
+  for (let index = 0; index < flags.length; index++) {
+    const flag = flags[index];
+    if (flag === '--workloads') workloads = true;
+    else if (flag === '--enable-runner') runner.enableAdmissions = true;
+    else if (flag === '--recover-runner') runner.enableRecovery = true;
+    else if (
+      flag === '--sandbox-campaign' &&
+      flags[index + 1] &&
+      !flags[index + 1].startsWith('--')
+    )
+      runner.campaign = await loadCampaign(flags[++index]);
+    else if (
+      flag === '--rollout' &&
+      flags[index + 1] &&
+      !flags[index + 1].startsWith('--')
+    )
+      runner.rolloutId = flags[++index];
+    else throw new Error('Argumentos de preparación inválidos.');
+  }
   const manifest = await loadManifest(path);
   for (const file of [
     'infra/preproduction/main.bicep',
@@ -139,7 +216,7 @@ async function main() {
     operations,
   });
   if (command === 'plan') {
-    const parameters = publicParameters(manifest, workloads);
+    const parameters = publicParameters(manifest, workloads, runner);
     const destination = join(
       root,
       '.local/preproduction/parameters.public.json',

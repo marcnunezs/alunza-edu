@@ -1,10 +1,12 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import { submitTechnicalResultSchema } from '@alunza/contracts';
 import type { ExecutionResult } from '@alunza/runner';
 import { APP_CONFIG } from '../config';
 import type { AppConfig } from '../config';
+import type { ExecutionContext, ExecutionAuthority } from './execution.port';
+import { executionContextSchema } from './execution.port';
+import { DockerRunnerService } from './docker-runner.service';
 import { createSubmitTimingObserver } from './submit-observability';
-import type { ExecutionPreparation } from './execution.port';
 import {
   failedSubmission,
   SubmissionExecutionPort,
@@ -43,7 +45,6 @@ export function projectSubmission(
     result.executionId !== input.executionId ||
     result.runnerVersion !== runnerVersion ||
     result.hiddenRequiredCount !== hidden.length ||
-    result.outputBytes > input.limits.outputBytes ||
     new Set(cases.map((test) => test.id)).size !== cases.length ||
     !belongsTo(result.visibleTestResults, visible) ||
     !belongsTo(result.privateTestResults, hidden) ||
@@ -101,20 +102,43 @@ export function projectSubmission(
 
 @Injectable()
 export class DockerSubmissionAdapter extends SubmissionExecutionPort {
-  constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {
+  constructor(
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
+    @Optional() private readonly configuredRunner?: DockerRunnerService,
+  ) {
     super();
   }
   async execute(
     input: SubmissionExecutionInput,
-    preparation?: ExecutionPreparation,
+    context?: ExecutionContext,
+    authority?: ExecutionAuthority,
   ) {
+    if (context && !executionContextSchema.safeParse(context).success)
+      throw new Error('Runner inspection context invalid');
     if (
-      preparation !== undefined &&
-      (preparation?.provider !== 'docker' ||
-        typeof preparation.image !== 'string')
-    )
-      throw new Error('Invalid execution preparation');
+      this.config.dockerConfiguration ||
+      (context?.provider === 'docker' && context.engineId)
+    ) {
+      if (!this.configuredRunner)
+        throw new Error('Docker candidate unavailable');
+      const { result, cleanupVerified } = await this.configuredRunner.execute(
+        input,
+        context,
+        authority,
+      );
+      return {
+        ...projectSubmission(input, result, context!.runnerVersion),
+        cleanupVerified,
+      };
+    }
     const runner = await import('@alunza/runner');
+    if (
+      context &&
+      (context.provider !== 'docker' ||
+        context.runnerVersion !== runner.RUNNER_VERSION ||
+        !/^sha256:[a-f0-9]{64}$/.test(context.image))
+    )
+      throw new Error('Runner inspection context invalid');
     const observer = createSubmitTimingObserver(this.config.environment, {
       requestId: input.requestId,
       executionId: input.executionId,
@@ -122,7 +146,7 @@ export class DockerSubmissionAdapter extends SubmissionExecutionPort {
     const result = await runner.execute(
       input,
       new runner.DockerAdapter({
-        image: preparation?.image,
+        ...(context ? { image: context.image } : {}),
         observeTiming: observer
           ? ({ phase, durationMs, completed }) =>
               observer({ source: 'docker', phase, durationMs, completed })

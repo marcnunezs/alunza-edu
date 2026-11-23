@@ -1,4 +1,4 @@
-import type { ApiError } from '@/lib/api';
+import { isRunnerBusy, type ApiError } from '@/lib/api';
 
 export function RequestError({ error }: { error: ApiError }) {
   return (
@@ -7,9 +7,11 @@ export function RequestError({ error }: { error: ApiError }) {
       className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm leading-relaxed"
     >
       <p className="font-semibold text-destructive">
-        {error.status === 401 || error.status === 403 || error.status === 404
-          ? 'Acceso no permitido'
-          : 'Consulta no disponible'}
+        {isRunnerBusy(error)
+          ? 'Ejecutor ocupado'
+          : error.status === 401 || error.status === 403 || error.status === 404
+            ? 'Acceso no permitido'
+            : 'Consulta no disponible'}
       </p>
       <p className="mt-1">{error.message}</p>
       {error.retryAfter ? (

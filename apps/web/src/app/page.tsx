@@ -30,11 +30,13 @@ export default function StatePage() {
         aria-labelledby="foundation-limit"
       >
         <h2 id="foundation-limit" className="font-semibold">
-          Espacio académico
+          Contenido y editor disponibles
         </h2>
         <p className="max-w-xl text-muted-foreground">
-          Entra a tu organización para administrar cursos, preparar ejercicios o
-          acceder a tus clases y trabajar en una solución.
+          Este entorno permite administrar cursos y clases, publicar actividades
+          y preparar soluciones JavaScript con borradores locales. La ejecución,
+          el envío de soluciones y la ayuda de aprendizaje se incorporarán en
+          incrementos posteriores.
         </p>
       </section>
     </>

@@ -8,11 +8,13 @@ import {
 import type { RunExecutionInput, RunTechnicalResult } from '@alunza/contracts';
 import type { PoolClient } from 'pg';
 import { DatabaseService } from '../database/database.service';
+import { classAccess, forbidden, resource } from '../academic/academic.shared';
 import { digest } from '../governance/governance.shared';
 import type { Actor } from '../governance/governance.shared';
 import { ApiError, notFound } from '../http/errors';
-import type { VisibleTest } from './execution.port';
-import { runContextSchema } from './practice-context';
+import { executionContextSchema } from './execution.port';
+import type { RunnerInspection, VisibleTest } from './execution.port';
+import { loadReservationExecutionContext } from './sandbox-resource.repository';
 
 const reservationSchema = z.object({
   executionId: z.uuid(),
@@ -23,6 +25,7 @@ const reservationSchema = z.object({
   leaseToken: z.uuid(),
   visibleTotal: z.number().int().min(1).max(8),
   runnerVersion: z.string().min(1).max(100),
+  executionContext: executionContextSchema.optional(),
 });
 export type RunReservation = z.infer<typeof reservationSchema>;
 const admissionSchema = z.discriminatedUnion('kind', [
@@ -33,7 +36,6 @@ export interface RunContext {
   organizationId: string;
   tests: VisibleTest[];
   suiteHash: string;
-  limits: { memoryBytes: number; runtimeMs: number; outputBytes: number };
 }
 export interface RunQuotas {
   actorConcurrency: number;
@@ -47,27 +49,49 @@ export class PracticeRepository {
 
   private async context(
     client: PoolClient,
+    who: Actor,
     activityId: string,
     assignmentId: string,
     versionId: string,
   ): Promise<RunContext> {
-    const { rows } = await client.query(
-      'SELECT app_private.practice_run_context($1::uuid,$2::uuid) AS context',
-      [activityId, assignmentId],
-    );
-    if (!rows[0]?.context) throw notFound();
-    const context = runContextSchema.parse(rows[0].context);
-    if (context.exerciseVersionId !== versionId)
+    const { row, role } = await resource(client, who, 'activity', activityId);
+    if (role !== 'STUDENT') forbidden();
+    await classAccess(client, who, row.class_id);
+    const assigned = (
+      await client.query(
+        'SELECT exercise_version_id FROM app.activity_exercises WHERE activity_id=$1 AND id=$2',
+        [activityId, assignmentId],
+      )
+    ).rows[0];
+    if (!assigned) throw notFound();
+    if (assigned.exercise_version_id !== versionId)
       throw new ApiError(
         'VERSION_CONFLICT',
         'La versión del ejercicio cambió. Recarga la actividad.',
         409,
       );
+    const rows = (
+      await client.query(
+        "SELECT test_id,args,expected FROM app_private.exercise_tests WHERE exercise_version_id=$1 AND visibility='visible' ORDER BY position",
+        [versionId],
+      )
+    ).rows;
+    const tests: VisibleTest[] = rows.map((test) => ({
+      id: String(test.test_id),
+      visibility: 'visible',
+      args: test.args as unknown[],
+      expected: test.expected,
+    }));
+    if (!tests.length)
+      throw new ApiError(
+        'ACTIVITY_NOT_AVAILABLE',
+        'El ejercicio no está disponible para ejecutar.',
+        409,
+      );
     return {
-      organizationId: context.organizationId,
-      tests: context.tests,
-      limits: context.limits,
-      suiteHash: digest(JSON.stringify(context.tests)),
+      organizationId: row.organization_id as string,
+      tests,
+      suiteHash: digest(JSON.stringify(tests)),
     };
   }
 
@@ -79,7 +103,8 @@ export class PracticeRepository {
   ) {
     return this.database.readAs(
       who.actorId,
-      (client) => this.context(client, activityId, assignmentId, versionId),
+      (client) =>
+        this.context(client, who, activityId, assignmentId, versionId),
       who.sessionId,
     );
   }
@@ -90,7 +115,7 @@ export class PracticeRepository {
     assignmentId: string,
     input: RunExecutionInput,
     key: string,
-    runner: { available: boolean; runnerVersion: string },
+    runner: RunnerInspection,
     quotas: RunQuotas,
   ) {
     return this.database.writeAs(
@@ -98,15 +123,13 @@ export class PracticeRepository {
       async (client) => {
         const context = await this.context(
           client,
+          who,
           activityId,
           assignmentId,
           input.exerciseVersionId,
         );
-        await client.query("SELECT set_config('app.organization_id',$1,true)", [
-          context.organizationId,
-        ]);
         const { rows } = await client.query(
-          'SELECT app_private.admit_practice_run($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10,$11::uuid,$12,$13,$14,$15) AS admission',
+          'SELECT app_private.admit_practice_run($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7,$8,$9,$10,$11::uuid,$12,$13,$14,$15,$16::jsonb,$17::text) AS admission',
           [
             randomUUID(),
             activityId,
@@ -130,6 +153,10 @@ export class PracticeRepository {
             quotas.actorConcurrency,
             quotas.organizationConcurrency,
             quotas.actorRequestsPerMinute,
+            runner.context
+              ? JSON.stringify(executionContextSchema.parse(runner.context))
+              : null,
+            runner.capacity ?? null,
           ],
         );
         return {
@@ -168,9 +195,15 @@ export class PracticeRepository {
       const { rows } = await client.query(
         'SELECT app_private.claim_expired_practice_run() AS reservation',
       );
-      return rows[0]?.reservation == null
-        ? null
-        : reservationSchema.parse(rows[0].reservation);
+      if (rows[0]?.reservation == null) return null;
+      const reservation = reservationSchema.parse(rows[0].reservation);
+      const executionContext = await loadReservationExecutionContext(
+        client,
+        reservation.executionId,
+      );
+      return executionContext
+        ? { ...reservation, executionContext }
+        : reservation;
     });
   }
 

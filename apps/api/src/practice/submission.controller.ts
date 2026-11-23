@@ -7,12 +7,12 @@ import {
   Post,
   Query,
   Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
   RUN_CODE_BYTES,
   activityProgressResponseSchema,
-  attemptedActivitiesResponseSchema,
   attemptListQuerySchema,
   attemptListResponseSchema,
   attemptResponseSchema,
@@ -28,25 +28,13 @@ import {
 import { ApiError } from '../http/errors';
 import type { ApiRequest } from '../http/errors';
 import { SubmissionService } from './submission.service';
+import type { Response } from 'express';
+import { responseClosed } from './response-closed';
 
 @Controller('api/v1')
 @UseGuards(AuthGuard)
 export class SubmissionController {
   constructor(private readonly service: SubmissionService) {}
-
-  @Get('classes/:id/attempted-activities')
-  async attemptedActivities(
-    @Req() request: ApiRequest,
-    @Param('id') classId: string,
-  ) {
-    return attemptedActivitiesResponseSchema.parse({
-      data: await this.service.attemptedActivities(
-        actor(request),
-        uuid(classId),
-      ),
-      requestId: request.requestId,
-    });
-  }
 
   @Post('activities/:id/exercises/:assignmentId/attempts')
   async submit(
@@ -55,6 +43,7 @@ export class SubmissionController {
     @Param('assignmentId') assignment: string,
     @Body() body: unknown,
     @Headers('idempotency-key') key: string | undefined,
+    @Res({ passthrough: true }) response?: Response,
   ) {
     if (
       typeof body === 'object' &&
@@ -75,6 +64,7 @@ export class SubmissionController {
         uuid(assignment),
         parse(submitAttemptInputSchema, body),
         idempotency(key),
+        responseClosed(response),
       ),
       requestId: request.requestId,
     });
